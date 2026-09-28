@@ -23,7 +23,7 @@ Functional requirements for unregistered and registered users/customers:
 6. # generate and display digital ticket with QR code 
 
    - upon successful booking, the system shall  generate and display digital ticket in detail.
-
+git
 7. # save and download ticket
 
    - the system shall allow customer to save tickets for offline use.
