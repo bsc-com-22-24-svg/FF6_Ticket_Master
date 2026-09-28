@@ -20,7 +20,7 @@ npm run dev
 | Member | Reg Number | Area |
 |---|---|---|
 | Mwandira Blessings Trevor | BED/COM/13/24 | Leader / Setup |
-| Jimu Ishmael Amos | BSC/19/23 | Attendee FR |
-| Tukula Paul | BED/COM/50/22 | Attendee FR |
+| Jimu Ishmael Amos | BSC/19/23 | Research  FR |
+| Tukula Paul | BED/COM/50/22 | Secretary FR |
 | Lobeni Joshua Sibusiso | BSC/INF/06/24 | Organizer FR |
-| Chiumia Misheck | BSC/COM/22/24 | NFR / validation |
+| Chiumia Misheck | BSC/COM/22/24 | Cordinator / validation |
