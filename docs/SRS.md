@@ -91,21 +91,18 @@ The system will operate as a centralized web-based event management and ticketin
 
 The platform will connect customers, event organizers, and authorized event staff through a common system.
 
-```text
-                         EVENT TICKETING PLATFORM
+`                         EVENT TICKETING PLATFORM
                                     |
-          +-------------------------+-------------------------+
-          |                         |                         |
-          v                         v                         v
-      CUSTOMER                 ORGANIZER                 EVENT STAFF
-          |                         |                         |
-          |                         |                         |
-   Discover Events           Manage Events            Validate Tickets
-   Purchase Tickets          Manage Pricing           Scan QR/Barcode
-   View Digital Ticket       Track Sales              Check Validity
-   View History              Track Attendance          Record Attendance
-```
-
+        +---------------+-----------+-----------+---------------+
+        |               |                       |               |
+        v               v                       v               v
+    CUSTOMER       ORGANIZER              EVENT STAFF      ADMINISTRATOR
+        |               |                       |               |
+  Discover Events   Manage Events         Validate Tickets   Oversee Platform
+  Purchase Tickets  Manage Pricing        Scan QR/Barcode    Approve Organizers
+  View Ticket       Track Sales           Check Validity     Approve Events
+  View History      Track Attendance      Record Attendance  Handle Disputes
+                                                             View Statistics
 ---
 
 # 3. User Classes and Characteristics
@@ -174,6 +171,24 @@ Event staff will be able to:
 - Record attendance through ticket validation.
 
 ---
+
+## 3.5 System Administrator
+
+A system administrator is an authenticated user responsible for overseeing the
+entire platform. The administrator ensures that organizers are legitimate, events
+are legitimate, disputes are resolved, and the platform operates correctly.
+
+The administrator will be able to:
+
+- View and manage all user accounts.
+- Approve or reject organizer accounts.
+- Approve or reject events before publication.
+- Suspend or ban accounts that violate platform rules.
+- View platform-wide statistics (total users, events, sales, revenue).
+- Handle customer complaints and disputes.
+- Process refunds where required.
+- Take down fraudulent, misleading, or rule-breaking events.
+- Monitor system health and activity.
 
 # 4. Functional Requirements
 
@@ -419,7 +434,54 @@ Performance information may include:
 - Sales revenue
 
 ---
+## 4.8 Administrator Requirements
 
+### FR-43: View All Users
+
+The system shall allow an administrator to view a list of all registered users,
+including customers, organizers, and event staff.
+
+### FR-44: Approve or Reject Organizer Accounts
+
+The system shall allow an administrator to approve or reject applications from
+users wishing to become event organizers.
+
+### FR-45: Approve or Reject Events
+
+The system shall allow an administrator to review an event before it becomes
+publicly visible and to approve or reject it.
+
+### FR-46: Suspend or Ban Accounts
+
+The system shall allow an administrator to suspend or permanently ban user
+accounts that violate platform policies.
+
+### FR-47: View Platform-Wide Statistics
+
+The system shall allow an administrator to view platform-wide statistics,
+including:
+
+- Total number of users
+- Total number of organizers
+- Total number of events
+- Total tickets sold
+- Total revenue
+- Total disputes and refunds
+
+### FR-48: Handle Disputes and Refunds
+
+The system shall allow an administrator to review customer complaints and
+process refunds where required.
+
+### FR-49: Take Down Events
+
+The system shall allow an administrator to remove or disable events that are
+fraudulent, misleading, or violate platform rules.
+
+### FR-50: Monitor System Health
+
+The system shall allow an administrator to monitor platform activity, errors,
+and suspicious behavior.
 # 5. Non-Functional Requirements
 
 Non-functional requirements describe **how well the system should perform its functions**.
@@ -600,6 +662,23 @@ The system shall be developed using a modular architecture that separates major 
 - Event management
 - Ticket validation
 
+
+## 5.11 Administrative Security
+
+### NFR-26: Administrator Authorization
+
+The system shall restrict administrator functionality to users explicitly
+assigned the administrator role.
+
+### NFR-27: Audit Logging
+
+The system shall record all administrator actions, including account approvals,
+event approvals, suspensions, and refunds, for accountability and review.
+
+### NFR-28: Separation of Roles
+
+A user shall not be able to hold both the organizer and administrator roles
+simultaneously, to prevent conflicts of interest.
 ---
 
 # 6. Major System Use Cases
