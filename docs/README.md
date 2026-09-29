@@ -24,3 +24,10 @@ npm run dev
 | Tukula Paul | BED/COM/50/22 | Secretary FR |
 | Lobeni Joshua Sibusiso | BSC/INF/06/24 | Organizer FR |
 | Chiumia Misheck | BSC/COM/22/24 | Cordinator / validation |
+
+## Organiser Functional requirements
+    -|Set and Update ticket pricing|
+    -|Manage capacity and availability in real time|
+    -|Track sales and attendance|
+    -|Control access and validate tickets|
+    -|Monitor overall perfimance of events|
