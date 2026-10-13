@@ -18,6 +18,9 @@ export function AppLayout(): ReactNode {
         <Link to="/checkout" className={navLinkClass} activeProps={{ className: activeNavLinkClass }}>
           Checkout
         </Link>
+        <Link to="/scan" className={navLinkClass} activeProps={{ className: activeNavLinkClass }}>
+          Scan tickets
+        </Link>
         <span className="sp" />
         <span className="navlink">Log in</span>
         <span className="btn">Register</span>

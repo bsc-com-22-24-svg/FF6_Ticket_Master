@@ -1,6 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 import { AppLayout } from '../components/AppLayout'
 import { CheckoutPage } from '../features/checkout'
+import { ScannerPage } from '../features/validation'
 
 const rootRoute = createRootRoute({ component: AppLayout })
 
@@ -16,7 +17,13 @@ const checkoutRoute = createRoute({
   component: CheckoutPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, checkoutRoute])
+const scanRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/scan',
+  component: ScannerPage,
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, checkoutRoute, scanRoute])
 
 export const router = createRouter({ routeTree })
 

@@ -12,6 +12,15 @@ export interface TicketRecord {
   checkedInAt?: string
 }
 
+export type TicketValidationStatus = 'valid' | 'invalid' | 'used' | 'wrong_event'
+
+export interface TicketValidationResult {
+  status: TicketValidationStatus
+  title: string
+  message: string
+  ticket?: TicketRecord
+}
+
 export const STORAGE_KEY = 'tm.ticket-master.tickets'
 
 const DEMO_TICKETS: TicketRecord[] = [
