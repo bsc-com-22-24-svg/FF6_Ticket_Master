@@ -1,13 +1,14 @@
 import { useEvents } from '../../events'
-import { filterEvents } from '../filters'
+import { filterEvents, type Filters } from '../filters'
 import EventCard from './EventCard'
 import Reveal from '../../../components/Reveal'
 
-// Gets the events with TanStack Query, filters them and shows the cards
-export default function EventsSection({ filters }) {
-  const { data: events = [], isLoading, isError } = useEvents()
+interface EventsSectionProps {
+  filters: Filters
+}
 
-  // only the events that match the search + filters
+export default function EventsSection({ filters }: EventsSectionProps) {
+  const { data: events = [], isLoading, isError } = useEvents()
   const visibleEvents = filterEvents(events, filters)
 
   return (
@@ -16,20 +17,29 @@ export default function EventsSection({ filters }) {
         <Reveal className="text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-navy">Upcoming</p>
           <h2 className="mt-2 text-3xl font-extrabold sm:text-4xl">Featured Events</h2>
-          <p className="mt-3">{isLoading ? 'Loading events...' : `${visibleEvents.length} event(s) found`}</p>
+          <p className="mt-3">
+            {isLoading ? 'Loading events...' : `${visibleEvents.length} event(s) found`}
+          </p>
         </Reveal>
 
-        {/* loading boxes */}
         {isLoading && (
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((n) => <div key={n} className="h-80 animate-pulse rounded-2xl bg-slate-100" />)}
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-80 animate-pulse rounded-2xl bg-slate-100" />
+            ))}
           </div>
         )}
 
-        {isError && <p className="mt-10 text-center text-red-600">Could not load the events. Please try again.</p>}
+        {isError && (
+          <p className="mt-10 text-center text-red-600">
+            Could not load the events. Please try again.
+          </p>
+        )}
 
         {!isLoading && visibleEvents.length === 0 && (
-          <p className="mt-10 rounded-2xl bg-slate-50 p-10 text-center">No events match your search. Try changing the filters.</p>
+          <p className="mt-10 rounded-2xl bg-slate-50 p-10 text-center">
+            No events match your search. Try changing the filters.
+          </p>
         )}
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

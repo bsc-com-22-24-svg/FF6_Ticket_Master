@@ -1,4 +1,11 @@
-export const headerLinks = [
+export interface NavLink {
+  label: string
+  to?: string
+  href?: string
+  slug?: string
+}
+
+export const headerLinks: NavLink[] = [
   { label: 'Home', to: '/' },
   { label: 'Concerts', slug: 'concerts' },
   { label: 'Events', href: '/#events' },
@@ -6,7 +13,7 @@ export const headerLinks = [
   { label: 'Contact', href: '/#contact' },
 ]
 
-export const quickLinks = [
+export const quickLinks: NavLink[] = [
   { label: 'Browse Events', to: '/events' },
   { label: 'Concerts', slug: 'concerts' },
   { label: 'Sports', slug: 'sports' },
@@ -14,14 +21,14 @@ export const quickLinks = [
   { label: 'Workshops', slug: 'workshops' },
 ]
 
-export const organizerLinks = [
-  { label: 'Create Event', to: '/organizer' },
+export const organizerLinks: NavLink[] = [
+  { label: 'Create Event', to: '/organizer/events/new' },
   { label: 'Pricing & Fees', slug: 'pricing-and-fees' },
-  { label: 'Dashboard', to: '/organizer' }, // same page for now, the organizer team can split it later
-  { label: 'Ticket Validation', to: '/validation' },
+  { label: 'Dashboard', to: '/organizer/dashboard' },
+  { label: 'Ticket Validation', to: '/scan' },
 ]
 
-export const legalLinks = [
+export const legalLinks: NavLink[] = [
   { label: 'Privacy Policy', slug: 'privacy-policy' },
   { label: 'Terms & Conditions', slug: 'terms-and-conditions' },
 ]
