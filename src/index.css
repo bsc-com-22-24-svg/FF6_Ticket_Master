@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+@import "tailwindcss";
 :root {
   color-scheme: light;
 
@@ -484,8 +484,7 @@ hr {
     padding: 12px 16px;
     gap: 14px;
   }
-=======
-@import "tailwindcss";
+}
 
 /* Our colours. They give us classes like bg-navy, text-navy-dark, bg-navy-50.
    Main colour: white, second colour: dark blue (navy), text: gray */
@@ -520,5 +519,4 @@ section[id] { scroll-margin-top: 4rem; }
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
   .fade-up { animation: none; }
->>>>>>> origin/docs/customer-requirements
 }
