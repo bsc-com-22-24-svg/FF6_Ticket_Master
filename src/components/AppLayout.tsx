@@ -15,9 +15,9 @@ export function AppLayout(): ReactNode {
       </div>
       <header className="top">
         <b className="l">🎟️ Ticket Master</b>
-        <Link to="/checkout" className={navLinkClass} activeProps={{ className: activeNavLinkClass }}>
-          Checkout
-        </Link>
+        <Link to="/events" className={navLinkClass} activeProps={{ className: activeNavLinkClass }}>
+  Events
+</Link>
         <Link to="/scan" className={navLinkClass} activeProps={{ className: activeNavLinkClass }}>
           Scan tickets
         </Link>

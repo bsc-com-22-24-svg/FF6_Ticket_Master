@@ -1,0 +1,283 @@
+.page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+/* ---------- Left: brand panel ---------- */
+.brand {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 48px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2b62c8 0%, #1f6aa8 55%, #121d7c 100%);
+}
+
+.brand::before,
+.brand::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.brand::before {
+  width: 360px;
+  height: 360px;
+  top: -120px;
+  right: -120px;
+}
+
+.brand::after {
+  width: 260px;
+  height: 260px;
+  bottom: -90px;
+  left: -70px;
+}
+
+.brand > * {
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.logoMark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 20px;
+}
+
+.headline {
+  margin: 0 0 12px;
+  font-size: 40px;
+  line-height: 1.1;
+}
+
+.tagline {
+  margin: 0 0 28px;
+  max-width: 380px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.perks {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.perks li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+
+.perkIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+}
+
+.copyright {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- Right: form side (white) ---------- */
+.formSide {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 32px 24px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.formSide::before {
+  content: '';
+  position: absolute;
+  top: -140px;
+  right: -140px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: #fbe9e5;
+}
+
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 30px;
+  color: #1c1917;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  color: #78716c;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  border-radius: 99px;
+  background: #f4f1ef;
+}
+
+.tab {
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: #78716c;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #ffffff;
+  color: #2b3bc8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.field {
+  display: block;
+  width: 100%;
+  padding: 13px 14px;
+  margin-bottom: 14px;
+  border: 1px solid #e7e2de;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #1c1917;
+  font-size: 15px;
+}
+
+.field::placeholder {
+  color: #a8a29e;
+}
+
+.field:focus {
+  outline: none;
+  border-color: #2e2bc8;
+  box-shadow: 0 0 0 3px #fbe9e5;
+}
+
+.passwordRow {
+  display: flex;
+  gap: 8px;
+}
+
+.passwordRow .field {
+  flex: 1;
+}
+
+.toggle {
+  width: 68px;
+  height: 47px;
+  border: 1px solid #e7e2de;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #78716c;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  border-color: #2b3bc8;
+  color: #2b62c8;
+}
+
+.error {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fbe9e5;
+  color: #1f34a8;
+  font-size: 14px;
+}
+
+.submit {
+  width: 100%;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #616ddb, #616ddb);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(34, 52, 209, 0.3);
+}
+
+.submit:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.note {
+  margin: 20px 0 0;
+  text-align: center;
+  color: #78716c;
+  font-size: 13px;
+}
+
+/* ---------- Tablet and mobile ---------- */
+@media (max-width: 860px) {
+  .page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .brand {
+    padding: 24px;
+  }
+
+  .headline,
+  .tagline,
+  .perks,
+  .copyright {
+    display: none;
+  }
+
+  .formSide {
+    align-items: start;
+    padding: 28px 20px 40px;
+  }
+}
