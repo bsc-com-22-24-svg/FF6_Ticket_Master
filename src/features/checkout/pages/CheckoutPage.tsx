@@ -1,5 +1,4 @@
-export function CheckoutPage() {
-  return <h1>Checkout</h1>;
+
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { calculateTotals, formatKwacha } from '../format'
