@@ -2,8 +2,8 @@
 :root {
   color-scheme: light;
 
-  --tm-red: #c8412b;
-  --tm-red-dark: #7c2d12;
+  --tm-navy: #12326b;
+  --tm-navy-dark: #0a1f47;
   --tm-amber: #f59e0b;
   --tm-dark: #1c1917;
   --tm-dark-2: #292524;
@@ -13,8 +13,8 @@
   --tm-border: #e7e2de;
   --tm-muted: #78716c;
   --tm-text: #1c1917;
-  --tm-green: #16a34a;
-  --tm-green-bg: #fbe9e5;
+  --tm-success: #16a34a;
+  --tm-success-bg: #dcfce7;
 
   --tm-radius: 16px;
   --tm-radius-sm: 10px;
@@ -76,17 +76,17 @@ a {
 }
 
 .p {
-  color: var(--tm-red);
+  color: var(--tm-navy);
   font-weight: 700;
 }
 
 .ok {
-  color: var(--tm-green);
+  color: var(--tm-success);
   font-weight: 700;
 }
 
 .bad {
-  color: var(--tm-red);
+  color: var(--tm-navy);
   font-weight: 700;
 }
 
@@ -103,7 +103,7 @@ a {
 
 .btn {
   display: inline-block;
-  background: var(--tm-red);
+  background: var(--tm-navy);
   color: #fff;
   border-radius: 12px;
   padding: 10px 20px;
@@ -116,7 +116,7 @@ a {
 }
 
 .btn:hover:not(:disabled) {
-  background: #b23a26;
+  background: #0a1f47;
 }
 
 .btn:disabled {
@@ -126,12 +126,12 @@ a {
 
 .btn.o {
   background: none;
-  color: var(--tm-red);
-  border: 1px solid var(--tm-red);
+  color: var(--tm-navy);
+  border: 1px solid var(--tm-navy);
 }
 
 .btn.o:hover:not(:disabled) {
-  background: rgba(200, 65, 43, 0.08);
+  background: rgba(18, 50, 107, 0.08);
 }
 
 .btn.w {
@@ -162,8 +162,8 @@ input.in:focus,
 select.in:focus,
 textarea.in:focus {
   outline: none;
-  border-color: var(--tm-red);
-  box-shadow: 0 0 0 3px rgba(200, 65, 43, 0.12);
+  border-color: var(--tm-navy);
+  box-shadow: 0 0 0 3px rgba(18, 50, 107, 0.12);
 }
 
 .pills {
@@ -183,8 +183,8 @@ textarea.in:focus {
 }
 
 .pill.on {
-  background: var(--tm-red);
-  border-color: var(--tm-red);
+  background: var(--tm-navy);
+  border-color: var(--tm-navy);
   color: #fff;
 }
 
@@ -230,13 +230,13 @@ textarea.in:focus {
 .pb i {
   display: block;
   height: 100%;
-  background: var(--tm-red);
+  background: var(--tm-navy);
 }
 
 .tag {
   display: inline-block;
   background: #fff;
-  color: var(--tm-red);
+  color: var(--tm-navy);
   font-size: 11px;
   padding: 2px 9px;
   border-radius: 99px;
@@ -294,7 +294,7 @@ hr {
 
 .top b.l {
   font-size: 18px;
-  color: var(--tm-red);
+  color: var(--tm-navy);
 }
 
 .top a,
@@ -335,7 +335,7 @@ hr {
 .alert.error {
   background: #fbe9e5;
   border: 1px solid #f0c4bb;
-  color: var(--tm-red-dark);
+  color: var(--tm-navy-dark);
 }
 
 .alert.success {
@@ -437,7 +437,7 @@ hr {
 .cam-frame {
   width: 190px;
   height: 190px;
-  border: 3px solid var(--tm-red);
+  border: 3px solid var(--tm-navy);
   border-radius: 16px;
 }
 
