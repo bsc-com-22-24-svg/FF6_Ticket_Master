@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppLayout } from '../components/AppLayout';
 import { LoginPage, requireAuth } from '../features/authentication';
 import { EventsPage, EventDetailsPage } from '../features/events';
@@ -6,6 +6,7 @@ import { CheckoutPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage } from '../features/organizer';
+import { HomePage } from '../features/landing';
 import type { ReactNode } from 'react';
 
 const rootRoute = createRootRoute({ component: AppLayout });
@@ -19,7 +20,7 @@ const page = <P extends string>(
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  beforeLoad: () => { throw redirect({ to: '/events' }); },
+  component: HomePage,
 });
 
 const loginRoute = createRoute({
