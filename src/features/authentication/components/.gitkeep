@@ -1,0 +1,19 @@
+export type Role = 'customer' | 'organizer' | 'staff';
+
+export interface User{
+    id:string;
+    name: string;
+    email: string;
+    role:Role;
+}
+
+interface StoredUser extends User{
+    password: string;
+}
+
+// Mock accounts until the backend exists
+const MOCK_USERS: StoredUser[] = [
+  { id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' },
+  { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', password: 'password123', role: 'organizer' },
+  { id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', password: 'password123', role: 'staff' },
+];

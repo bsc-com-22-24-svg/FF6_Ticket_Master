@@ -1,0 +1,66 @@
+export type Role = 'customer' | 'organizer' | 'staff';
+
+export interface User{
+    id:string;
+    name: string;
+    email: string;
+    role:Role;
+}
+
+interface StoredUser extends User{
+    password: string;
+}
+
+// Mock accounts until the backend exists
+const MOCK_USERS: StoredUser[] = [
+  { id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' },
+  { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', password: 'password123', role: 'organizer' },
+  { id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', password: 'password123', role: 'staff' },
+];
+
+const SESSION_KEY = 'tm_user';
+const ACCOUNTS_KEY= 'tm_accounts';
+
+function readJson<T>(key:string): T | null {
+    try{
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T   ) : null;
+    }catch{
+        return null;
+    }
+}
+function allAccounts():StoredUser[]{
+    return [...MOCK_USERS, ...(readJson<StoredUser[]>(ACCOUNTS_KEY)?? [])];
+}
+const wait = ()=> new Promise((resolve) => setTimeout(resolve,400));
+
+export function getUser(): User | null{
+    return readJson<User>(SESSION_KEY);
+}
+
+function startSession(account : StoredUser): User {
+    const user:User = {id:account.id,name:account.name,email:account.email,role:account.role};
+    localStorage.setItem(SESSION_KEY,JSON.stringify(user));
+    return user;
+}
+export async function loginRequest(email:string,password:string):Promise<User>{
+    await wait();
+    const account = allAccounts().find((a) => a.email ===email.trim().toLocaleLowerCase() && a.password ===password);
+    if(!account) throw new Error('Wrong emil or password');
+    return startSession(account);
+}
+
+export async function registerRequest(name:string,email:string,password:string): Promise<User>{
+    await wait();
+    const cleanEmail = email.trim().toLowerCase();
+    if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exist');
+    const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role:'customer'};
+    const saved = readJson<StoredUser[]>(ACCOUNTS_KEY)??[];
+    localStorage.setItem(ACCOUNTS_KEY,JSON.stringify([...saved,account]));
+    return startSession(account);
+    
+}
+
+export function logoutRequest():void{
+    localStorage.removeItem(SESSION_KEY);
+}
