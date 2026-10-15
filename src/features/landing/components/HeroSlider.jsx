@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { heroSlides } from '../../../mocks/heroSlides'
+import SearchBar from './SearchBar'
 
 
 //  5 pictures that change by themselves
@@ -40,7 +41,7 @@ export default function HeroSlider({ filters, setFilters }) {
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/85 sm:text-xl">{heroSlides[current].text}</p>
         </div>
         <div className="mt-10 w-full">
-          
+          <SearchBar filters={filters} setFilters={setFilters} />
         </div>
       </div>
 
