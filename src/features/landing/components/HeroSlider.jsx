@@ -28,7 +28,7 @@ export default function HeroSlider({ filters, setFilters }) {
             key={slide.image}
             src={slide.image}
             alt={slide.title}
-            className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1500ms] ${i === current ? 'scale-105 opacity-100' : 'scale-100 opacity-0'}`}
+            className={`absolute inset-0 h-full w-full object-cover transition-all transition-duration: 1500ms ${i === current ? 'scale-105 opacity-100' : 'scale-100 opacity-0'}`}
           />
         ))}
         <div className="absolute inset-0 bg-linear-to-b from-navy-dark/70 via-navy-dark/50 to-navy-dark/80" />
