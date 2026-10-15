@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+/* Our colours. They give us classes like bg-navy, text-navy-dark, bg-navy-50.
+   Main colour: white, second colour: dark blue (navy), text: gray */
+@theme {
+  --color-navy: #12326b;
+  --color-navy-dark: #0a1f47;
+  --color-navy-50: #eef3fc;
+  --color-navy-100: #dbe6f8;
+}
+
+/* base styles (inside @layer base so Tailwind classes can still override them) */
+@layer base {
+  /* default border colour (Tailwind 4 uses black otherwise) */
+  *, ::after, ::before { border-color: #e2e8f0; }
+  html { scroll-behavior: smooth; }
+  body { background: #ffffff; color: #475569; -webkit-font-smoothing: antialiased; }
+  h1, h2, h3, h4 { color: #0a1f47; }
+  button { cursor: pointer; }
+}
+
+/* so the fixed header doesn't cover section titles when we scroll to them */
+section[id] { scroll-margin-top: 4rem; }
+
+/* scroll animation (see components/common/Reveal.jsx) */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity .7s ease, transform .7s ease; transition-delay: var(--d, 0ms); }
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* hero text animation */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+.fade-up { animation: fadeUp .9s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .fade-up { animation: none; }
+}
