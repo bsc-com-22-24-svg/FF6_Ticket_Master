@@ -1,1 +1,1 @@
-export {};
+export { TicketScannerPage } from './pages/TicketScannerPage';

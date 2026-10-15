@@ -1,1 +1,1 @@
-export {};
+export { CheckoutPage } from './pages/CheckoutPage';
