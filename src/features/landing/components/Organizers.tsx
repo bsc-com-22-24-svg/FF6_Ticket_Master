@@ -8,15 +8,20 @@ const perks = [
   { icon: ScanLine, title: 'Easy entry', text: 'Scan the QR code at the door to confirm every ticket.' },
 ]
 
-// Section for event organizers. Background picture: public/images/organizers-bg.jpg
 export default function Organizers() {
   return (
-    <section id="organizers" className="relative bg-navy-dark bg-cover bg-center py-24" style={{ backgroundImage: "url('/images/organizers-bg.jpg')" }}>
+    <section
+      id="organizers"
+      className="relative bg-navy-dark bg-cover bg-center py-24"
+      style={{ backgroundImage: "url('/images/organizers-bg.jpg')" }}
+    >
       <div className="absolute inset-0 bg-navy-dark/60" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-widest text-navy-100">For event organizers</p>
-          <h2 className="mt-2 text-3xl font-extrabold text-white sm:text-4xl">Hosting an event? Sell your tickets with us</h2>
+          <h2 className="mt-2 text-3xl font-extrabold text-white sm:text-4xl">
+            Hosting an event? Sell your tickets with us
+          </h2>
           <p className="mt-4 text-lg text-slate-200">
             Stop using forms and manual registration. Create your event, set your prices and let people book online.
           </p>
@@ -35,7 +40,10 @@ export default function Organizers() {
         </div>
 
         <Reveal className="mt-12 text-center">
-          <Link to="/organizer" className="inline-block rounded-full bg-white px-8 py-3 font-semibold text-navy-dark shadow-lg hover:bg-navy-50">
+          <Link
+            to="/organizer/dashboard"
+            className="inline-block rounded-full bg-white px-8 py-3 font-semibold text-navy-dark shadow-lg hover:bg-navy-50"
+          >
             Create an event
           </Link>
         </Reveal>
