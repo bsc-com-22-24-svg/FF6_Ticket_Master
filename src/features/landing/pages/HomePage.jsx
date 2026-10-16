@@ -5,6 +5,7 @@ import About from '../components/About'
 import EventsSection from '../components/EventsSection'
 import Organizers from '../components/Organizers'
 import Testimonials from '../components/Testimonials'
+import Contact from '../components/Contact'
 
  export default function HomePage() {
   const [filters, setFilters] = useState(defaultFilters)
@@ -15,6 +16,7 @@ import Testimonials from '../components/Testimonials'
       <EventsSection filters={filters} />
       <Organizers />
       <Testimonials />
+      <Contact />
     </>
   )
 }
