@@ -4,6 +4,7 @@ import HeroSlider from '../components/HeroSlider'
 import About from '../components/About'
 import EventsSection from '../components/EventsSection'
 import Organizers from '../components/Organizers'
+import Testimonials from '../components/Testimonials'
 
  export default function HomePage() {
   const [filters, setFilters] = useState(defaultFilters)
@@ -13,6 +14,7 @@ import Organizers from '../components/Organizers'
       <About />
       <EventsSection filters={filters} />
       <Organizers />
+      <Testimonials />
     </>
   )
 }
