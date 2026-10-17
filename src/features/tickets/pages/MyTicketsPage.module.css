@@ -1,0 +1,139 @@
+.page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.header {
+  margin-bottom: 18px;
+}
+
+.heading {
+  margin: 0 0 4px;
+  font-size: 26px;
+  color: #0a1f47;
+}
+
+.sub {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.section {
+  margin-top: 28px;
+}
+
+.sectionTitle {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: #0a1f47;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.pill {
+  padding: 6px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 99px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pillActive {
+  background: #12326b;
+  border-color: #12326b;
+  color: #ffffff;
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.itemInfo {
+  min-width: 0;
+}
+
+.itemTitle {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #0a1f47;
+}
+
+.meta {
+  margin: 2px 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.itemSide {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.valid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.used {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.state {
+  margin: 12px 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.retry {
+  border: 0;
+  background: none;
+  color: #12326b;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .itemSide {
+    flex-direction: row;
+    align-items: center;
+  }
+}
