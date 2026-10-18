@@ -258,6 +258,49 @@
   font-size: 13px;
 }
 
+/* ---------- Demo accounts ---------- */
+.demo {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed #e7e2de;
+}
+
+.demoTitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.demoButtons {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.demoButton {
+  padding: 9px 6px;
+  border: 1px solid #e7e2de;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #44403c;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.demoButton:hover:not(:disabled) {
+  border-color: #2b3bc8;
+  color: #2b62c8;
+}
+
+.demoButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* ---------- Tablet and mobile ---------- */
 @media (max-width: 860px) {
   .page {
