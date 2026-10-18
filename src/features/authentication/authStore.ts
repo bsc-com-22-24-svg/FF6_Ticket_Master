@@ -43,17 +43,23 @@ function startSession(account : StoredUser): User {
     localStorage.setItem(SESSION_KEY,JSON.stringify(user));
     return user;
 }
+export const DEMO_ACCOUNTS = [
+  { role: 'Customer', email: 'customer@example.com', password: 'password123' },
+  { role: 'Organizer', email: 'organizer@example.com', password: 'password123' },
+  { role: 'Staff', email: 'staff@example.com', password: 'password123' },
+] as const
+
 export async function loginRequest(email:string,password:string):Promise<User>{
     await wait();
-    const account = allAccounts().find((a) => a.email ===email.trim().toLocaleLowerCase() && a.password ===password);
-    if(!account) throw new Error('Wrong emil or password');
+    const account = allAccounts().find((a) => a.email ===email.trim().toLowerCase() && a.password ===password);
+    if(!account) throw new Error('Wrong email or password');
     return startSession(account);
 }
 
 export async function registerRequest(name:string,email:string,password:string): Promise<User>{
     await wait();
     const cleanEmail = email.trim().toLowerCase();
-    if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exist');
+    if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exists');
     const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role:'customer'};
     const saved = readJson<StoredUser[]>(ACCOUNTS_KEY)??[];
     localStorage.setItem(ACCOUNTS_KEY,JSON.stringify([...saved,account]));

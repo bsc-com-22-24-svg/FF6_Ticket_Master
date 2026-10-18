@@ -7,10 +7,14 @@ export function AuthProvider({children}:{children: ReactNode}){
     const [user,setUser] = useState<User | null>(getUser);
 
     const login = async (email:string,password:string)=>{
-        setUser(await loginRequest(email,password));
+        const next = await loginRequest(email,password);
+        setUser(next);
+        return next;
     };
     const register = async (name:string,email:string,password:string) => {
-        setUser(await registerRequest(name,email,password));
+        const next = await registerRequest(name,email,password);
+        setUser(next);
+        return next;
     };
     const logout = () => {
         logoutRequest();

@@ -1,11 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { events } from '../../../mocks/events'
+import { listAllEvents, listEvents } from '../../../lib/events'
 import { withDelay } from '../../../mocks/delay'
-import type { Event } from '../../../types/event'
 
+// Published events only — the public catalogue.
 export function useEvents() {
-  return useQuery<Event[]>({
+  return useQuery({
     queryKey: ['events'],
-    queryFn: () => withDelay(events),
+    queryFn: () => withDelay(listEvents()),
+  })
+}
+
+// Every event including drafts — the organizer workspace.
+export function useAllEvents() {
+  return useQuery({
+    queryKey: ['events', 'all'],
+    queryFn: () => withDelay(listAllEvents()),
   })
 }

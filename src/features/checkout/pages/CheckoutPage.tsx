@@ -2,10 +2,10 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useSearch, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { calculateTotals, formatKwacha } from '../format'
 import { useCheckout, validatePayment } from '../hooks/useCheckout'
-import { events } from '../../../mocks/events'
+import { getEvent } from '../../../lib/events'
 import { withDelay } from '../../../mocks/delay'
 import { DEMO_HOLDER, EMPTY_PAYMENT, MOBILE_MONEY_PROVIDERS } from '../mockData'
 import type { CheckoutResult, PaymentDetails, CheckoutEvent, TicketType } from '../types'
@@ -44,7 +44,7 @@ export function CheckoutPage(): ReactNode {
 
   const { data: eventData, isLoading, isError } = useQuery({
     queryKey: ['checkout-event', eventId],
-    queryFn: () => withDelay(events.find((e) => e.id === eventId) ?? null),
+    queryFn: () => withDelay(getEvent(eventId ?? '') ?? null),
     enabled: !!eventId,
   })
 
@@ -65,6 +65,7 @@ export function CheckoutPage(): ReactNode {
       }
 
   const checkout = useCheckout()
+  const queryClient = useQueryClient()
 
   const totals = ticketType
     ? calculateTotals(ticketType.price, quantity)
@@ -92,7 +93,15 @@ export function CheckoutPage(): ReactNode {
     }
     checkout.mutate(
       { event: checkoutEvent, ticketType, quantity, holder, payment },
-      { onSuccess: (data) => setResult(data) },
+      {
+        onSuccess: (data) => {
+          setResult(data)
+          queryClient.invalidateQueries({ queryKey: ['events'] })
+          queryClient.invalidateQueries({ queryKey: ['checkout-event'] })
+          queryClient.invalidateQueries({ queryKey: ['tickets'] })
+          queryClient.invalidateQueries({ queryKey: ['bookings'] })
+        },
+      },
     )
   }
 

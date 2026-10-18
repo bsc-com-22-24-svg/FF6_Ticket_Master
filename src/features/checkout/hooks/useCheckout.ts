@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { issueTicket, type TicketRecord } from '../../../lib/tickets'
+import { incrementSold } from '../../../lib/events'
 import type { CheckoutInput, CheckoutResult, PaymentDetails } from '../types'
 
 export class CheckoutError extends Error {}
@@ -70,6 +71,9 @@ async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
       }),
     )
   }
+
+  // Persist the sale so remaining seats drop across the whole app.
+  incrementSold(input.event.id, input.ticketType.id, input.quantity)
 
   return { reference: tickets[0].id, tickets }
 }

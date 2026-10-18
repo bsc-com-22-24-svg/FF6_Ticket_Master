@@ -1,8 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { useRouter, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import type { User } from '../authStore';
+import { DEMO_ACCOUNTS } from '../authStore';
 import { useAuth } from '../useAuth';
 import styles from './LoginPage.module.css';
+
+function homeForRole(role: User['role']): string {
+  if (role === 'organizer') return '/organizer/dashboard';
+  if (role === 'staff') return '/scan';
+  return '/events';
+}
 
 type Mode = 'login' | 'register';
 
@@ -20,7 +28,7 @@ function safePath(path: string | undefined): string {
 
 export function LoginPage() {
   const { login, register } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
   const { redirect } = useSearch({ strict: false }) as { redirect?: string };
 
   const [mode, setMode] = useState<Mode>('login');
@@ -30,9 +38,18 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const goAfterLogin = (user: User) =>
+    navigate({ to: redirect ? safePath(redirect) : homeForRole(user.role) });
+
   const submit = useMutation({
     mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password)),
-    onSuccess: () => router.history.push(safePath(redirect)),
+    onSuccess: goAfterLogin,
+  });
+
+  const demoLogin = useMutation({
+    mutationFn: (account: (typeof DEMO_ACCOUNTS)[number]) =>
+      login(account.email, account.password),
+    onSuccess: goAfterLogin,
   });
 
   const onSubmit = (e: FormEvent) => {
@@ -48,7 +65,8 @@ export function LoginPage() {
     submit.reset();
   };
 
-  const errorMessage = formError ?? (submit.error ? submit.error.message : null);
+  const errorMessage =
+    formError ?? (submit.error?.message || demoLogin.error?.message || null);
 
   return (
     <main className={styles.page}>
@@ -113,6 +131,25 @@ export function LoginPage() {
           </form>
 
           <p className={styles.note}>Browsing events never needs an account.</p>
+
+          {mode === 'login' && (
+            <div className={styles.demo}>
+              <p className={styles.demoTitle}>Demo accounts · one-tap sign in</p>
+              <div className={styles.demoButtons}>
+                {DEMO_ACCOUNTS.map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    disabled={demoLogin.isPending || submit.isPending}
+                    onClick={() => demoLogin.mutate(account)}
+                    className={styles.demoButton}
+                  >
+                    {account.role}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </main>

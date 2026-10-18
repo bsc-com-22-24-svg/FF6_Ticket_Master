@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
-import { events } from '../../../mocks/events'
+import { listEvents } from '../../../lib/events'
 import { ScanResult } from '../components/ScanResult'
 import { SCAN_EVENT } from '../mockData'
 import { useQrScanner } from '../hooks/useQrScanner'
@@ -11,6 +11,7 @@ export function ScannerPage(): ReactNode {
   const [result, setResult] = useState<TicketValidationResult | null>(null)
   const [history, setHistory] = useState<TicketValidationResult[]>([])
   const [manualCode, setManualCode] = useState('')
+  const events = listEvents()
   const [selectedEventId, setSelectedEventId] = useState(SCAN_EVENT.id)
   const selectedEvent =
     events.find((e) => e.id === selectedEventId) ?? { id: SCAN_EVENT.id, title: SCAN_EVENT.name }

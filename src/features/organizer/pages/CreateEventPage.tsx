@@ -1,46 +1,53 @@
-import { useParams } from '@tanstack/react-router'
+import { useState } from 'react'
+import { useNavigate, useParams } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import EventForm from '../components/EventForm'
-import type { EventInput, EventItem } from '../types/Event'
-
-const MOCK_EVENT: EventItem = {
-  id: 'lake-of-stars',
-  name: 'Lake of Stars Live',
-  description: 'Three days of music, art and culture on the shores of Lake Malawi.',
-  date: '2026-11-14',
-  time: '17:00',
-  location: 'Cape Maclear Beach, Mangochi',
-  category: 'Music',
-  imageUrl: '/images/events/event-1.webp',
-  status: 'Published',
-  ticketTypes: [
-    { id: 'general', name: 'General', price: 35000, capacity: 800 },
-    { id: 'vip', name: 'VIP', price: 75000, capacity: 120 },
-  ],
-  ticketsSold: 480 + 45,
-  revenue: 480 * 35000 + 45 * 75000,
-  checkedIn: 42,
-}
+import { getEvent, saveEvent, type EventInput } from '../../../lib/events'
 
 export function CreateEventPage() {
   const { eventId } = useParams({ strict: false }) as { eventId?: string }
   const isEdit = !!eventId
-  const initial = isEdit ? MOCK_EVENT : undefined
+  const initial = eventId ? getEvent(eventId) : undefined
+
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [isSaving, setIsSaving] = useState(false)
 
   async function handleSubmit(values: EventInput) {
-    // Mock submit - in real app this would call an API
-    console.log('Submitting event:', values)
-    await new Promise((r) => setTimeout(r, 600))
-    alert(isEdit ? 'Event updated (mock)' : 'Event created (mock)')
+    setIsSaving(true)
+    // Simulate a network round-trip, then persist to the shared store.
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    saveEvent(values)
+    await queryClient.invalidateQueries({ queryKey: ['events'] })
+    setIsSaving(false)
+    await navigate({ to: '/organizer/dashboard' })
   }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16 pt-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-3xl font-extrabold sm:text-4xl">{isEdit ? 'Edit Event' : 'Create Event'}</h1>
-          <p className="mt-2 text-slate-600">Fill in the details below</p>
+          <h1 className="text-3xl font-extrabold sm:text-4xl">
+            {isEdit ? 'Edit Event' : 'Create Event'}
+          </h1>
+          <p className="mt-2 text-slate-600">
+            {isEdit
+              ? 'Update the details and save your changes.'
+              : 'Fill in the details below to list a new event.'}
+          </p>
         </div>
-        <EventForm key={eventId ?? 'new'} initialEvent={initial} onSubmit={handleSubmit} isSaving={false} />
+        {isEdit && !initial ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
+            That event could not be found.
+          </div>
+        ) : (
+          <EventForm
+            key={eventId ?? 'new'}
+            initialEvent={initial}
+            onSubmit={handleSubmit}
+            isSaving={isSaving}
+          />
+        )}
       </div>
     </div>
   )

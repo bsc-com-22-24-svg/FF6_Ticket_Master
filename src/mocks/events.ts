@@ -1,7 +1,8 @@
 import type { Event } from '../types/event'
 
-// Demo catalog shown across the app. Ticket "sold" counts are static mock
-// data — checkout decrements them in memory for the current session.
+// Seed catalogue for the app. The live catalogue lives in src/lib/events.ts,
+// which seeds from this list on first load and persists organizer edits and
+// ticket sales to localStorage.
 export const events: Event[] = [
   {
     id: 'lake-of-stars',
