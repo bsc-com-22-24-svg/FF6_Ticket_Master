@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Star, User } from 'lucide-react'
 import { useTestimonials } from '../hooks/useTestimonials'
 import Reveal from '../../../components/Reveal'
@@ -9,12 +9,15 @@ export default function Testimonials() {
   const [current, setCurrent] = useState(0)
   const total = reviews.length || 1
 
-  const goTo = (index) => setCurrent((index + total) % total)
+  const goTo = useCallback(
+    (index: number) => setCurrent((index + total) % total),
+    [total],
+  )
 
   useEffect(() => {
     const timer = setTimeout(() => goTo(current + 1), 5000)
     return () => clearTimeout(timer)
-  }, [current, total])
+  }, [current, goTo])
 
   const arrowStyle = 'absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-navy shadow-lg hover:bg-navy hover:text-white'
 

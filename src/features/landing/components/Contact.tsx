@@ -46,7 +46,7 @@ export default function Contact() {
                 <input type="email" placeholder="Email address" className={inputStyle} />
               </div>
               <input placeholder="Subject" className={inputStyle} />
-              <textarea rows="5" placeholder="Your message" className={inputStyle} />
+              <textarea rows={5} placeholder="Your message" className={inputStyle} />
               <button onClick={() => setSent(true)} className="w-full rounded-xl bg-navy py-3 font-semibold text-white hover:bg-navy-dark">Send message</button>
             </div>
           )}

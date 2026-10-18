@@ -4,6 +4,7 @@ import { quickLinks, organizerLinks, legalLinks } from '../routes/links'
 import SiteLink from './SiteLink'
 
 const linkStyle = 'block py-1 text-sm text-slate-300 hover:text-white'
+const YEAR = new Date().getFullYear()
 
 // Footer with a blue background picture (public/images/footer-bg.jpg)
 export default function Footer() {
@@ -53,7 +54,7 @@ export default function Footer() {
 
       {/* bottom bar */}
       <div className="mx-auto mt-12 flex max-w-7xl flex-col items-center justify-between gap-3 border-t border-white/20 px-4 py-6 text-sm sm:flex-row sm:px-6">
-        <p>© {new Date().getFullYear()} Ticket Master. All rights reserved.</p>
+        <p>© {YEAR} Ticket Master. All rights reserved.</p>
         <div className="flex gap-6 sm:pr-16">
           {legalLinks.map((item) => <SiteLink key={item.label} item={item} className="hover:text-white" />)}
         </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { heroSlides } from '../../../mocks/heroSlides'
 import SearchBar from './SearchBar'
@@ -13,12 +13,15 @@ export default function HeroSlider({ filters, setFilters }: HeroSliderProps) {
   const [current, setCurrent] = useState(0)
   const total = heroSlides.length
 
-  const goTo = (index: number) => setCurrent((index + total) % total)
+  const goTo = useCallback(
+    (index: number) => setCurrent((index + total) % total),
+    [total],
+  )
 
   useEffect(() => {
     const timer = setTimeout(() => goTo(current + 1), 6000)
     return () => clearTimeout(timer)
-  }, [current])
+  }, [current, goTo])
 
   const arrowStyle =
     'absolute top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/40 sm:flex'
