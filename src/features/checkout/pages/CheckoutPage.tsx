@@ -1,34 +1,87 @@
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useParams, useSearch, Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { calculateTotals, formatKwacha } from '../format'
 import { useCheckout, validatePayment } from '../hooks/useCheckout'
-import {
-  CHECKOUT_EVENT,
-  CHECKOUT_TICKET_TYPES,
-  DEMO_HOLDER,
-  EMPTY_PAYMENT,
-  MOBILE_MONEY_PROVIDERS,
-} from '../mockData'
-import type { CheckoutResult, PaymentDetails } from '../types'
+import { events } from '../../../mocks/events'
+import { withDelay } from '../../../mocks/delay'
+import { DEMO_HOLDER, EMPTY_PAYMENT, MOBILE_MONEY_PROVIDERS } from '../mockData'
+import type { CheckoutResult, PaymentDetails, CheckoutEvent, TicketType } from '../types'
 import { OrderSummary } from '../components/OrderSummary'
 import { TicketConfirmation } from '../components/TicketConfirmation'
 import { TicketSummaryCard } from '../components/TicketSummaryCard'
+import { remainingSeats } from '../../../types/event'
+
+const toCheckoutEvent = (ev: import('../../../types/event').Event): CheckoutEvent => ({
+  id: ev.id,
+  name: ev.title,
+  date: ev.date,
+  time: ev.time,
+  venue: ev.venue,
+  city: ev.city,
+  organizer: ev.organizer,
+})
+
+const toCheckoutTicketTypes = (ev: import('../../../types/event').Event): TicketType[] =>
+  ev.ticketTypes.map((t) => ({ ...t }))
+
 
 export function CheckoutPage(): ReactNode {
-  const [selectedTypeId, setSelectedTypeId] = useState(CHECKOUT_TICKET_TYPES[0].id)
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [holder, setHolder] = useState(DEMO_HOLDER)
   const [payment, setPayment] = useState<PaymentDetails>(EMPTY_PAYMENT)
   const [clientError, setClientError] = useState<string | null>(null)
   const [result, setResult] = useState<CheckoutResult | null>(null)
 
+  const { eventId } = useParams({ strict: false }) as { eventId?: string }
+  const { type, qty } = useSearch({ strict: false }) as { type?: string; qty?: string }
+
+  const { data: eventData, isLoading, isError } = useQuery<import('../../../types/event').Event | null>({
+    queryKey: ['checkout-event', eventId],
+    queryFn: () => withDelay(events.find((e) => e.id === eventId) ?? null),
+    enabled: !!eventId,
+  })
+
+  const event = eventData
+  const ticketTypes: TicketType[] = eventData ? toCheckoutTicketTypes(eventData) : []
+  const checkoutEvent: CheckoutEvent = eventData
+    ? toCheckoutEvent(eventData)
+    : {
+        id: eventId ?? 'unknown',
+        name: 'Event',
+        date: '',
+        time: '',
+        venue: '',
+        city: '',
+        organizer: '',
+      }
+
+  useEffect(() => {
+    if (ticketTypes.length > 0) {
+      const candidate = ticketTypes.find((t) => t.id === type)
+      if (candidate && candidate.id !== selectedTypeId) {
+        setSelectedTypeId(candidate.id)
+      } else if (!selectedTypeId) {
+        setSelectedTypeId(ticketTypes[0].id)
+      }
+    }
+  }, [ticketTypes, type, selectedTypeId])
+
+  useEffect(() => {
+    const q = parseInt(qty ?? '', 10)
+    if (!Number.isNaN(q) && q > 0) {
+      setQuantity(q)
+    }
+  }, [qty])
+
   const checkout = useCheckout()
 
-  const ticketType =
-    CHECKOUT_TICKET_TYPES.find((type) => type.id === selectedTypeId) ?? CHECKOUT_TICKET_TYPES[0]
+  const ticketType = ticketTypes.find((type) => type.id === selectedTypeId) ?? ticketTypes[0]
   const totals = calculateTotals(ticketType.price, quantity)
-  const remaining = ticketType.capacity - ticketType.sold
+  const remaining = remainingSeats(ticketType)
   const soldOut = remaining <= 0
   const exceedsAvailable = quantity > remaining
 
@@ -50,8 +103,26 @@ export function CheckoutPage(): ReactNode {
       return
     }
     checkout.mutate(
-      { event: CHECKOUT_EVENT, ticketType, quantity, holder, payment },
+      { event: checkoutEvent, ticketType, quantity, holder, payment },
       { onSuccess: (data) => setResult(data) },
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
+        <div className="h-80 animate-pulse rounded-3xl bg-slate-100" />
+      </div>
+    )
+  }
+
+  if (isError || !event) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6">
+        <h1 className="text-2xl font-bold">Event not found</h1>
+        <p className="mt-2 text-slate-600">We couldn’t find this event to check out.</p>
+        <Link to="/events" className="mt-6 inline-block rounded-full bg-navy px-6 py-2 text-white">Browse events</Link>
+      </div>
     )
   }
 
@@ -78,7 +149,7 @@ export function CheckoutPage(): ReactNode {
       <div className="split" style={{ marginTop: 16 }}>
         <div className="g">
           <TicketSummaryCard
-            event={CHECKOUT_EVENT}
+            event={checkoutEvent}
             ticketType={ticketType}
             quantity={quantity}
             onChangeQuantity={setQuantity}
@@ -87,7 +158,7 @@ export function CheckoutPage(): ReactNode {
           <div className="card">
             <h4 style={{ marginTop: 0 }}>Ticket type</h4>
             <div className="pills">
-              {CHECKOUT_TICKET_TYPES.map((type) => {
+              {ticketTypes.map((type) => {
                 const left = type.capacity - type.sold
                 const disabled = left <= 0
                 return (
