@@ -1,5 +1,5 @@
-import { listTickets, type TicketRecord } from '../../../lib/tickets'
-import { withDelay } from '../../../mocks/delay'
+import { listTickets, type TicketRecord } from '../../lib/tickets'
+import { withDelay } from '../../mocks/delay'
 import type { Ticket } from './ticketTypes'
 
 // The ticket store (src/lib/tickets.ts) is the single source of truth.

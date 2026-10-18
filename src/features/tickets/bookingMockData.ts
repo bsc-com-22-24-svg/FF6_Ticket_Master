@@ -1,5 +1,5 @@
-import { listBookings, type BookingRecord } from '../../../lib/tickets'
-import { withDelay } from '../../../mocks/delay'
+import { listBookings, type BookingRecord } from '../../lib/tickets'
+import { withDelay } from '../../mocks/delay'
 import type { Booking } from './bookingTypes'
 
 // Bookings live in the shared store (src/lib/tickets.ts) next to the
