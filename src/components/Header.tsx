@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { headerLinks } from '../routes/links'
 import SiteLink from './SiteLink'
+import { useAuth } from '../features/authentication/useAuth'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -14,6 +15,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const { user, logout } = useAuth()
   const closeMenu = () => setMenuOpen(false)
 
   return (
@@ -31,12 +33,23 @@ export default function Header() {
               className="text-sm font-medium text-slate-600 hover:text-navy"
             />
           ))}
-          <Link
-            to="/login"
-            className="rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy-dark"
-          >
-            Login
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-slate-600">{user.name} · {user.role}</span>
+              <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>
+              {user.role === 'customer' && <Link to="/tickets/$ticketId" params={{ ticketId: "TKT-2026-001" }} className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
+              {user.role === 'staff' && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
+              <button onClick={logout} className="rounded-full border px-4 py-1.5 text-sm font-semibold hover:bg-slate-50">Logout</button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy-dark"
+            >
+              Login
+            </Link>
+          )}
         </nav>
 
         <button aria-label="Menu" onClick={() => setMenuOpen(!menuOpen)} className="text-navy lg:hidden">
@@ -54,13 +67,24 @@ export default function Header() {
               className="rounded-lg px-3 py-3 font-medium hover:bg-navy-50"
             />
           ))}
-          <Link
-            to="/login"
-            onClick={closeMenu}
-            className="mt-2 rounded-full bg-navy py-3 text-center font-semibold text-white"
-          >
-            Login
-          </Link>
+          {user ? (
+            <div className="flex flex-col gap-2 pt-2">
+              <span className="px-3 py-1 text-sm text-slate-600">{user.name} · {user.role}</span>
+              <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>
+              {user.role === 'customer' && <Link to="/tickets/$ticketId" params={{ ticketId: "TKT-2026-001" }} onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
+              {user.role === 'staff' && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}
+              <button onClick={() => { logout(); closeMenu() }} className="mt-2 rounded-full border py-2 text-center font-semibold hover:bg-slate-50">Logout</button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              onClick={closeMenu}
+              className="mt-2 rounded-full bg-navy py-3 text-center font-semibold text-white"
+            >
+              Login
+            </Link>
+          )}
         </nav>
       )}
     </header>
