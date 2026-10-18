@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { EventInput, EventItem, EventStatus, TicketType } from '../types/Event';
 
 type Props = {
@@ -25,32 +25,28 @@ const empty: EventInput = {
   ticketTypes: [makeTicket()],
 };
 
-export default function EventForm({ initialEvent, onSubmit, isSaving }: Props) {
-  const [values, setValues] = useState<EventInput>(empty);
-  const [, setImageName] = useState('');
+function toInput(event: EventItem): EventInput {
+  const { id, name, description, date, time, location, category, imageUrl, status, ticketTypes } =
+    event;
+  return {
+    id,
+    name,
+    description,
+    date,
+    time,
+    location,
+    category,
+    imageUrl,
+    status,
+    ticketTypes: ticketTypes.map((t) => ({ ...t })),
+  };
+}
 
-  useEffect(() => {
-    if (initialEvent) {
-      const { id, name, description, date, time, location, category, imageUrl, status, ticketTypes } =
-        initialEvent;
-      setValues({
-        id,
-        name,
-        description,
-        date,
-        time,
-        location,
-        category,
-        imageUrl,
-        status,
-        ticketTypes: ticketTypes.map((t) => ({ ...t })),
-      });
-      setImageName(imageUrl ?? '');
-    } else {
-      setValues({ ...empty, ticketTypes: [makeTicket()] });
-      setImageName('');
-    }
-  }, [initialEvent]);
+export default function EventForm({ initialEvent, onSubmit, isSaving }: Props) {
+  // The parent keys this component by event id, so initial state is enough.
+  const [values, setValues] = useState<EventInput>(() =>
+    initialEvent ? toInput(initialEvent) : { ...empty, ticketTypes: [makeTicket()] },
+  );
 
   function update<K extends keyof EventInput>(key: K, value: EventInput[K]) {
     setValues((old) => ({ ...old, [key]: value }));
