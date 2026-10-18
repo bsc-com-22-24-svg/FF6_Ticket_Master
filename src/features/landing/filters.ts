@@ -1,7 +1,7 @@
-import type { Event } from '../../types/event'
+import { fromPrice, type Event } from '../../types/event'
 
 export const categories = ['All', 'Concerts', 'Sports', 'Festivals', 'Workshops', 'Community']
-export const cities = ['All cities', 'Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba', 'Mangochi']
+export const cities = ['All cities', 'Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba', 'Mangochi', 'Salima']
 
 export const priceOptions = [
   { value: 'any', label: 'Any price' },
@@ -47,13 +47,13 @@ export function filterEvents(events: Event[], filters: Filters): Event[] {
   return events
     .filter((e) => filters.category === 'All' || e.category === filters.category)
     .filter((e) => filters.city === 'All cities' || e.city === filters.city)
-    .filter((e) => matchesPrice(e.price, filters.price))
+    .filter((e) => matchesPrice(fromPrice(e), filters.price))
     .filter((e) =>
       `${e.title} ${e.city} ${e.venue} ${e.category}`.toLowerCase().includes(search),
     )
     .sort((a, b) => {
-      if (filters.sort === 'low') return a.price - b.price
-      if (filters.sort === 'high') return b.price - a.price
+      if (filters.sort === 'low') return fromPrice(a) - fromPrice(b)
+      if (filters.sort === 'high') return fromPrice(b) - fromPrice(a)
       return new Date(a.date).getTime() - new Date(b.date).getTime()
     })
 }

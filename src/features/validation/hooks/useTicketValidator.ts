@@ -1,7 +1,12 @@
-import { getTicket, markTicketUsed, type TicketValidationResult } from '../../../lib/tickets'
+import {
+  getTicket,
+  markTicketUsed,
+  normalizeTicketCode,
+  type TicketValidationResult,
+} from '../../../lib/tickets'
 
 export function validateTicket(rawCode: string, eventId: string): TicketValidationResult {
-  const code = rawCode.trim().toUpperCase()
+  const code = normalizeTicketCode(rawCode)
 
   if (!code) {
     return {
