@@ -6,7 +6,8 @@ import { CheckoutPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage } from '../features/organizer';
-import { HomePage } from '../features/landing';
+import { HomePage } from '../features/landing'
+import NotFoundPage from '../components/NotFoundPage';
 import type { ReactNode } from 'react';
 
 const rootRoute = createRootRoute({ component: AppLayout });
@@ -32,6 +33,12 @@ const loginRoute = createRoute({
   }),
 });
 
+const notFoundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '*',
+  component: NotFoundPage,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
@@ -47,6 +54,7 @@ const routeTree = rootRoute.addChildren([
   page('/organizer/events/$eventId/edit', CreateEventPage, requireAuth('organizer')),
   // staff
   page('/scan', ScannerPage, requireAuth('staff')),
+  notFoundRoute,
 ]);
 
 export const router = createRouter({ routeTree });

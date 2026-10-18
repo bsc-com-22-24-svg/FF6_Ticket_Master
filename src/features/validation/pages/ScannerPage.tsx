@@ -1,30 +1,29 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
+import { events } from '../../../mocks/events'
 import { ScanResult } from '../components/ScanResult'
 import { SCAN_EVENT } from '../mockData'
 import { useQrScanner } from '../hooks/useQrScanner'
 import { validateTicket } from '../hooks/useTicketValidator'
 
-function countCheckedIn(): number {
-  return listTickets().filter(
-    (ticket) => ticket.eventId === SCAN_EVENT.id && ticket.status === 'used',
-  ).length
-}
-
 export function ScannerPage(): ReactNode {
   const [result, setResult] = useState<TicketValidationResult | null>(null)
   const [history, setHistory] = useState<TicketValidationResult[]>([])
   const [manualCode, setManualCode] = useState('')
-  const [checkedIn, setCheckedIn] = useState(countCheckedIn)
+  const [selectedEventId, setSelectedEventId] = useState(SCAN_EVENT.id)
+  const selectedEvent =
+    events.find((e) => e.id === selectedEventId) ?? { id: SCAN_EVENT.id, title: SCAN_EVENT.name }
 
-  const handleCode = useCallback((rawCode: string) => {
-    const outcome = validateTicket(rawCode, SCAN_EVENT.id)
-    setResult(outcome)
-    setHistory((previous) => [outcome, ...previous].slice(0, 6))
-    if (outcome.status === 'valid') setCheckedIn((count) => count + 1)
-    setManualCode('')
-  }, [])
+  const handleCode = useCallback(
+    (rawCode: string) => {
+      const outcome = validateTicket(rawCode, selectedEventId)
+      setResult(outcome)
+      setHistory((previous) => [outcome, ...previous].slice(0, 6))
+      setManualCode('')
+    },
+    [selectedEventId],
+  )
 
   const { videoRef, status, error, start, stop } = useQrScanner(handleCode)
 
@@ -33,6 +32,10 @@ export function ScannerPage(): ReactNode {
     handleCode(manualCode)
   }
 
+  const checkedIn = listTickets().filter(
+    (ticket) => ticket.eventId === selectedEventId && ticket.status === 'used',
+  ).length
+
   const scanning = status === 'scanning'
 
   return (
@@ -40,12 +43,29 @@ export function ScannerPage(): ReactNode {
       <div className="row">
         <div>
           <h1>Scan tickets</h1>
-          <p className="m">
-            {SCAN_EVENT.name} · {SCAN_EVENT.gate}
-          </p>
+          <p className="m">{SCAN_EVENT.gate}</p>
+          <label className="m" style={{ display: 'block', marginTop: 8 }}>
+            Event gate
+            <select
+              className="in"
+              style={{ marginTop: 4 }}
+              value={selectedEventId}
+              onChange={(event) => {
+                setSelectedEventId(event.target.value)
+                setResult(null)
+                setHistory([])
+              }}
+            >
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.title}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="card stat" style={{ minWidth: 160 }}>
-          <span className="m">Checked in today</span>
+          <span className="m">Checked in · {selectedEvent.title}</span>
           <b>{checkedIn}</b>
         </div>
       </div>

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useSearch, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -29,24 +29,29 @@ const toCheckoutTicketTypes = (ev: import('../../../types/event').Event): Ticket
 
 
 export function CheckoutPage(): ReactNode {
+  const { eventId } = useParams({ strict: false }) as { eventId?: string }
+  const { type, qty } = useSearch({ strict: false }) as { type?: string; qty?: string }
+  const parsedQty = parseInt(qty ?? '', 10)
+
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null)
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState(() =>
+    Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
+  )
   const [holder, setHolder] = useState(DEMO_HOLDER)
   const [payment, setPayment] = useState<PaymentDetails>(EMPTY_PAYMENT)
   const [clientError, setClientError] = useState<string | null>(null)
   const [result, setResult] = useState<CheckoutResult | null>(null)
 
-  const { eventId } = useParams({ strict: false }) as { eventId?: string }
-  const { type, qty } = useSearch({ strict: false }) as { type?: string; qty?: string }
-
-  const { data: eventData, isLoading, isError } = useQuery<import('../../../types/event').Event | null>({
+  const { data: eventData, isLoading, isError } = useQuery({
     queryKey: ['checkout-event', eventId],
     queryFn: () => withDelay(events.find((e) => e.id === eventId) ?? null),
     enabled: !!eventId,
   })
 
-  const event = eventData
   const ticketTypes: TicketType[] = eventData ? toCheckoutTicketTypes(eventData) : []
+  const activeTypeId = selectedTypeId ?? type ?? ticketTypes[0]?.id
+  const ticketType =
+    ticketTypes.find((candidate) => candidate.id === activeTypeId) ?? ticketTypes[0]
   const checkoutEvent: CheckoutEvent = eventData
     ? toCheckoutEvent(eventData)
     : {
@@ -59,32 +64,14 @@ export function CheckoutPage(): ReactNode {
         organizer: '',
       }
 
-  useEffect(() => {
-    if (ticketTypes.length > 0) {
-      const candidate = ticketTypes.find((t) => t.id === type)
-      if (candidate && candidate.id !== selectedTypeId) {
-        setSelectedTypeId(candidate.id)
-      } else if (!selectedTypeId) {
-        setSelectedTypeId(ticketTypes[0].id)
-      }
-    }
-  }, [ticketTypes, type, selectedTypeId])
-
-  useEffect(() => {
-    const q = parseInt(qty ?? '', 10)
-    if (!Number.isNaN(q) && q > 0) {
-      setQuantity(q)
-    }
-  }, [qty])
-
   const checkout = useCheckout()
 
-  const ticketType = ticketTypes.find((type) => type.id === selectedTypeId) ?? ticketTypes[0]
-  const totals = calculateTotals(ticketType.price, quantity)
-  const remaining = remainingSeats(ticketType)
+  const totals = ticketType
+    ? calculateTotals(ticketType.price, quantity)
+    : { subtotal: 0, serviceFee: 0, total: 0 }
+  const remaining = ticketType ? remainingSeats(ticketType) : 0
   const soldOut = remaining <= 0
   const exceedsAvailable = quantity > remaining
-
   function updatePayment(patch: Partial<PaymentDetails>) {
     setPayment((current) => ({ ...current, ...patch }))
   }
@@ -96,6 +83,7 @@ export function CheckoutPage(): ReactNode {
   }
 
   function handlePay() {
+    if (!ticketType) return
     setClientError(null)
     const paymentError = validatePayment(payment)
     if (paymentError) {
@@ -116,7 +104,7 @@ export function CheckoutPage(): ReactNode {
     )
   }
 
-  if (isError || !event) {
+  if (isError || !eventData) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6">
         <h1 className="text-2xl font-bold">Event not found</h1>
@@ -267,13 +255,13 @@ export function CheckoutPage(): ReactNode {
             </p>
           </div>
 
-          {soldOut && (
+          {soldOut && ticketType && (
             <div className="alert error">
               <b>Sold out.</b> There are no {ticketType.name} tickets left, so this purchase is
               blocked.
             </div>
           )}
-          {!soldOut && exceedsAvailable && (
+          {!soldOut && exceedsAvailable && ticketType && (
             <div className="alert error">
               Only {remaining} ticket{remaining === 1 ? '' : 's'} left — reduce the quantity to
               continue.

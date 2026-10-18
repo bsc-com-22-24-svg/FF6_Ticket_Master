@@ -40,7 +40,7 @@ export function CreateEventPage() {
           <h1 className="text-3xl font-extrabold sm:text-4xl">{isEdit ? 'Edit Event' : 'Create Event'}</h1>
           <p className="mt-2 text-slate-600">Fill in the details below</p>
         </div>
-        <EventForm initialEvent={initial} onSubmit={handleSubmit} isSaving={false} />
+        <EventForm key={eventId ?? 'new'} initialEvent={initial} onSubmit={handleSubmit} isSaving={false} />
       </div>
     </div>
   )
