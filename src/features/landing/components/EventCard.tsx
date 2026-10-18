@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Calendar, MapPin } from 'lucide-react'
-import type { Event } from '../../../types/event'
+import { fromPrice, type Event } from '../../../types/event'
 
 interface EventCardProps {
   event: Event
@@ -12,7 +12,8 @@ export default function EventCard({ event }: EventCardProps) {
     month: 'short',
     year: 'numeric',
   })
-  const price = event.price === 0 ? 'Free' : `MK ${event.price.toLocaleString()}`
+  const from = fromPrice(event)
+  const price = from === 0 ? 'Free' : `MK ${from.toLocaleString()}`
 
   return (
     <Link

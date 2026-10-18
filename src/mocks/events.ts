@@ -1,36 +1,164 @@
 import type { Event } from '../types/event'
 
+// Demo catalog shown across the app. Ticket "sold" counts are static mock
+// data — checkout decrements them in memory for the current session.
 export const events: Event[] = [
   {
-    id: 1,
+    id: 'lake-of-stars',
     title: 'Lake of Stars Live',
     category: 'Festivals',
     city: 'Mangochi',
     venue: 'Cape Maclear Beach',
     date: '2026-11-14',
-    price: 35000,
+    time: '17:00',
+    description:
+      'Three days of music, art and culture on the shores of Lake Malawi. Local and international acts across two stages, with food stalls and beachside camping.',
+    organizer: 'Nyasa Events',
     image: '/images/events/event-1.webp',
+    ticketTypes: [
+      { id: 'general', name: 'General', price: 35000, capacity: 800, sold: 480 },
+      { id: 'vip', name: 'VIP', price: 75000, capacity: 120, sold: 45 },
+    ],
   },
-
   {
-    id: 2,
-    title: 'Game on',
+    id: 'game-on',
+    title: 'Game on: Malawi vs Zimbabwe',
     category: 'Sports',
     city: 'Lilongwe',
-    venue: 'Bingu Stadium',
-    date: '2026-14-2',
-    price: 10000,
+    venue: 'Bingu National Stadium',
+    date: '2026-10-28',
+    time: '15:00',
+    description:
+      'The Flames take on Zimbabwe in a crucial qualifier. Join thousands of fans for an afternoon of football at the national stadium.',
+    organizer: 'Sports Council Malawi',
     image: '/images/events/event-2.jpg',
+    ticketTypes: [
+      { id: 'general', name: 'General', price: 10000, capacity: 5000, sold: 2100 },
+      { id: 'vip', name: 'VIP', price: 25000, capacity: 400, sold: 120 },
+    ],
   },
-
   {
-    id: 3,
+    id: 'zomba-plateau-hike',
     title: 'Hiking in Zomba',
-    category: 'Festivals',
+    category: 'Community',
     city: 'Zomba',
     venue: 'Zomba Plateau',
-    date: '2026-10-13',
-    price: 5000,
+    date: '2026-11-03',
+    time: '06:00',
+    description:
+      'Guided sunrise hike up the Zomba Plateau with panoramic views over the valley. Transport from Zomba town included. Fully booked — join the waitlist for the next batch.',
+    organizer: 'Zomba Hikers Club',
     image: '/images/events/event-3.webp',
+    ticketTypes: [{ id: 'standard', name: 'Standard', price: 5000, capacity: 60, sold: 60 }],
+  },
+  {
+    id: 'dev-summit',
+    title: 'Dev Summit 2026',
+    category: 'Workshops',
+    city: 'Lilongwe',
+    venue: 'Bingu wa Mutharika ICC',
+    date: '2026-11-06',
+    time: '09:00',
+    description:
+      'Malawi’s largest developer conference. Talks and hands-on workshops on web, mobile and cloud, with lightning demos and a career fair.',
+    organizer: 'Tech Makers Malawi',
+    image: '/images/events/event-2.jpg',
+    ticketTypes: [
+      { id: 'standard', name: 'Standard', price: 20000, capacity: 200, sold: 90 },
+      { id: 'student', name: 'Student', price: 10000, capacity: 100, sold: 60 },
+    ],
+  },
+  {
+    id: 'lilongwe-jazz-night',
+    title: 'Lilongwe Jazz Night',
+    category: 'Concerts',
+    city: 'Lilongwe',
+    venue: 'Bingu International Conference Centre',
+    date: '2026-12-05',
+    time: '19:00',
+    description:
+      'An evening of smooth jazz featuring the Zion Band plus special guests. Doors open at 18:00, dinner service available for VIP ticket holders.',
+    organizer: 'Nyasa Events',
+    image: '/images/events/event-1.webp',
+    ticketTypes: [
+      { id: 'standard', name: 'Standard', price: 15000, capacity: 300, sold: 80 },
+      { id: 'vip', name: 'VIP', price: 30000, capacity: 50, sold: 10 },
+    ],
+  },
+  {
+    id: 'karonga-cultural-day',
+    title: 'Karonga Cultural Day',
+    category: 'Community',
+    city: 'Mzuzu',
+    venue: 'Karonga Stadium',
+    date: '2026-11-28',
+    time: '10:00',
+    description:
+      'Free community celebration of northern Malawi’s heritage with traditional dance, food and craft stalls. Everyone welcome.',
+    organizer: 'Karonga District Council',
+    image: '/images/events/event-3.webp',
+    ticketTypes: [{ id: 'general', name: 'General', price: 0, capacity: 300, sold: 45 }],
+  },
+  {
+    id: 'zomba-tech-meetup',
+    title: 'Zomba Tech Meetup',
+    category: 'Workshops',
+    city: 'Zomba',
+    venue: 'Zomba Central Hall',
+    date: '2026-11-20',
+    time: '09:00',
+    description:
+      'Monthly meetup for students and professionals. This edition: intro to machine learning with a live demo and networking session.',
+    organizer: 'Zomba Devs',
+    image: '/images/events/event-2.jpg',
+    ticketTypes: [{ id: 'standard', name: 'Standard', price: 15000, capacity: 150, sold: 40 }],
+  },
+  {
+    id: 'salima-beach-concert',
+    title: 'Salima Beach Concert',
+    category: 'Concerts',
+    city: 'Salima',
+    venue: 'Senga Bay Lakeshore',
+    date: '2027-01-10',
+    time: '16:00',
+    description:
+      'Kick off the year with a sunset concert on Senga Bay. Afro-pop headliners, live DJ and beach games through the afternoon.',
+    organizer: 'Lakeshore Entertainment',
+    image: '/images/events/event-1.webp',
+    ticketTypes: [
+      { id: 'general', name: 'General', price: 20000, capacity: 600, sold: 150 },
+      { id: 'vip', name: 'VIP', price: 40000, capacity: 80, sold: 20 },
+    ],
+  },
+  {
+    id: 'blantyre-business-expo',
+    title: 'Blantyre Business Expo',
+    category: 'Workshops',
+    city: 'Blantyre',
+    venue: 'Blantyre Cultural Centre',
+    date: '2026-12-18',
+    time: '10:30',
+    description:
+      'Exhibition and talk series for southern Malawi’s entrepreneurs. Stalls, pitch sessions and panels on financing and growth.',
+    organizer: 'Blantyre Chamber of Commerce',
+    image: '/images/events/event-3.webp',
+    ticketTypes: [
+      { id: 'standard', name: 'Standard', price: 20000, capacity: 250, sold: 60 },
+      { id: 'vip', name: 'VIP', price: 40000, capacity: 60, sold: 15 },
+    ],
+  },
+  {
+    id: 'mzuzu-food-fair',
+    title: 'Mzuzu Food Fair',
+    category: 'Community',
+    city: 'Mzuzu',
+    venue: 'Mzuzu Showgrounds',
+    date: '2026-07-14',
+    time: '11:00',
+    description:
+      'A look back at Mzuzu’s biggest food festival — 60 vendors, live cooking demos and a kids’ corner. Held earlier this year.',
+    organizer: 'Mzuzu Foodies',
+    image: '/images/events/event-2.jpg',
+    ticketTypes: [{ id: 'standard', name: 'Standard', price: 20000, capacity: 400, sold: 400 }],
   },
 ]

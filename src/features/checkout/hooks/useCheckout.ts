@@ -61,8 +61,11 @@ async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
         eventId: input.event.id,
         eventName: input.event.name,
         date: input.event.date,
-        venue: `${input.event.venue}, ${input.event.city}`,
+        time: input.event.time,
+        venue: input.event.venue,
+        city: input.event.city,
         ticketType: input.ticketType.name,
+        price: input.ticketType.price,
         holder: input.holder.trim() || 'Guest',
       }),
     )

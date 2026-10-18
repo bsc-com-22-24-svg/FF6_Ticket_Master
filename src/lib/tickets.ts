@@ -1,15 +1,33 @@
+import type { Event, TicketType } from '../types/event'
+
 export type TicketStatus = 'valid' | 'used'
 
 export interface TicketRecord {
   id: string
   eventId: string
   eventName: string
-  date: string
+  date: string // ISO date, e.g. 2026-11-14
+  time: string // 24h, e.g. 18:00
   venue: string
+  city: string
   ticketType: string
+  price: number // in MK
   holder: string
   status: TicketStatus
   checkedInAt?: string
+}
+
+export type BookingStatus = 'confirmed' | 'cancelled'
+
+export interface BookingRecord {
+  id: string
+  eventTitle: string
+  venue: string
+  date: string // ISO date
+  quantity: number
+  total: number // in MK
+  status: BookingStatus
+  ticketIds: string[]
 }
 
 export type TicketValidationStatus = 'valid' | 'invalid' | 'used' | 'wrong_event'
@@ -21,38 +39,97 @@ export interface TicketValidationResult {
   ticket?: TicketRecord
 }
 
-export const STORAGE_KEY = 'tm.ticket-master.tickets'
+export const TICKETS_KEY = 'tm.ticket-master.tickets'
+export const BOOKINGS_KEY = 'tm.ticket-master.bookings'
+
+// QR codes encode "TICKET:<id>"; accept both forms everywhere.
+export function normalizeTicketCode(raw: string): string {
+  return raw.trim().toUpperCase().replace(/^TICKET:/, '')
+}
 
 const DEMO_TICKETS: TicketRecord[] = [
   {
     id: 'TM-2026-004871',
-    eventId: 'evt-lakeshore',
-    eventName: 'Lakeshore Music Fest',
-    date: 'Sat 24 Oct',
-    venue: 'Mount Soche Grounds, Blantyre',
+    eventId: 'lake-of-stars',
+    eventName: 'Lake of Stars Live',
+    date: '2026-11-14',
+    time: '17:00',
+    venue: 'Cape Maclear Beach',
+    city: 'Mangochi',
     ticketType: 'General',
+    price: 35000,
     holder: 'Chimwemwe Banda',
     status: 'valid',
   },
   {
     id: 'TM-2026-009999',
-    eventId: 'evt-dev-summit',
+    eventId: 'dev-summit',
     eventName: 'Dev Summit 2026',
-    date: 'Fri 6 Nov',
-    venue: 'Bingu wa Mutharika ICC, Lilongwe',
-    ticketType: 'General',
-    holder: 'Mphatso Gondwe',
+    date: '2026-11-06',
+    time: '09:00',
+    venue: 'Bingu wa Mutharika ICC',
+    city: 'Lilongwe',
+    ticketType: 'Standard',
+    price: 20000,
+    holder: 'Chimwemwe Banda',
     status: 'valid',
   },
   {
     id: 'TM-2026-002540',
-    eventId: 'evt-lakeshore',
-    eventName: 'Lakeshore Music Fest',
-    date: 'Sat 24 Oct',
-    venue: 'Mount Soche Grounds, Blantyre',
-    ticketType: 'VIP',
-    holder: 'Tadala Phiri',
+    eventId: 'mzuzu-food-fair',
+    eventName: 'Mzuzu Food Fair',
+    date: '2026-07-14',
+    time: '11:00',
+    venue: 'Mzuzu Showgrounds',
+    city: 'Mzuzu',
+    ticketType: 'Standard',
+    price: 20000,
+    holder: 'Chimwemwe Banda',
     status: 'used',
+    checkedInAt: '2026-07-14T11:42:00.000Z',
+  },
+]
+
+const DEMO_BOOKINGS: BookingRecord[] = [
+  {
+    id: 'BK-2026-004871',
+    eventTitle: 'Lake of Stars Live',
+    venue: 'Cape Maclear Beach',
+    date: '2026-11-14',
+    quantity: 1,
+    total: 35500,
+    status: 'confirmed',
+    ticketIds: ['TM-2026-004871'],
+  },
+  {
+    id: 'BK-2026-009999',
+    eventTitle: 'Dev Summit 2026',
+    venue: 'Bingu wa Mutharika ICC',
+    date: '2026-11-06',
+    quantity: 1,
+    total: 20500,
+    status: 'confirmed',
+    ticketIds: ['TM-2026-009999'],
+  },
+  {
+    id: 'BK-2026-002540',
+    eventTitle: 'Mzuzu Food Fair',
+    venue: 'Mzuzu Showgrounds',
+    date: '2026-07-14',
+    quantity: 1,
+    total: 20500,
+    status: 'confirmed',
+    ticketIds: ['TM-2026-002540'],
+  },
+  {
+    id: 'BK-2026-001102',
+    eventTitle: 'Lilongwe Jazz Night',
+    venue: 'Bingu International Conference Centre',
+    date: '2026-12-05',
+    quantity: 2,
+    total: 30500,
+    status: 'cancelled',
+    ticketIds: [],
   },
 ]
 
@@ -60,57 +137,64 @@ function hasStorage(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
 }
 
-function readTickets(): TicketRecord[] {
-  if (!hasStorage()) return [...DEMO_TICKETS]
+function readList<T>(key: string, seed: T[]): T[] {
+  if (!hasStorage()) return [...seed]
 
-  const raw = window.localStorage.getItem(STORAGE_KEY)
+  const raw = window.localStorage.getItem(key)
   if (!raw) {
-    writeTickets(DEMO_TICKETS)
-    return [...DEMO_TICKETS]
+    window.localStorage.setItem(key, JSON.stringify(seed))
+    return [...seed]
   }
 
   try {
-    const parsed = JSON.parse(raw) as TicketRecord[]
-    return Array.isArray(parsed) ? parsed : [...DEMO_TICKETS]
+    const parsed = JSON.parse(raw) as T[]
+    return Array.isArray(parsed) ? parsed : [...seed]
   } catch {
-    writeTickets(DEMO_TICKETS)
-    return [...DEMO_TICKETS]
+    window.localStorage.setItem(key, JSON.stringify(seed))
+    return [...seed]
   }
 }
 
-function writeTickets(tickets: TicketRecord[]): void {
+function writeList<T>(key: string, items: T[]): void {
   if (!hasStorage()) return
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets))
+  window.localStorage.setItem(key, JSON.stringify(items))
 }
 
 export function listTickets(): TicketRecord[] {
-  return readTickets()
+  return readList(TICKETS_KEY, DEMO_TICKETS)
 }
 
 export function getTicket(id: string): TicketRecord | undefined {
-  const normalized = id.trim().toUpperCase()
-  return readTickets().find((ticket) => ticket.id.toUpperCase() === normalized)
+  const normalized = normalizeTicketCode(id)
+  return listTickets().find((ticket) => ticket.id.toUpperCase() === normalized)
 }
 
-function generateId(): string {
+export function listBookings(): BookingRecord[] {
+  return readList(BOOKINGS_KEY, DEMO_BOOKINGS)
+}
+
+function generateId(prefix: string): string {
   const serial = String(Math.floor(100000 + Math.random() * 900000))
-  return `TM-2026-${serial}`
+  return `${prefix}-2026-${serial}`
 }
 
 export interface IssueTicketInput {
   eventId: string
   eventName: string
   date: string
+  time: string
   venue: string
+  city: string
   ticketType: string
+  price: number
   holder: string
 }
 
 export function issueTicket(input: IssueTicketInput): TicketRecord {
-  const tickets = readTickets()
-  let id = generateId()
+  const tickets = listTickets()
+  let id = generateId('TM')
   while (tickets.some((ticket) => ticket.id === id)) {
-    id = generateId()
+    id = generateId('TM')
   }
 
   const ticket: TicketRecord = {
@@ -119,13 +203,13 @@ export function issueTicket(input: IssueTicketInput): TicketRecord {
     status: 'valid',
   }
 
-  writeTickets([ticket, ...tickets])
+  writeList(TICKETS_KEY, [ticket, ...tickets])
   return ticket
 }
 
 export function markTicketUsed(id: string): TicketRecord | undefined {
-  const normalized = id.trim().toUpperCase()
-  const tickets = readTickets()
+  const normalized = normalizeTicketCode(id)
+  const tickets = listTickets()
   const index = tickets.findIndex((ticket) => ticket.id.toUpperCase() === normalized)
   if (index === -1) return undefined
 
@@ -135,6 +219,60 @@ export function markTicketUsed(id: string): TicketRecord | undefined {
     checkedInAt: new Date().toISOString(),
   }
   tickets[index] = updated
-  writeTickets(tickets)
+  writeList(TICKETS_KEY, tickets)
   return updated
+}
+
+export interface IssueBookingInput {
+  event: Event
+  ticketType: TicketType
+  quantity: number
+  holder: string
+}
+
+export interface IssueBookingResult {
+  booking: BookingRecord
+  tickets: TicketRecord[]
+}
+
+// Issues the tickets and the booking that owns them in one step.
+export function issueBooking(input: IssueBookingInput): IssueBookingResult {
+  const { event, ticketType, quantity, holder } = input
+
+  const tickets: TicketRecord[] = []
+  for (let index = 0; index < quantity; index += 1) {
+    tickets.push(
+      issueTicket({
+        eventId: event.id,
+        eventName: event.title,
+        date: event.date,
+        time: event.time,
+        venue: event.venue,
+        city: event.city,
+        ticketType: ticketType.name,
+        price: ticketType.price,
+        holder: holder.trim() || 'Guest',
+      }),
+    )
+  }
+
+  const bookings = listBookings()
+  let bookingId = generateId('BK')
+  while (bookings.some((booking) => booking.id === bookingId)) {
+    bookingId = generateId('BK')
+  }
+
+  const booking: BookingRecord = {
+    id: bookingId,
+    eventTitle: event.title,
+    venue: event.venue,
+    date: event.date,
+    quantity,
+    total: quantity * ticketType.price,
+    status: 'confirmed',
+    ticketIds: tickets.map((ticket) => ticket.id),
+  }
+
+  writeList(BOOKINGS_KEY, [booking, ...bookings])
+  return { booking, tickets }
 }

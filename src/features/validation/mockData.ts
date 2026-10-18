@@ -1,5 +1,5 @@
 export const SCAN_EVENT = {
-  id: 'evt-lakeshore',
-  name: 'Lakeshore Music Fest',
+  id: 'lake-of-stars',
+  name: 'Lake of Stars Live',
   gate: 'Gate A',
 }
