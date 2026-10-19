@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from '@tanstack/react-router'
 import { QrCode } from '../../../components/QrCode'
 import type { TicketRecord } from '../../../lib/tickets'
 
@@ -19,7 +20,7 @@ export function TicketConfirmation({ tickets, onBuyAgain }: TicketConfirmationPr
           <div>
             <h2>{ticket.eventName}</h2>
             <p className="m">📅 {ticket.date}</p>
-            <p className="m">📍 {ticket.venue}</p>
+            <p className="m">📍 {ticket.venue}, {ticket.city}</p>
             <p className="m">Ticket type: {ticket.ticketType}</p>
             <p className="m">Holder: {ticket.holder}</p>
             <p>
@@ -33,9 +34,16 @@ export function TicketConfirmation({ tickets, onBuyAgain }: TicketConfirmationPr
         </div>
         <div className="card">
           <h2>Actions</h2>
-          <a
+          <Link
+            to="/tickets/$ticketId"
+            params={{ ticketId: ticket.id }}
             className="btn w"
             style={{ marginTop: 0 }}
+          >
+            View in My Tickets
+          </Link>
+          <a
+            className="btn o w"
             href={`data:text/plain,${encodeURIComponent(ticket.id)}`}
             download={`${ticket.id}.txt`}
           >
@@ -44,6 +52,9 @@ export function TicketConfirmation({ tickets, onBuyAgain }: TicketConfirmationPr
           <button type="button" className="btn o w" onClick={onBuyAgain}>
             Buy more tickets
           </button>
+          <Link className="btn o w" to="/events">
+            Browse more events
+          </Link>
         </div>
       </div>
     </div>
