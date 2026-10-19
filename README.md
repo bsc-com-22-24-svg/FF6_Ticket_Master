@@ -20,6 +20,7 @@ Other scripts:
 ```bash
 npm run build     # type-check + production build
 npm run lint      # oxlint
+npm test          # vitest unit tests
 ```
 
 ## Demo
