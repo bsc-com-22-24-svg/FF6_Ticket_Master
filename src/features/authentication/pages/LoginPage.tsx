@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { User } from '../authStore';
 import { DEMO_ACCOUNTS } from '../authStore';
 import { useAuth } from '../useAuth';
+import { canAccess } from '../guards';
 import styles from './LoginPage.module.css';
 
 function homeForRole(role: User['role']): string {
@@ -36,14 +37,16 @@ export function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const organizerArea = !!redirect && redirect.startsWith('/organizer');
+  const [accountType, setAccountType] = useState<'customer' | 'organizer'>(organizerArea ? 'organizer' : 'customer');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const goAfterLogin = (user: User) =>
-    navigate({ to: redirect ? safePath(redirect) : homeForRole(user.role) });
+    navigate({ to: redirect && canAccess(user.role, safePath(redirect)) ? safePath(redirect) : homeForRole(user.role) });
 
   const submit = useMutation({
-    mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password)),
+    mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password, accountType)),
     onSuccess: goAfterLogin,
   });
 
@@ -104,9 +107,25 @@ export function LoginPage() {
             </button>
           </div>
 
+          {organizerArea && (
+            <p className={styles.note} role="note">
+              Organizer area: log in with an organizer account, or register as an organizer to create events.
+            </p>
+          )}
+
           <form onSubmit={onSubmit} noValidate>
             {mode === 'register' && (
-              <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} className={styles.field} />
+              <>
+                <div className={styles.tabs}>
+                  <button type="button" onClick={() => setAccountType('customer')} className={`${styles.tab} ${accountType === 'customer' ? styles.active : ''}`}>
+                    I want to buy tickets
+                  </button>
+                  <button type="button" onClick={() => setAccountType('organizer')} className={`${styles.tab} ${accountType === 'organizer' ? styles.active : ''}`}>
+                    I'm an organizer
+                  </button>
+                </div>
+                <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} className={styles.field} />
+              </>
             )}
             <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className={styles.field} />
             <div className={styles.passwordRow}>

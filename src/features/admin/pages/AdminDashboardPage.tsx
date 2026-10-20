@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ShieldCheck, ShieldAlert, DollarSign, Check, X, Users } from 'lucide-react'
+import { ShieldAlert, DollarSign, Check, X, Users } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listAllEvents, saveEvent, type StoredEvent } from '../../../lib/events'
 import { listAllKYC, saveKYC, type OrganizerKYC } from '../../../lib/verification'

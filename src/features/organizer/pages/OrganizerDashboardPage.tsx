@@ -124,9 +124,15 @@ export function OrganizerDashboardPage() {
             <button onClick={handleReset} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
               <RotateCcw size={16} /> Reset demo data
             </button>
-            <Link to={kycStatus === 'Verified' ? "/organizer/events/new" : "#"} onClick={(e) => { if(kycStatus !== 'Verified') { e.preventDefault(); alert('You must be verified to create an event.'); } }} className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-white ${kycStatus === 'Verified' ? 'bg-navy hover:bg-navy-dark' : 'bg-slate-400 cursor-not-allowed'}`}>
-              <Plus size={16} /> Create event
-            </Link>
+            {kycStatus === 'Verified' ? (
+              <Link to="/organizer/events/new" className="flex items-center gap-2 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy-dark">
+                <Plus size={16} /> Create event
+              </Link>
+            ) : (
+              <button type="button" onClick={() => alert('You must be verified to create an event.')} className="flex items-center gap-2 rounded-full bg-slate-400 px-5 py-2 text-sm font-semibold text-white cursor-not-allowed">
+                <Plus size={16} /> Create event
+              </button>
+            )}
           </div>
         </div>
 

@@ -11,8 +11,8 @@ export function AuthProvider({children}:{children: ReactNode}){
         setUser(next);
         return next;
     };
-    const register = async (name:string,email:string,password:string) => {
-        const next = await registerRequest(name,email,password);
+    const register = async (name:string,email:string,password:string, role?: 'customer' | 'organizer') => {
+        const next = await registerRequest(name,email,password,role);
         setUser(next);
         return next;
     };
