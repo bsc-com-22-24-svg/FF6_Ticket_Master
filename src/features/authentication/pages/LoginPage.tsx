@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { User } from '../authStore';
-import { DEMO_ACCOUNTS } from '../authStore';
 import { useAuth } from '../useAuth';
 import { canAccess } from '../guards';
 import styles from './LoginPage.module.css';
@@ -50,12 +49,6 @@ export function LoginPage() {
     onSuccess: goAfterLogin,
   });
 
-  const demoLogin = useMutation({
-    mutationFn: (account: (typeof DEMO_ACCOUNTS)[number]) =>
-      login(account.email, account.password),
-    onSuccess: goAfterLogin,
-  });
-
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     const error = validate(mode, name, email, password);
@@ -70,7 +63,7 @@ export function LoginPage() {
   };
 
   const errorMessage =
-    formError ?? (submit.error?.message || demoLogin.error?.message || null);
+    formError ?? (submit.error?.message || null);
 
   return (
     <main className={styles.page}>
@@ -107,12 +100,6 @@ export function LoginPage() {
             </button>
           </div>
 
-          {organizerArea && (
-            <p className={styles.note} role="note">
-              Organizer area: log in with an organizer account, or register as an organizer to create events.
-            </p>
-          )}
-
           <form onSubmit={onSubmit} noValidate>
             {mode === 'register' && (
               <>
@@ -148,26 +135,6 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className={styles.note}>Browsing events never needs an account.</p>
-
-          {mode === 'login' && (
-            <div className={styles.demo}>
-              <p className={styles.demoTitle}>Demo accounts · one-tap sign in</p>
-              <div className={styles.demoButtons}>
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    disabled={demoLogin.isPending || submit.isPending}
-                    onClick={() => demoLogin.mutate(account)}
-                    className={styles.demoButton}
-                  >
-                    {account.role}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </section>
     </main>
