@@ -76,6 +76,9 @@ export function MyTicketsPage() {
                   <p className={styles.meta}>
                     {t.venue} · {formatDate(t.date)}
                   </p>
+                  <p className={styles.meta} style={{ fontWeight: 500, color: '#0a1f47' }}>
+                    Holder: {t.holder}
+                  </p>
                 </div>
                 <div className={styles.itemSide}>
                   <span

@@ -98,7 +98,7 @@ export function CheckoutPage(): ReactNode {
       return
     }
     checkout.mutate(
-      { event: checkoutEvent, ticketType, quantity, holder, payment },
+      { event: checkoutEvent, ticketType, quantity, holder, payment, ownerEmail: user?.email },
       {
         onSuccess: (data) => {
           setResult(data)
@@ -180,12 +180,12 @@ export function CheckoutPage(): ReactNode {
               })}
             </div>
             <label className="m" style={{ display: 'block' }}>
-              Ticket holder
+              Ticket holder (Your Name)
               <input
                 className="in"
-                style={{ marginTop: 4 }}
+                style={{ marginTop: 4, backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                 value={holder}
-                onChange={(event) => setHolder(event.target.value)}
+                readOnly
               />
             </label>
           </div>

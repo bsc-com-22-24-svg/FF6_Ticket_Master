@@ -9,5 +9,6 @@ export type Ticket = {
   ticketType: string;
   seat: string;
   price: number; // in MK
+  holder: string;
   status: TicketStatus;
 };

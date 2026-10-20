@@ -103,12 +103,29 @@ export default function EventForm({ initialEvent, onSubmit, isSaving }: Props) {
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Ticket types</h2>
             <div className="mt-4 space-y-3">
+              <div className="hidden sm:grid grid-cols-12 gap-3 px-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                <div className="col-span-5">Ticket Name</div>
+                <div className="col-span-3">Price (MK)</div>
+                <div className="col-span-3">Capacity</div>
+                <div className="col-span-1 text-right">Action</div>
+              </div>
               {values.ticketTypes.map((type) => (
-                <div key={type.id} className="grid grid-cols-1 gap-3 sm:grid-cols-12">
-                  <input aria-label="Ticket name" required value={type.name} onChange={(e) => updateTicket(type.id, { name: e.target.value })} placeholder="General Admission" className="sm:col-span-5 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
-                  <input aria-label="Price in MWK" required type="number" min={0} value={type.price} onChange={(e) => updateTicket(type.id, { price: Number(e.target.value) })} className="sm:col-span-3 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
-                  <input aria-label="Ticket capacity" required type="number" min={1} value={type.capacity} onChange={(e) => updateTicket(type.id, { capacity: Number(e.target.value) })} className="sm:col-span-3 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
-                  <button type="button" disabled={values.ticketTypes.length === 1} onClick={() => setValues((old) => ({ ...old, ticketTypes: old.ticketTypes.filter((candidate) => candidate.id !== type.id) }))} className="sm:col-span-1 rounded-xl border px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50">Remove</button>
+                <div key={type.id} className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:items-start bg-slate-50 sm:bg-transparent p-4 sm:p-0 rounded-xl sm:rounded-none border sm:border-0 border-slate-200">
+                  <div className="sm:col-span-5">
+                    <label className="sm:hidden text-xs font-semibold text-slate-600 mb-1 block">Ticket Name</label>
+                    <input required value={type.name} onChange={(e) => updateTicket(type.id, { name: e.target.value })} placeholder="e.g. General Admission" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="sm:hidden text-xs font-semibold text-slate-600 mb-1 block">Price (MK)</label>
+                    <input required type="number" min={0} value={type.price} onChange={(e) => updateTicket(type.id, { price: Number(e.target.value) })} placeholder="0 for free" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="sm:hidden text-xs font-semibold text-slate-600 mb-1 block">Capacity (Qty)</label>
+                    <input required type="number" min={1} value={type.capacity} onChange={(e) => updateTicket(type.id, { capacity: Number(e.target.value) })} placeholder="100" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy" />
+                  </div>
+                  <div className="sm:col-span-1 flex sm:justify-end mt-2 sm:mt-0">
+                    <button type="button" disabled={values.ticketTypes.length === 1} onClick={() => setValues((old) => ({ ...old, ticketTypes: old.ticketTypes.filter((candidate) => candidate.id !== type.id) }))} className="w-full sm:w-auto rounded-xl border border-red-200 text-red-600 px-3 py-2 text-sm font-semibold hover:bg-red-50 disabled:opacity-50">Remove</button>
+                  </div>
                 </div>
               ))}
               <button type="button" onClick={() => setValues((old) => ({ ...old, ticketTypes: [...old.ticketTypes, makeTicket()] }))} className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-slate-50">+ Add ticket type</button>

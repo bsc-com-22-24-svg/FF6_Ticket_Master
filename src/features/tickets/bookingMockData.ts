@@ -16,9 +16,11 @@ function toBookingView(record: BookingRecord): Booking {
   }
 }
 
-export async function fetchBookings(): Promise<Booking[]> {
+export async function fetchBookings(email?: string): Promise<Booking[]> {
   return withDelay(
-    listBookings().map(toBookingView),
+    listBookings()
+      .filter((b) => b.ticketIds.some((id) => listTickets().find((t) => t.id === id)?.ownerEmail === email))
+      .map(toBookingView),
     400,
   )
 }

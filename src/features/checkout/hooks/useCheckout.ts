@@ -66,6 +66,7 @@ async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     ticketType: input.ticketType,
     quantity: input.quantity,
     holder: input.holder,
+    ownerEmail: input.ownerEmail,
   })
 
   // Persist the sale so remaining seats drop across the whole app.

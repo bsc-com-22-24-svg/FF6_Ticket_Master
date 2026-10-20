@@ -13,6 +13,7 @@ export interface TicketRecord {
   ticketType: string
   price: number // in MK
   holder: string
+  ownerEmail?: string
   status: TicketStatus
   checkedInAt?: string
 }
@@ -47,91 +48,9 @@ export function normalizeTicketCode(raw: string): string {
   return raw.trim().toUpperCase().replace(/^TICKET:/, '')
 }
 
-const DEMO_TICKETS: TicketRecord[] = [
-  {
-    id: 'TM-2026-004871',
-    eventId: 'lake-of-stars',
-    eventName: 'Lake of Stars Live',
-    date: '2026-11-14',
-    time: '17:00',
-    venue: 'Cape Maclear Beach',
-    city: 'Mangochi',
-    ticketType: 'General',
-    price: 35000,
-    holder: 'Chimwemwe Banda',
-    status: 'valid',
-  },
-  {
-    id: 'TM-2026-009999',
-    eventId: 'dev-summit',
-    eventName: 'Dev Summit 2026',
-    date: '2026-11-06',
-    time: '09:00',
-    venue: 'Bingu wa Mutharika ICC',
-    city: 'Lilongwe',
-    ticketType: 'Standard',
-    price: 20000,
-    holder: 'Chimwemwe Banda',
-    status: 'valid',
-  },
-  {
-    id: 'TM-2026-002540',
-    eventId: 'mzuzu-food-fair',
-    eventName: 'Mzuzu Food Fair',
-    date: '2026-07-14',
-    time: '11:00',
-    venue: 'Mzuzu Showgrounds',
-    city: 'Mzuzu',
-    ticketType: 'Standard',
-    price: 20000,
-    holder: 'Chimwemwe Banda',
-    status: 'used',
-    checkedInAt: '2026-07-14T11:42:00.000Z',
-  },
-]
+const DEMO_TICKETS: TicketRecord[] = []
 
-const DEMO_BOOKINGS: BookingRecord[] = [
-  {
-    id: 'BK-2026-004871',
-    eventTitle: 'Lake of Stars Live',
-    venue: 'Cape Maclear Beach',
-    date: '2026-11-14',
-    quantity: 1,
-    total: 35500,
-    status: 'confirmed',
-    ticketIds: ['TM-2026-004871'],
-  },
-  {
-    id: 'BK-2026-009999',
-    eventTitle: 'Dev Summit 2026',
-    venue: 'Bingu wa Mutharika ICC',
-    date: '2026-11-06',
-    quantity: 1,
-    total: 20500,
-    status: 'confirmed',
-    ticketIds: ['TM-2026-009999'],
-  },
-  {
-    id: 'BK-2026-002540',
-    eventTitle: 'Mzuzu Food Fair',
-    venue: 'Mzuzu Showgrounds',
-    date: '2026-07-14',
-    quantity: 1,
-    total: 20500,
-    status: 'confirmed',
-    ticketIds: ['TM-2026-002540'],
-  },
-  {
-    id: 'BK-2026-001102',
-    eventTitle: 'Lilongwe Jazz Night',
-    venue: 'Bingu International Conference Centre',
-    date: '2026-12-05',
-    quantity: 2,
-    total: 30500,
-    status: 'cancelled',
-    ticketIds: [],
-  },
-]
+const DEMO_BOOKINGS: BookingRecord[] = []
 
 function hasStorage(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'
@@ -179,6 +98,7 @@ function generateId(prefix: string): string {
 }
 
 export interface IssueTicketInput {
+  ownerEmail?: string
   eventId: string
   eventName: string
   date: string
@@ -228,6 +148,7 @@ export interface IssueBookingInput {
   ticketType: TicketType
   quantity: number
   holder: string
+  ownerEmail?: string
 }
 
 export interface IssueBookingResult {
@@ -237,7 +158,7 @@ export interface IssueBookingResult {
 
 // Issues the tickets and the booking that owns them in one step.
 export function issueBooking(input: IssueBookingInput): IssueBookingResult {
-  const { event, ticketType, quantity, holder } = input
+  const { event, ticketType, quantity, holder, ownerEmail } = input
 
   const tickets: TicketRecord[] = []
   for (let index = 0; index < quantity; index += 1) {
@@ -252,6 +173,7 @@ export function issueBooking(input: IssueBookingInput): IssueBookingResult {
         ticketType: ticketType.name,
         price: ticketType.price,
         holder: holder.trim() || 'Guest',
+        ownerEmail,
       }),
     )
   }

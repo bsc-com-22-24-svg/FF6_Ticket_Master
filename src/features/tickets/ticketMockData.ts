@@ -11,14 +11,17 @@ export function toTicketView(record: TicketRecord): Ticket {
     time: record.time || '12:00',
     ticketType: record.ticketType || 'General',
     seat: (record.ticketType || 'general').toLowerCase() === 'vip' ? 'VIP Section' : 'General Admission',
-    price: record.price ?? 0, // <-- Prevents undefined price crashes
+    price: record.price ?? 0,
+    holder: record.holder || 'Guest',
     status: record.status || 'valid',
   }
 }
 
-export async function fetchTickets(): Promise<Ticket[]> {
+export async function fetchTickets(email?: string): Promise<Ticket[]> {
   return withDelay(
-    listTickets().map(toTicketView),
+    listTickets()
+      .filter((t) => t.ownerEmail === email)
+      .map(toTicketView),
     400,
   )
 }
