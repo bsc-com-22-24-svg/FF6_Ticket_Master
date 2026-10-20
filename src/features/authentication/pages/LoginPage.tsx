@@ -4,6 +4,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { User } from '../authStore';
 import { useAuth } from '../useAuth';
 import { canAccess } from '../guards';
+import { useToast } from '../../toast';
 import styles from './LoginPage.module.css';
 
 function homeForRole(role: User['role']): string {
@@ -29,6 +30,7 @@ function safePath(path: string | undefined): string {
 
 export function LoginPage() {
   const { login, register } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const { redirect } = useSearch({ strict: false }) as { redirect?: string };
 
@@ -46,7 +48,17 @@ export function LoginPage() {
 
   const submit = useMutation({
     mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password, accountType)),
-    onSuccess: goAfterLogin,
+    onSuccess: (user) => {
+      if (mode === 'register') {
+        showToast(`Account created — welcome, ${user.name}!`, 'success');
+      }
+      goAfterLogin(user);
+    },
+    onError: (error) => {
+      if (mode === 'register') {
+        showToast(error.message, 'error');
+      }
+    },
   });
 
   const onSubmit = (e: FormEvent) => {
