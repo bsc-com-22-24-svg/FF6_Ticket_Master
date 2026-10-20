@@ -43,6 +43,8 @@ body {
   min-height: 100svh;
 }
 
+/* element defaults: inside @layer base so Tailwind classes (text-white, text-4xl, mt-4 ...) can override them */
+@layer base {
 img {
   max-width: 100%;
 }
@@ -68,6 +70,7 @@ p {
 
 a {
   color: inherit;
+}
 }
 
 .m {

@@ -7,6 +7,7 @@ import { useAuth } from '../useAuth';
 import styles from './LoginPage.module.css';
 
 function homeForRole(role: User['role']): string {
+  if (role === 'admin') return '/admin';        // <-- Added Admin redirect
   if (role === 'organizer') return '/organizer/dashboard';
   if (role === 'staff') return '/scan';
   return '/events';
@@ -85,8 +86,6 @@ export function LoginPage() {
             <li><span className={styles.perkIcon}>✓</span>Show your QR code at the door</li>
           </ul>
         </div>
-
-        
       </aside>
 
       <section className={styles.formSide}>

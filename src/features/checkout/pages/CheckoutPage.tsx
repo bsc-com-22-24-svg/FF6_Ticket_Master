@@ -7,7 +7,8 @@ import { calculateTotals, formatKwacha } from '../format'
 import { useCheckout, validatePayment } from '../hooks/useCheckout'
 import { getEvent } from '../../../lib/events'
 import { withDelay } from '../../../mocks/delay'
-import { DEMO_HOLDER, EMPTY_PAYMENT, MOBILE_MONEY_PROVIDERS } from '../mockData'
+import { EMPTY_PAYMENT, MOBILE_MONEY_PROVIDERS } from '../mockData'
+import { useAuth } from '../../authentication'
 import type { CheckoutResult, PaymentDetails, CheckoutEvent, TicketType } from '../types'
 import { OrderSummary } from '../components/OrderSummary'
 import { TicketConfirmation } from '../components/TicketConfirmation'
@@ -37,14 +38,19 @@ export function CheckoutPage(): ReactNode {
   const [quantity, setQuantity] = useState(() =>
     Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
   )
-  const [holder, setHolder] = useState(DEMO_HOLDER)
+  const { user } = useAuth()
+  const [holder, setHolder] = useState(user?.name ?? '')
   const [payment, setPayment] = useState<PaymentDetails>(EMPTY_PAYMENT)
   const [clientError, setClientError] = useState<string | null>(null)
   const [result, setResult] = useState<CheckoutResult | null>(null)
 
   const { data: eventData, isLoading, isError } = useQuery({
     queryKey: ['checkout-event', eventId],
-    queryFn: () => withDelay(getEvent(eventId ?? '') ?? null),
+    queryFn: () => {
+      const found = getEvent(eventId ?? '')
+      // drafts are private to the organizer, so they cannot be bought
+      return withDelay(found && found.status === 'Published' ? found : null)
+    },
     enabled: !!eventId,
   })
 
