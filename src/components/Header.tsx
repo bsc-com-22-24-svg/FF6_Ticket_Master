@@ -31,18 +31,26 @@ export default function Header() {
           Tic-EM
         </Link>
 
-        <nav className="hidden items-center gap-8 lg:flex">
+        <nav className="hidden items-center gap-6 lg:flex xl:gap-8">
           {headerLinks.map((item) => (
             <SiteLink key={item.label} item={item} className="text-sm font-medium text-slate-600 hover:text-navy" />
           ))}
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-slate-600">{user.name} · {user.role}</span>
+            <div className="flex items-center gap-4 border-l border-slate-200 pl-5">
               <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>
               {user.role === 'customer' && <Link to="/tickets" className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
               {user.role === 'staff' && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
               {user.role === 'admin' && <Link to="/admin" className="text-sm font-medium text-red-600 hover:text-red-800 font-bold">Admin Panel</Link>}
+              <div className="flex items-center gap-2.5">
+                <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-50 text-xs font-bold uppercase text-navy">
+                  {user.name.trim().charAt(0)}
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-sm font-semibold text-slate-700">{user.name}</span>
+                  <span className="text-[11px] font-medium capitalize text-slate-500">{user.role}</span>
+                </span>
+              </div>
               <button onClick={handleLogout} className="rounded-full border px-4 py-1.5 text-sm font-semibold hover:bg-slate-50">Logout</button>
             </div>
           ) : (
@@ -62,12 +70,20 @@ export default function Header() {
           ))}
           {user ? (
             <div className="flex flex-col gap-2 pt-2">
-              <span className="px-3 py-1 text-sm text-slate-600">{user.name} · {user.role}</span>
               <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>
               {user.role === 'customer' && <Link to="/tickets" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
               {user.role === 'staff' && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}
               {user.role === 'admin' && <Link to="/admin" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50">Admin Panel</Link>}
+              <div className="mt-1 flex items-center gap-2.5 border-t border-slate-100 px-3 pt-3">
+                <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-50 text-xs font-bold uppercase text-navy">
+                  {user.name.trim().charAt(0)}
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="text-sm font-semibold text-slate-700">{user.name}</span>
+                  <span className="text-[11px] font-medium capitalize text-slate-500">{user.role}</span>
+                </span>
+              </div>
               <button onClick={handleLogout} className="mt-2 rounded-full border py-2 text-center font-semibold hover:bg-slate-50">Logout</button>
             </div>
           ) : (

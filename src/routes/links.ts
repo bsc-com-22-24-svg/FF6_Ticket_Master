@@ -7,7 +7,6 @@ export interface NavLink {
 
 export const headerLinks: NavLink[] = [
   { label: 'Home', to: '/' },
-  { label: 'Concerts', slug: 'concerts' },
   { label: 'Events', href: '/#events' },
   { label: 'About', href: '/#about' },
   { label: 'Contact', href: '/#contact' },
