@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { User } from '../authStore';
-import { DEMO_ACCOUNTS } from '../authStore';
 import { useAuth } from '../useAuth';
+import { canAccess } from '../guards';
 import styles from './LoginPage.module.css';
 
 function homeForRole(role: User['role']): string {
@@ -36,20 +36,16 @@ export function LoginPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const organizerArea = !!redirect && redirect.startsWith('/organizer');
+  const [accountType, setAccountType] = useState<'customer' | 'organizer'>(organizerArea ? 'organizer' : 'customer');
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const goAfterLogin = (user: User) =>
-    navigate({ to: redirect ? safePath(redirect) : homeForRole(user.role) });
+    navigate({ to: redirect && canAccess(user.role, safePath(redirect)) ? safePath(redirect) : homeForRole(user.role) });
 
   const submit = useMutation({
-    mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password)),
-    onSuccess: goAfterLogin,
-  });
-
-  const demoLogin = useMutation({
-    mutationFn: (account: (typeof DEMO_ACCOUNTS)[number]) =>
-      login(account.email, account.password),
+    mutationFn: () => (mode === 'login' ? login(email, password) : register(name, email, password, accountType)),
     onSuccess: goAfterLogin,
   });
 
@@ -67,7 +63,7 @@ export function LoginPage() {
   };
 
   const errorMessage =
-    formError ?? (submit.error?.message || demoLogin.error?.message || null);
+    formError ?? (submit.error?.message || null);
 
   return (
     <main className={styles.page}>
@@ -106,7 +102,17 @@ export function LoginPage() {
 
           <form onSubmit={onSubmit} noValidate>
             {mode === 'register' && (
-              <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} className={styles.field} />
+              <>
+                <div className={styles.tabs}>
+                  <button type="button" onClick={() => setAccountType('customer')} className={`${styles.tab} ${accountType === 'customer' ? styles.active : ''}`}>
+                    I want to buy tickets
+                  </button>
+                  <button type="button" onClick={() => setAccountType('organizer')} className={`${styles.tab} ${accountType === 'organizer' ? styles.active : ''}`}>
+                    I'm an organizer
+                  </button>
+                </div>
+                <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} className={styles.field} />
+              </>
             )}
             <input type="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className={styles.field} />
             <div className={styles.passwordRow}>
@@ -129,26 +135,6 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className={styles.note}>Browsing events never needs an account.</p>
-
-          {mode === 'login' && (
-            <div className={styles.demo}>
-              <p className={styles.demoTitle}>Demo accounts · one-tap sign in</p>
-              <div className={styles.demoButtons}>
-                {DEMO_ACCOUNTS.map((account) => (
-                  <button
-                    key={account.email}
-                    type="button"
-                    disabled={demoLogin.isPending || submit.isPending}
-                    onClick={() => demoLogin.mutate(account)}
-                    className={styles.demoButton}
-                  >
-                    {account.role}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </section>
     </main>

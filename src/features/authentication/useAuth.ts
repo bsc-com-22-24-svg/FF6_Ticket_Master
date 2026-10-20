@@ -5,7 +5,7 @@ import type {User} from './authStore';
 export interface AuthValue{
     user:User|null;
     login :(email:string, password:string) => Promise<User>;
-    register: (name: string ,email:string,password:string)=> Promise<User>;
+    register: (name: string ,email:string,password:string, role?: 'customer' | 'organizer')=> Promise<User>;
     logout:() => void;
 }
 

@@ -58,11 +58,11 @@ export async function loginRequest(email:string,password:string):Promise<User>{
     return startSession(account);
 }
 
-export async function registerRequest(name:string,email:string,password:string): Promise<User>{
+export async function registerRequest(name:string,email:string,password:string,role: 'customer' | 'organizer' = 'customer'): Promise<User>{
     await wait();
     const cleanEmail = email.trim().toLowerCase();
     if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exists');
-    const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role:'customer'};
+    const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role};
     const saved = readJson<StoredUser[]>(ACCOUNTS_KEY)??[];
     localStorage.setItem(ACCOUNTS_KEY,JSON.stringify([...saved,account]));
     return startSession(account);

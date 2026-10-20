@@ -1,6 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { AppLayout } from '../components/AppLayout';
-import { LoginPage, requireAuth } from '../features/authentication';
+import { LoginPage, requireAuth, requireVerifiedOrganizer } from '../features/authentication';
 import { EventsPage, EventDetailsPage } from '../features/events';
 import { CheckoutPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
@@ -34,8 +34,8 @@ const routeTree = rootRoute.addChildren([
   page('/tickets/$ticketId', MyTicketsPage, requireAuth('customer')), // <-- Kept specific route
   page('/bookings', BookingHistoryPage, requireAuth('customer')),
   page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
-  page('/organizer/events/new', CreateEventPage, requireAuth('organizer')),
-  page('/organizer/events/$eventId/edit', CreateEventPage, requireAuth('organizer')),
+  page('/organizer/events/new', CreateEventPage, requireVerifiedOrganizer()),
+  page('/organizer/events/$eventId/edit', CreateEventPage, requireVerifiedOrganizer()),
   page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),
   notFoundRoute,
