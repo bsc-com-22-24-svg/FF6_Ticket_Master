@@ -1,4 +1,4 @@
-export type Role = 'customer' | 'organizer' | 'staff';
+export type Role = 'customer' | 'organizer' | 'staff' | 'admin';
 
 export interface User{
     id:string;
@@ -16,6 +16,7 @@ const MOCK_USERS: StoredUser[] = [
   { id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' },
   { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', password: 'password123', role: 'organizer' },
   { id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', password: 'password123', role: 'staff' },
+  { id: 'u-4', name: 'Platform Admin', email: 'admin@example.com', password: 'password123', role: 'admin' },
 ];
 
 const SESSION_KEY = 'tm_user';
@@ -47,6 +48,7 @@ export const DEMO_ACCOUNTS = [
   { role: 'Customer', email: 'customer@example.com', password: 'password123' },
   { role: 'Organizer', email: 'organizer@example.com', password: 'password123' },
   { role: 'Staff', email: 'staff@example.com', password: 'password123' },
+  { role: 'Admin', email: 'admin@example.com', password: 'password123' },
 ] as const
 
 export async function loginRequest(email:string,password:string):Promise<User>{
@@ -64,7 +66,6 @@ export async function registerRequest(name:string,email:string,password:string):
     const saved = readJson<StoredUser[]>(ACCOUNTS_KEY)??[];
     localStorage.setItem(ACCOUNTS_KEY,JSON.stringify([...saved,account]));
     return startSession(account);
-    
 }
 
 export function logoutRequest():void{

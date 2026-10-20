@@ -7,52 +7,36 @@ import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage } from '../features/organizer';
 import { HomePage } from '../features/landing'
+import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
 import NotFoundPage from '../components/NotFoundPage';
 import type { ReactNode } from 'react';
 
 const rootRoute = createRootRoute({ component: AppLayout });
 
-const page = <P extends string>(
-  path: P,
-  component: () => ReactNode,
-  beforeLoad?: ReturnType<typeof requireAuth>,
-) => createRoute({ getParentRoute: () => rootRoute, path, component, beforeLoad });
+const page = <P extends string>(path: P, component: () => ReactNode, beforeLoad?: ReturnType<typeof requireAuth>) => createRoute({ getParentRoute: () => rootRoute, path, component, beforeLoad });
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: HomePage,
-});
-
+const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomePage });
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   component: LoginPage,
-  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
-    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({ redirect: typeof search.redirect === 'string' ? search.redirect : undefined }),
 });
-
-const notFoundRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '*',
-  component: NotFoundPage,
-})
+const notFoundRoute = createRoute({ getParentRoute: () => rootRoute, path: '*', component: NotFoundPage })
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   page('/events', EventsPage),
   page('/events/$eventId', EventDetailsPage),
-  // customer
   page('/checkout/$eventId', CheckoutPage, requireAuth('customer')),
-  page('/tickets/$ticketId', MyTicketsPage, requireAuth('customer')),
+  page('/tickets', MyTicketsPage, requireAuth('customer')),         // <-- Added base tickets route
+  page('/tickets/$ticketId', MyTicketsPage, requireAuth('customer')), // <-- Kept specific route
   page('/bookings', BookingHistoryPage, requireAuth('customer')),
-  // organizer
   page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
   page('/organizer/events/new', CreateEventPage, requireAuth('organizer')),
   page('/organizer/events/$eventId/edit', CreateEventPage, requireAuth('organizer')),
-  // staff
+  page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),
   notFoundRoute,
 ]);
@@ -60,7 +44,5 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({ routeTree });
 
 declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router;
-  }
+  interface Register { router: typeof router; }
 }

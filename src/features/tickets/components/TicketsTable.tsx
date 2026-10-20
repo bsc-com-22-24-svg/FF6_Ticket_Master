@@ -23,18 +23,19 @@ export function TicketsTable({ tickets, onView }: TicketsTableProps) {
           </tr>
         </thead>
         <tbody>
-          {tickets.map((t) => (
-            <tr key={t.id}>
-              <td className={styles.event}>{t.eventTitle}</td>
-              <td>{formatDate(t.date)}</td>
-              <td>{t.id}</td>
-              <td>{t.ticketType}</td>
-              <td>{formatMoney(t.price)}</td>
+          {tickets.map((t, index) => (
+            /* Use ID if it exists, otherwise fallback to the array index to prevent duplicate key crashes */
+            <tr key={t.id || `fallback-${index}`}>
+              <td className={styles.event}>{t.eventTitle || 'Unknown Event'}</td>
+              <td>{t.date ? formatDate(t.date) : 'TBD'}</td>
+              <td>{t.id || 'N/A'}</td>
+              <td>{t.ticketType || 'Standard'}</td>
+              <td>{formatMoney(t.price ?? 0)}</td>
               <td>
                 <span
                   className={`${styles.badge} ${t.status === 'valid' ? styles.valid : styles.used}`}
                 >
-                  {t.status}
+                  {t.status || 'valid'}
                 </span>
               </td>
               <td>
@@ -42,6 +43,7 @@ export function TicketsTable({ tickets, onView }: TicketsTableProps) {
                   type="button"
                   className={styles.link}
                   onClick={() => onView(t.id)}
+                  disabled={!t.id}
                 >
                   View ticket
                 </button>

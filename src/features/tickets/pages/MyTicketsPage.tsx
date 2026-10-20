@@ -25,6 +25,8 @@ export function MyTicketsPage() {
   const activeId = selectedId ?? ticketId ?? null;
 
   const tickets = data ?? [];
+  
+  // Find the specific ticket, or default to the very first one
   const featured: Ticket | undefined =
     tickets.find((t) => t.id === activeId) ?? tickets[0];
   const others = tickets.filter((t) => t.id !== featured?.id);

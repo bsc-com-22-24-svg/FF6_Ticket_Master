@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
-import { issueTicket, type TicketRecord } from '../../../lib/tickets'
-import { incrementSold } from '../../../lib/events'
+import { issueBooking } from '../../../lib/tickets'
+import { getEvent, incrementSold } from '../../../lib/events'
 import type { CheckoutInput, CheckoutResult, PaymentDetails } from '../types'
 
 export class CheckoutError extends Error {}
@@ -55,22 +55,18 @@ async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     throw new CheckoutError('Payment was declined. No ticket was issued — please try again.')
   }
 
-  const tickets: TicketRecord[] = []
-  for (let index = 0; index < input.quantity; index += 1) {
-    tickets.push(
-      issueTicket({
-        eventId: input.event.id,
-        eventName: input.event.name,
-        date: input.event.date,
-        time: input.event.time,
-        venue: input.event.venue,
-        city: input.event.city,
-        ticketType: input.ticketType.name,
-        price: input.ticketType.price,
-        holder: input.holder.trim() || 'Guest',
-      }),
-    )
+  const storedEvent = getEvent(input.event.id)
+  if (!storedEvent || storedEvent.status !== 'Published') {
+    throw new CheckoutError('This event is not available for booking.')
   }
+
+  // One call creates the tickets AND the booking that owns them (Booking History reads it)
+  const { tickets } = issueBooking({
+    event: storedEvent,
+    ticketType: input.ticketType,
+    quantity: input.quantity,
+    holder: input.holder,
+  })
 
   // Persist the sale so remaining seats drop across the whole app.
   incrementSold(input.event.id, input.ticketType.id, input.quantity)
