@@ -9,16 +9,20 @@ import { useAuth } from '../../authentication'
 import { getKYC, saveKYC, type KYCStatus } from '../../../lib/verification'
 import StatCard from '../components/StatCard'
 import SalesChart from '../components/SalesChart'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
+import { useToast } from '../../toast'
 
 export function OrganizerDashboardPage() {
   const { user } = useAuth()
   const { data: events = [], isLoading } = useAllEvents()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { showToast } = useToast()
   
   // KYC State
   const [kyc, setKyc] = useState(() => user ? getKYC(user.id) : null)
   const [showKycForm, setShowKycForm] = useState(false)
   const [formData, setFormData] = useState({ businessName: '', phoneNumber: '', nationalId: '' })
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const selected = useMemo(
     () => events.find((event) => event.id === (selectedId ?? events[0]?.id)),
@@ -38,10 +42,14 @@ export function OrganizerDashboardPage() {
   }, [selected])
 
   function handleReset() {
-    if (!window.confirm('Reset all demo data (events, tickets and bookings)?')) return
+    setShowResetConfirm(true)
+  }
+
+  function confirmReset() {
     resetEvents()
     window.localStorage.removeItem(TICKETS_KEY)
     window.localStorage.removeItem(BOOKINGS_KEY)
+    showToast('Demo data reset', 'success')
     window.location.reload()
   }
 
@@ -59,6 +67,7 @@ export function OrganizerDashboardPage() {
     saveKYC(newKyc)
     setKyc(newKyc)
     setShowKycForm(false)
+    showToast('Verification submitted', 'success')
   }
 
   const kycStatus = kyc?.status || 'Unverified'
@@ -129,9 +138,26 @@ export function OrganizerDashboardPage() {
                 <Plus size={16} /> Create event
               </Link>
             ) : (
-              <button type="button" onClick={() => alert('You must be verified to create an event.')} className="flex items-center gap-2 rounded-full bg-slate-400 px-5 py-2 text-sm font-semibold text-white cursor-not-allowed">
-                <Plus size={16} /> Create event
-              </button>
+              <div className="flex flex-col items-start gap-1">
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="flex items-center gap-2 rounded-full bg-slate-400 px-5 py-2 text-sm font-semibold text-white cursor-not-allowed"
+                >
+                  <Plus size={16} /> Create event
+                </button>
+                <p className="text-xs text-slate-600">
+                  You need to verify your account before you can create events.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowKycForm(true)}
+                    className="font-semibold text-navy underline hover:no-underline"
+                  >
+                    Verify now
+                  </button>
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -189,6 +215,16 @@ export function OrganizerDashboardPage() {
             </div>
           </div>
         </div>
+        <ConfirmDialog
+          open={showResetConfirm}
+          onClose={() => setShowResetConfirm(false)}
+          onConfirm={confirmReset}
+          title="Reset demo data"
+          description="Reset all demo data (events, tickets and bookings)? This action cannot be undone."
+          confirmLabel="Reset"
+          cancelLabel="Cancel"
+          variant="danger"
+        />
       </div>
     </div>
   )

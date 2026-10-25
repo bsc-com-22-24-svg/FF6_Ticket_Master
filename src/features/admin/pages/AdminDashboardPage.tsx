@@ -4,9 +4,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { listAllEvents, saveEvent, type StoredEvent } from '../../../lib/events'
 import { listAllKYC, saveKYC, type OrganizerKYC } from '../../../lib/verification'
 import StatCard from '../../organizer/components/StatCard'
+import { useToast } from '../../toast'
 
 export function AdminDashboardPage() {
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
   const [events, setEvents] = useState<StoredEvent[]>(listAllEvents())
   const [kycs, setKycs] = useState<OrganizerKYC[]>(listAllKYC())
   const [activeTab, setActiveTab] = useState<'events' | 'organizers'>('organizers')
@@ -19,11 +21,21 @@ export function AdminDashboardPage() {
     saveEvent({ ...event, status: newStatus })
     setEvents(listAllEvents())
     queryClient.invalidateQueries({ queryKey: ['events'] })
+    if (newStatus === 'Published') {
+      showToast('Event approved and published', 'success')
+    } else if (newStatus === 'Draft') {
+      showToast('Event rejected', 'info')
+    }
   }
 
   function updateKycStatus(kyc: OrganizerKYC, newStatus: 'Verified' | 'Rejected') {
     saveKYC({ ...kyc, status: newStatus })
     setKycs(listAllKYC())
+    if (newStatus === 'Verified') {
+      showToast('Organizer verified', 'success')
+    } else if (newStatus === 'Rejected') {
+      showToast('Organizer verification rejected', 'info')
+    }
   }
 
   return (
