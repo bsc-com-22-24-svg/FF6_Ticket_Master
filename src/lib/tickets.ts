@@ -1,4 +1,6 @@
 import type { Event, TicketType } from '../types/event'
+import { calculateTotals } from '../features/checkout/format'
+import { SERVICE_FEE } from '../features/checkout/mockData'
 
 export type TicketStatus = 'valid' | 'used'
 
@@ -26,7 +28,9 @@ export interface BookingRecord {
   venue: string
   date: string // ISO date
   quantity: number
-  total: number // in MK
+  subtotal: number // tickets only, in MK
+  serviceFee: number // in MK
+  total: number // what the customer paid (subtotal + serviceFee), in MK
   status: BookingStatus
   ticketIds: string[]
 }
@@ -88,8 +92,21 @@ export function getTicket(id: string): TicketRecord | undefined {
   return listTickets().find((ticket) => ticket.id.toUpperCase() === normalized)
 }
 
+// Older saved bookings have no breakdown. Derive one so the UI never
+// shows undefined (subtotal = total - service fee, as the issue asks).
+function withBreakdown(record: BookingRecord): BookingRecord {
+  if (typeof record.subtotal === 'number' && typeof record.serviceFee === 'number') {
+    return record
+  }
+  return {
+    ...record,
+    serviceFee: SERVICE_FEE,
+    subtotal: Math.max(record.total - SERVICE_FEE, 0),
+  }
+}
+
 export function listBookings(): BookingRecord[] {
-  return readList(BOOKINGS_KEY, DEMO_BOOKINGS)
+  return readList<BookingRecord>(BOOKINGS_KEY, DEMO_BOOKINGS).map(withBreakdown)
 }
 
 function generateId(prefix: string): string {
@@ -149,6 +166,7 @@ export interface IssueBookingInput {
   quantity: number
   holder: string
   ownerEmail?: string
+  serviceFee?: number // defaults to the checkout service fee
 }
 
 export interface IssueBookingResult {
@@ -158,7 +176,7 @@ export interface IssueBookingResult {
 
 // Issues the tickets and the booking that owns them in one step.
 export function issueBooking(input: IssueBookingInput): IssueBookingResult {
-  const { event, ticketType, quantity, holder, ownerEmail } = input
+  const { event, ticketType, quantity, holder, ownerEmail, serviceFee } = input
 
   const tickets: TicketRecord[] = []
   for (let index = 0; index < quantity; index += 1) {
@@ -184,13 +202,19 @@ export function issueBooking(input: IssueBookingInput): IssueBookingResult {
     bookingId = generateId('BK')
   }
 
+  // Same calculation the checkout page uses, so the stored total always
+  // matches the amount the customer was charged.
+  const totals = calculateTotals(ticketType.price, quantity, serviceFee)
+
   const booking: BookingRecord = {
     id: bookingId,
     eventTitle: event.title,
     venue: event.venue,
     date: event.date,
     quantity,
-    total: quantity * ticketType.price,
+    subtotal: totals.subtotal,
+    serviceFee: totals.serviceFee,
+    total: totals.total,
     status: 'confirmed',
     ticketIds: tickets.map((ticket) => ticket.id),
   }

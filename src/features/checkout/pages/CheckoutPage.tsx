@@ -39,7 +39,7 @@ export function CheckoutPage(): ReactNode {
     Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
   )
   const { user } = useAuth()
-  const [holder, setHolder] = useState(user?.name ?? '')
+  const [holder] = useState(user?.name ?? '')
   const [payment, setPayment] = useState<PaymentDetails>(EMPTY_PAYMENT)
   const [clientError, setClientError] = useState<string | null>(null)
   const [result, setResult] = useState<CheckoutResult | null>(null)
