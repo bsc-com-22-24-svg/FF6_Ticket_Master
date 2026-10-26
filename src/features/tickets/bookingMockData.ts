@@ -1,4 +1,4 @@
-import { listBookings, type BookingRecord } from '../../lib/tickets'
+import { listBookings, listTickets, type BookingRecord } from '../../lib/tickets'
 import { withDelay } from '../../mocks/delay'
 import type { Booking } from './bookingTypes'
 
@@ -11,6 +11,8 @@ function toBookingView(record: BookingRecord): Booking {
     venue: record.venue,
     date: record.date,
     quantity: record.quantity,
+    subtotal: record.subtotal,
+    serviceFee: record.serviceFee,
     total: record.total,
     status: record.status,
   }

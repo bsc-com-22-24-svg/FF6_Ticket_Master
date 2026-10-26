@@ -3,7 +3,7 @@ import { Users, Ticket, Coins, CheckCircle, Plus, Pencil, RotateCcw, ShieldAlert
 import { Link } from '@tanstack/react-router'
 import { useAllEvents } from '../../events'
 import { remainingSeats } from '../../../types/event'
-import { listTickets, BOOKINGS_KEY, TICKETS_KEY } from '../../../lib/tickets'
+import { listBookings, listTickets, BOOKINGS_KEY, TICKETS_KEY } from '../../../lib/tickets'
 import { resetEvents } from '../../../lib/events'
 import { useAuth } from '../../authentication'
 import { getKYC, saveKYC, type KYCStatus } from '../../../lib/verification'
@@ -30,15 +30,29 @@ export function OrganizerDashboardPage() {
   )
 
   const stats = useMemo(() => {
-    if (!selected) return { sold: 0, capacity: 0, remaining: 0, revenue: 0, checkedIn: 0 }
+    if (!selected) return { sold: 0, capacity: 0, remaining: 0, revenue: 0, fees: 0, checkedIn: 0 }
     const sold = selected.ticketTypes.reduce((sum, type) => sum + type.sold, 0)
     const capacity = selected.ticketTypes.reduce((sum, type) => sum + type.capacity, 0)
     const remaining = selected.ticketTypes.reduce((sum, type) => sum + remainingSeats(type), 0)
-    const revenue = selected.ticketTypes.reduce((sum, type) => sum + type.sold * type.price, 0)
+    const ticketSales = selected.ticketTypes.reduce((sum, type) => sum + type.sold * type.price, 0)
+    // service fees collected on this event's confirmed bookings (issue #66)
+    const eventTicketIds = new Set(
+      listTickets()
+        .filter((ticket) => ticket.eventId === selected.id)
+        .map((ticket) => ticket.id),
+    )
+    const fees = listBookings()
+      .filter(
+        (booking) =>
+          booking.status === 'confirmed' &&
+          booking.ticketIds.some((id) => eventTicketIds.has(id)),
+      )
+      .reduce((sum, booking) => sum + booking.serviceFee, 0)
+    const revenue = ticketSales + fees
     const checkedIn = listTickets().filter(
       (ticket) => ticket.eventId === selected.id && ticket.status === 'used',
     ).length
-    return { sold, capacity, remaining, revenue, checkedIn }
+    return { sold, capacity, remaining, revenue, fees, checkedIn }
   }, [selected])
 
   function handleReset() {
@@ -191,7 +205,7 @@ export function OrganizerDashboardPage() {
 
           <StatCard label="Tickets sold" value={stats.sold.toLocaleString()} detail={`${stats.capacity.toLocaleString()} total`} icon={Ticket} />
           <StatCard label="Remaining" value={stats.remaining.toLocaleString()} detail="seats left" icon={Users} />
-          <StatCard label="Revenue" value={`MK ${stats.revenue.toLocaleString()}`} detail="from sales" icon={Coins} />
+          <StatCard label="Revenue" value={`MK ${stats.revenue.toLocaleString()}`} detail={stats.fees > 0 ? `incl. MK ${stats.fees.toLocaleString()} fees` : 'from sales'} icon={Coins} />
           <StatCard label="Checked in" value={stats.checkedIn.toLocaleString()} detail="attendees admitted" icon={CheckCircle} />
         </div>
 
