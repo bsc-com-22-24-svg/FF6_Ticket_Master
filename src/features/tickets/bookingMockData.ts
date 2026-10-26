@@ -1,4 +1,4 @@
-import { listBookings, listTickets, type BookingRecord } from '../../lib/tickets'
+import { listBookingsForUser, type BookingRecord } from '../../lib/tickets'
 import { withDelay } from '../../mocks/delay'
 import type { Booking } from './bookingTypes'
 
@@ -18,11 +18,8 @@ function toBookingView(record: BookingRecord): Booking {
   }
 }
 
-export async function fetchBookings(email?: string): Promise<Booking[]> {
-  return withDelay(
-    listBookings()
-      .filter((b) => b.ticketIds.some((id) => listTickets().find((t) => t.id === id)?.ownerEmail === email))
-      .map(toBookingView),
-    400,
-  )
+export async function fetchBookings(userId?: string): Promise<Booking[]> {
+  // No signed-in user means nothing to show; never fall back to every booking.
+  const records = userId ? listBookingsForUser(userId) : []
+  return withDelay(records.map(toBookingView), 400)
 }

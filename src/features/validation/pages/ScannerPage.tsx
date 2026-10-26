@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
 import { listEvents } from '../../../lib/events'
 import { ScanResult } from '../components/ScanResult'
@@ -11,6 +12,7 @@ export function ScannerPage(): ReactNode {
   const [result, setResult] = useState<TicketValidationResult | null>(null)
   const [history, setHistory] = useState<TicketValidationResult[]>([])
   const [manualCode, setManualCode] = useState('')
+  const queryClient = useQueryClient()
   const events = listEvents()
   const [selectedEventId, setSelectedEventId] = useState(SCAN_EVENT.id)
   const selectedEvent =
@@ -22,8 +24,11 @@ export function ScannerPage(): ReactNode {
       setResult(outcome)
       setHistory((previous) => [outcome, ...previous].slice(0, 6))
       setManualCode('')
+      if (outcome.status === 'valid') {
+        queryClient.invalidateQueries({ queryKey: ['event-stats'] })
+      }
     },
-    [selectedEventId],
+    [queryClient, selectedEventId],
   )
 
   const { videoRef, status, error, start, stop } = useQrScanner(handleCode)

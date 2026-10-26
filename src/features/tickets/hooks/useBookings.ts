@@ -4,8 +4,11 @@ import { useAuth } from '../../authentication';
 
 export function useBookings() {
   const { user } = useAuth();
+  const userId = user?.id;
   return useQuery({
-    queryKey: ['bookings', user?.email],
-    queryFn: () => fetchBookings(user?.email),
+    // Keyed per user so switching accounts never shows the previous cache.
+    queryKey: ['bookings', userId],
+    queryFn: () => fetchBookings(userId),
+    enabled: !!userId,
   });
 }

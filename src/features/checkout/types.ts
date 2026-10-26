@@ -29,7 +29,7 @@ export interface PaymentDetails {
 }
 
 export interface CheckoutInput {
-  ownerEmail?: string
+  userId: string
   event: CheckoutEvent
   ticketType: TicketType
   quantity: number

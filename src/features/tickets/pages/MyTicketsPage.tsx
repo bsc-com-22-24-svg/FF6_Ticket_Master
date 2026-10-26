@@ -74,7 +74,7 @@ export function MyTicketsPage() {
                 <div className={styles.itemInfo}>
                   <h3 className={styles.itemTitle}>{t.eventTitle}</h3>
                   <p className={styles.meta}>
-                    {t.venue} · {formatDate(t.date)}
+                    {t.venue}, {t.city} · {formatDate(t.date)}
                   </p>
                   <p className={styles.meta} style={{ fontWeight: 500, color: '#0a1f47' }}>
                     Holder: {t.holder}

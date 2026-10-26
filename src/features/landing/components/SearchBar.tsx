@@ -35,7 +35,8 @@ function Highlight({ text, word }: HighlightProps) {
 
 interface SearchBarProps {
   filters: Filters
-  setFilters: (f: Filters) => void
+  setFilters: (f: Filters, options?: { replace?: boolean }) => void
+  onShowAll?: (filters: Filters) => void
 }
 
 type OpenBox = 'none' | 'filters' | 'results'
@@ -48,7 +49,7 @@ const MAX_RESULTS = 5
 //   - Enter opens the focused option, Escape closes and returns to the input,
 //     Tab closes the list
 //   - a hidden live region announces how many events were found
-export default function SearchBar({ filters, setFilters }: SearchBarProps) {
+export default function SearchBar({ filters, setFilters, onShowAll }: SearchBarProps) {
   const [openBox, setOpenBox] = useState<OpenBox>('none')
   const [activeIndex, setActiveIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -73,10 +74,12 @@ export default function SearchBar({ filters, setFilters }: SearchBarProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const update = (name: keyof Filters, value: string) => setFilters({ ...filters, [name]: value })
+  const update = (name: keyof Filters, value: string, options?: { replace?: boolean }) =>
+    setFilters({ ...filters, [name]: value }, options)
 
   const handleTyping = (e: ChangeEvent<HTMLInputElement>) => {
-    update('search', e.target.value)
+    // Typeahead replaces the current entry; committed filters push a new one.
+    update('search', e.target.value, { replace: true })
     setOpenBox(e.target.value.trim() ? 'results' : 'none')
     setActiveIndex(-1)
   }
@@ -99,6 +102,10 @@ export default function SearchBar({ filters, setFilters }: SearchBarProps) {
 
   const goToEvents = (restoreFocus = false) => {
     closeBox(restoreFocus)
+    if (onShowAll) {
+      onShowAll(filters)
+      return
+    }
     document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' })
   }
 

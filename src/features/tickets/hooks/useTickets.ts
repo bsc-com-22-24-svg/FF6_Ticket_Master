@@ -4,8 +4,11 @@ import { useAuth } from '../../authentication';
 
 export function useTickets() {
   const { user } = useAuth();
+  const userId = user?.id;
   return useQuery({
-    queryKey: ['tickets', user?.email],
-    queryFn: () => fetchTickets(user?.email),
+    // Keyed per user so switching accounts never shows the previous cache.
+    queryKey: ['tickets', userId],
+    queryFn: () => fetchTickets(userId),
+    enabled: !!userId,
   });
 }

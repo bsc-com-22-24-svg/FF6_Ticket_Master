@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import { QrCode } from '../../../components/QrCode'
 import type { TicketRecord } from '../../../lib/tickets'
 import { formatKwacha } from '../format'
-import { downloadTicketImage, formatTicketDate } from '../ticketImage'
+import { downloadTicketImage, ticketFromRecord } from '../../tickets/ticketImage'
+import { formatDate } from '../../tickets/ticketFormat'
 
 interface TicketConfirmationProps {
   tickets: TicketRecord[]
@@ -53,7 +54,7 @@ function TicketPass({ ticket }: { ticket: TicketRecord }): ReactNode {
         <h2 style={{ marginTop: 10 }}>{ticket.eventName}</h2>
         <p className="m">{ticket.venue}, {ticket.city}</p>
         <div className="g g2" style={{ marginTop: 14 }}>
-          <div><span className="m">Date</span><br /><b>{formatTicketDate(ticket.date)}</b></div>
+          <div><span className="m">Date</span><br /><b>{formatDate(ticket.date)}</b></div>
           <div><span className="m">Time</span><br /><b>{ticket.time}</b></div>
           <div><span className="m">Ticket</span><br /><b>{ticket.ticketType}</b></div>
           <div><span className="m">Entry</span><br /><b>{ticket.ticketType} Admission</b></div>
@@ -65,7 +66,7 @@ function TicketPass({ ticket }: { ticket: TicketRecord }): ReactNode {
           type="button"
           className="btn"
           style={{ marginTop: 8 }}
-          onClick={() => downloadTicketImage(ticket, qrRef.current)}
+          onClick={() => void downloadTicketImage(ticketFromRecord(ticket), qrRef.current)}
         >
           Download ticket PNG
         </button>
