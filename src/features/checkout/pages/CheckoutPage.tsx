@@ -2,16 +2,14 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useSearch, Link } from '@tanstack/react-router'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { calculateTotals, formatKwacha } from '../format'
-import { useCheckout, validatePayment } from '../hooks/useCheckout'
+import { useCheckout } from '../hooks/useCheckout'
 import { getEvent } from '../../../lib/events'
 import { withDelay } from '../../../mocks/delay'
-import { EMPTY_PAYMENT, MOBILE_MONEY_PROVIDERS } from '../mockData'
 import { useAuth } from '../../authentication'
-import type { CheckoutResult, PaymentDetails, CheckoutEvent, TicketType } from '../types'
+import type { CheckoutEvent, TicketType } from '../types'
 import { OrderSummary } from '../components/OrderSummary'
-import { TicketConfirmation } from '../components/TicketConfirmation'
 import { TicketSummaryCard } from '../components/TicketSummaryCard'
 import { remainingSeats } from '../../../types/event'
 
@@ -39,10 +37,8 @@ export function CheckoutPage(): ReactNode {
     Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
   )
   const { user } = useAuth()
-  const [holder, setHolder] = useState(user?.name ?? '')
-  const [payment, setPayment] = useState<PaymentDetails>(EMPTY_PAYMENT)
+  const [holder] = useState(user?.name ?? '')
   const [clientError, setClientError] = useState<string | null>(null)
-  const [result, setResult] = useState<CheckoutResult | null>(null)
 
   const { data: eventData, isLoading, isError } = useQuery({
     queryKey: ['checkout-event', eventId],
@@ -71,7 +67,6 @@ export function CheckoutPage(): ReactNode {
       }
 
   const checkout = useCheckout()
-  const queryClient = useQueryClient()
 
   const totals = ticketType
     ? calculateTotals(ticketType.price, quantity)
@@ -79,10 +74,6 @@ export function CheckoutPage(): ReactNode {
   const remaining = ticketType ? remainingSeats(ticketType) : 0
   const soldOut = remaining <= 0
   const exceedsAvailable = quantity > remaining
-  function updatePayment(patch: Partial<PaymentDetails>) {
-    setPayment((current) => ({ ...current, ...patch }))
-  }
-
   function selectTicketType(id: string) {
     setSelectedTypeId(id)
     setQuantity(1)
@@ -90,25 +81,17 @@ export function CheckoutPage(): ReactNode {
   }
 
   function handlePay() {
-    if (!ticketType) return
+    if (!ticketType || !user) return
     setClientError(null)
-    const paymentError = validatePayment(payment)
-    if (paymentError) {
-      setClientError(paymentError)
-      return
-    }
-    checkout.mutate(
-      { event: checkoutEvent, ticketType, quantity, holder, payment, ownerEmail: user?.email },
-      {
-        onSuccess: (data) => {
-          setResult(data)
-          queryClient.invalidateQueries({ queryKey: ['events'] })
-          queryClient.invalidateQueries({ queryKey: ['checkout-event'] })
-          queryClient.invalidateQueries({ queryKey: ['tickets'] })
-          queryClient.invalidateQueries({ queryKey: ['bookings'] })
-        },
-      },
-    )
+    // goes to PayChangu; tickets are issued on the return page once the payment is confirmed
+    checkout.mutate({
+      event: checkoutEvent,
+      ticketType,
+      quantity,
+      holder,
+      email: user.email,
+      ownerEmail: user.email,
+    })
   }
 
   if (isLoading) {
@@ -126,19 +109,6 @@ export function CheckoutPage(): ReactNode {
         <p className="mt-2 text-slate-600">We couldn’t find this event to check out.</p>
         <Link to="/events" className="mt-6 inline-block rounded-full bg-navy px-6 py-2 text-white">Browse events</Link>
       </div>
-    )
-  }
-
-  if (result) {
-    return (
-      <TicketConfirmation
-        tickets={result.tickets}
-        onBuyAgain={() => {
-          setResult(null)
-          setQuantity(1)
-          checkout.reset()
-        }}
-      />
     )
   }
 
@@ -192,81 +162,15 @@ export function CheckoutPage(): ReactNode {
 
           <div className="card">
             <h2>Payment</h2>
-            <div className="pills">
-              <button
-                type="button"
-                className={`pill ${payment.method === 'mobile_money' ? 'on' : ''}`}
-                onClick={() => updatePayment({ method: 'mobile_money' })}
-              >
-                Mobile money
-              </button>
-              <button
-                type="button"
-                className={`pill ${payment.method === 'card' ? 'on' : ''}`}
-                onClick={() => updatePayment({ method: 'card' })}
-              >
-                Card
-              </button>
-            </div>
-
-            {payment.method === 'mobile_money' ? (
-              <div className="g g2">
-                <label className="m" style={{ display: 'block' }}>
-                  Provider
-                  <select
-                    className="in"
-                    style={{ marginTop: 4 }}
-                    value={payment.provider}
-                    onChange={(event) => updatePayment({ provider: event.target.value })}
-                  >
-                    {MOBILE_MONEY_PROVIDERS.map((provider) => (
-                      <option key={provider} value={provider}>
-                        {provider}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="m" style={{ display: 'block' }}>
-                  Phone number
-                  <input
-                    className="in"
-                    style={{ marginTop: 4 }}
-                    inputMode="numeric"
-                    placeholder="0991 234 567"
-                    value={payment.phoneNumber}
-                    onChange={(event) => updatePayment({ phoneNumber: event.target.value })}
-                  />
-                </label>
-              </div>
-            ) : (
-              <div className="g g2">
-                <label className="m" style={{ display: 'block' }}>
-                  Card number
-                  <input
-                    className="in"
-                    style={{ marginTop: 4 }}
-                    inputMode="numeric"
-                    placeholder="4242 4242 4242 4242"
-                    value={payment.cardNumber}
-                    onChange={(event) => updatePayment({ cardNumber: event.target.value })}
-                  />
-                </label>
-                <label className="m" style={{ display: 'block' }}>
-                  Expiry (MM/YY)
-                  <input
-                    className="in"
-                    style={{ marginTop: 4 }}
-                    placeholder="12/27"
-                    value={payment.cardExpiry}
-                    onChange={(event) => updatePayment({ cardExpiry: event.target.value })}
-                  />
-                </label>
-              </div>
-            )}
-
             <p className="m">
-              If payment fails, no ticket is issued and you can try again. A payment number ending in
-              “00” simulates a declined payment.
+              You pay securely on PayChangu. Choose Airtel Money, TNM Mpamba or a bank card on the next screen.
+            </p>
+            <p className="m">
+              Your receipt goes to <b>{user?.email}</b>.
+            </p>
+            <p className="m">
+              A ticket is issued only after PayChangu confirms the payment. If it fails or you cancel, you are not
+              charged and no ticket is issued.
             </p>
           </div>
 

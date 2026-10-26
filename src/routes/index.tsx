@@ -2,7 +2,7 @@ import { createRootRoute, createRoute, createRouter } from '@tanstack/react-rout
 import { AppLayout } from '../components/AppLayout';
 import { LoginPage, requireAuth, requireVerifiedOrganizer } from '../features/authentication';
 import { EventsPage, EventDetailsPage } from '../features/events';
-import { CheckoutPage } from '../features/checkout';
+import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage } from '../features/organizer';
@@ -29,6 +29,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   page('/events', EventsPage),
   page('/events/$eventId', EventDetailsPage),
+  page('/checkout/return', PaymentReturnPage, requireAuth('customer')), // PayChangu sends customers back here
   page('/checkout/$eventId', CheckoutPage, requireAuth('customer')),
   page('/tickets', MyTicketsPage, requireAuth('customer')),         // <-- Added base tickets route
   page('/tickets/$ticketId', MyTicketsPage, requireAuth('customer')), // <-- Kept specific route

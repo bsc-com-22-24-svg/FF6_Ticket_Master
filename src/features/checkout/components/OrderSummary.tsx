@@ -37,7 +37,7 @@ export function OrderSummary({
         </span>
       </div>
       <button type="button" className="btn w" onClick={onPay} disabled={disabled || paying}>
-        {paying ? 'Processing payment…' : `Pay ${formatKwacha(total)}`}
+        {paying ? 'Redirecting to PayChangu…' : `Pay ${formatKwacha(total)} with PayChangu`}
       </button>
       <p className="m" style={{ textAlign: 'center', marginTop: 8 }}>
         A ticket is issued only after payment is confirmed.

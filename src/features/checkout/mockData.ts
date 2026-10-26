@@ -1,4 +1,4 @@
-import type { CheckoutEvent, PaymentDetails, TicketType } from './types'
+import type { CheckoutEvent, TicketType } from './types'
 
 export const CHECKOUT_EVENT: CheckoutEvent = {
   id: 'evt-lakeshore',
@@ -17,14 +17,3 @@ export const CHECKOUT_TICKET_TYPES: TicketType[] = [
 
 export const SERVICE_FEE = 500
 
-export const MOBILE_MONEY_PROVIDERS = ['Airtel Money', 'TNM Mpamba', 'T-Pay']
-
-export const DEMO_HOLDER = 'Chimwemwe Banda'
-
-export const EMPTY_PAYMENT: PaymentDetails = {
-  method: 'mobile_money',
-  provider: MOBILE_MONEY_PROVIDERS[0],
-  phoneNumber: '',
-  cardNumber: '',
-  cardExpiry: '',
-}
