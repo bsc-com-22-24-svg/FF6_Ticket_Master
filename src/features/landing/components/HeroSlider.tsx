@@ -7,10 +7,11 @@ import { useAutoplay } from '../hooks/useAutoplay'
 
 interface HeroSliderProps {
   filters: Filters
-  setFilters: (f: Filters) => void
+  setFilters: (f: Filters, options?: { replace?: boolean }) => void
+  onShowAll?: (filters: Filters) => void
 }
 
-export default function HeroSlider({ filters, setFilters }: HeroSliderProps) {
+export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSliderProps) {
   const [current, setCurrent] = useState(0)
   const total = heroSlides.length
 
@@ -54,7 +55,7 @@ export default function HeroSlider({ filters, setFilters }: HeroSliderProps) {
           </p>
         </div>
         <div className="mt-10 w-full">
-          <SearchBar filters={filters} setFilters={setFilters} />
+          <SearchBar filters={filters} setFilters={setFilters} onShowAll={onShowAll} />
         </div>
       </div>
 

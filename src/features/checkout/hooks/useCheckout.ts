@@ -62,11 +62,11 @@ async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
 
   // One call creates the tickets AND the booking that owns them (Booking History reads it)
   const { tickets } = issueBooking({
+    userId: input.userId,
     event: storedEvent,
     ticketType: input.ticketType,
     quantity: input.quantity,
     holder: input.holder,
-    ownerEmail: input.ownerEmail,
   })
 
   // Persist the sale so remaining seats drop across the whole app.

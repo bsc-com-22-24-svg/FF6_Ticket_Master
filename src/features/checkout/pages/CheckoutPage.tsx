@@ -90,7 +90,7 @@ export function CheckoutPage(): ReactNode {
   }
 
   function handlePay() {
-    if (!ticketType) return
+    if (!ticketType || !user) return
     setClientError(null)
     const paymentError = validatePayment(payment)
     if (paymentError) {
@@ -98,7 +98,7 @@ export function CheckoutPage(): ReactNode {
       return
     }
     checkout.mutate(
-      { event: checkoutEvent, ticketType, quantity, holder, payment, ownerEmail: user?.email },
+      { event: checkoutEvent, ticketType, quantity, holder, payment, userId: user.id },
       {
         onSuccess: (data) => {
           setResult(data)
@@ -106,6 +106,8 @@ export function CheckoutPage(): ReactNode {
           queryClient.invalidateQueries({ queryKey: ['checkout-event'] })
           queryClient.invalidateQueries({ queryKey: ['tickets'] })
           queryClient.invalidateQueries({ queryKey: ['bookings'] })
+          queryClient.invalidateQueries({ queryKey: ['sales-series'] })
+          queryClient.invalidateQueries({ queryKey: ['event-stats'] })
         },
       },
     )

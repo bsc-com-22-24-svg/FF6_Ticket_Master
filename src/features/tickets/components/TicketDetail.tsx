@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import type { Ticket } from '../ticketTypes';
 import { formatDate, formatMoney } from '../ticketFormat';
-import { downloadTicketImage } from '../ticketDownload';
+import { downloadTicketImage, ticketFromView } from '../ticketImage';
 import styles from './TicketDetail.module.css';
 
 export function TicketDetail({ ticket }: { ticket: Ticket }) {
@@ -14,7 +14,7 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
       <div className={styles.info}>
         <span className={`${styles.badge} ${statusClass}`}>{ticket.status}</span>
         <h2 className={styles.title}>{ticket.eventTitle}</h2>
-        <p className={styles.venue}>{ticket.venue}</p>
+        <p className={styles.venue}>{ticket.venue}, {ticket.city}</p>
 
         <div className={styles.details}>
           <div>
@@ -42,7 +42,7 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
         <button
           type="button"
           className={styles.download}
-          onClick={() => downloadTicketImage(ticket, qrRef.current)}
+          onClick={() => void downloadTicketImage(ticketFromView(ticket), qrRef.current)}
         >
           Download ticket
         </button>

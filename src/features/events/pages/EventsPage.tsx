@@ -1,14 +1,20 @@
-import { useState } from 'react'
-import { defaultFilters, filterEvents, type Filters } from '../../landing/filters'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { filtersFromSearch, filterEvents, searchFromFilters, type Filters } from '../../landing/filters'
 import { useEvents } from '../hooks/useEvents'
 import EventCard from '../../landing/components/EventCard'
 import SearchBar from '../../landing/components/SearchBar'
 import Reveal from '../../../components/Reveal'
 
 export function EventsPage() {
-  const [filters, setFilters] = useState<Filters>(defaultFilters)
+  const search = useSearch({ from: '/events' })
+  const navigate = useNavigate({ from: '/events' })
+  const filters = filtersFromSearch(search)
   const { data: events = [], isLoading, isError } = useEvents()
   const visibleEvents = filterEvents(events, filters)
+
+  function setFilters(next: Filters, options?: { replace?: boolean }) {
+    navigate({ search: searchFromFilters(next), replace: options?.replace })
+  }
 
   return (
     <div className="min-h-screen">
@@ -27,7 +33,7 @@ export function EventsPage() {
         </div>
       </section>
 
-      <section className="py-12">
+      <section id="events" className="py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {isLoading && (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

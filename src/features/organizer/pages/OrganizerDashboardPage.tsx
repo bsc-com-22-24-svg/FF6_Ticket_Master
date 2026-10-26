@@ -2,13 +2,14 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Users, Ticket, Coins, CheckCircle, Plus, Pencil, RotateCcw, ShieldAlert } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useAllEvents } from '../../events'
-import { remainingSeats } from '../../../types/event'
-import { listBookings, listTickets, BOOKINGS_KEY, TICKETS_KEY } from '../../../lib/tickets'
+import { resetTicketStore } from '../../../lib/tickets'
 import { resetEvents } from '../../../lib/events'
 import { useAuth } from '../../authentication'
 import { getKYC, saveKYC, type KYCStatus } from '../../../lib/verification'
 import StatCard from '../components/StatCard'
 import SalesChart from '../components/SalesChart'
+import { useSalesSeries } from '../hooks/useSalesSeries'
+import { EMPTY_EVENT_STATS, useEventStats } from '../hooks/useEventStats'
 import { ConfirmDialog } from '../../../components/ConfirmDialog'
 import { useToast } from '../../toast'
 
@@ -29,31 +30,10 @@ export function OrganizerDashboardPage() {
     [events, selectedId],
   )
 
-  const stats = useMemo(() => {
-    if (!selected) return { sold: 0, capacity: 0, remaining: 0, revenue: 0, fees: 0, checkedIn: 0 }
-    const sold = selected.ticketTypes.reduce((sum, type) => sum + type.sold, 0)
-    const capacity = selected.ticketTypes.reduce((sum, type) => sum + type.capacity, 0)
-    const remaining = selected.ticketTypes.reduce((sum, type) => sum + remainingSeats(type), 0)
-    const ticketSales = selected.ticketTypes.reduce((sum, type) => sum + type.sold * type.price, 0)
-    // service fees collected on this event's confirmed bookings (issue #66)
-    const eventTicketIds = new Set(
-      listTickets()
-        .filter((ticket) => ticket.eventId === selected.id)
-        .map((ticket) => ticket.id),
-    )
-    const fees = listBookings()
-      .filter(
-        (booking) =>
-          booking.status === 'confirmed' &&
-          booking.ticketIds.some((id) => eventTicketIds.has(id)),
-      )
-      .reduce((sum, booking) => sum + booking.serviceFee, 0)
-    const revenue = ticketSales + fees
-    const checkedIn = listTickets().filter(
-      (ticket) => ticket.eventId === selected.id && ticket.status === 'used',
-    ).length
-    return { sold, capacity, remaining, revenue, fees, checkedIn }
-  }, [selected])
+  // Sales and attendance come from the same reactive query source, so buying
+  // or checking in a ticket updates the dashboard without a reload.
+  const { data: stats = EMPTY_EVENT_STATS } = useEventStats(selected?.id)
+  const { data: series = [] } = useSalesSeries(selected?.id)
 
   function handleReset() {
     setShowResetConfirm(true)
@@ -61,8 +41,7 @@ export function OrganizerDashboardPage() {
 
   function confirmReset() {
     resetEvents()
-    window.localStorage.removeItem(TICKETS_KEY)
-    window.localStorage.removeItem(BOOKINGS_KEY)
+    resetTicketStore()
     showToast('Demo data reset', 'success')
     window.location.reload()
   }
@@ -212,7 +191,9 @@ export function OrganizerDashboardPage() {
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Sales this week</h2>
-            <div className="mt-6"><SalesChart values={[12, 18, 9, 24, 31, 15, 20]} /></div>
+            <div className="mt-6">
+              <SalesChart data={series} eventName={selected?.title} />
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Ticket types</h2>

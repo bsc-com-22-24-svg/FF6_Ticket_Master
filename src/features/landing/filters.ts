@@ -33,6 +33,62 @@ export const defaultFilters: Filters = {
   sort: 'date',
 }
 
+// The URL only carries non-default filters, so links stay short and readable.
+export type EventSearch = Partial<Filters>
+
+const priceValues = priceOptions.map((option) => option.value)
+const sortValues = sortOptions.map((option) => option.value)
+
+function picked(value: unknown, allowed: readonly string[]): string | undefined {
+  return typeof value === 'string' && allowed.includes(value) ? value : undefined
+}
+
+// validateSearch for both `/` and `/events`. Unknown or invalid values are
+// dropped, which makes them fall back to the defaults instead of breaking.
+export function validateEventSearch(raw: Record<string, unknown>): EventSearch {
+  const search: EventSearch = {}
+
+  if (typeof raw.search === 'string' && raw.search !== '') {
+    search.search = raw.search
+  }
+
+  const category = picked(raw.category, categories)
+  if (category && category !== defaultFilters.category) search.category = category
+
+  const city = picked(raw.city, cities)
+  if (city && city !== defaultFilters.city) search.city = city
+
+  const price = picked(raw.price, priceValues)
+  if (price && price !== defaultFilters.price) search.price = price
+
+  const sort = picked(raw.sort, sortValues)
+  if (sort && sort !== defaultFilters.sort) search.sort = sort
+
+  return search
+}
+
+// Merge partial URL state with the defaults for filtering/sorting.
+export function filtersFromSearch(search: EventSearch): Filters {
+  return {
+    search: search.search ?? defaultFilters.search,
+    category: search.category ?? defaultFilters.category,
+    city: search.city ?? defaultFilters.city,
+    price: search.price ?? defaultFilters.price,
+    sort: search.sort ?? defaultFilters.sort,
+  }
+}
+
+// Turn the full filter state back into a clean search object.
+export function searchFromFilters(filters: Filters): EventSearch {
+  const search: EventSearch = {}
+  if (filters.search !== '') search.search = filters.search
+  if (filters.category !== defaultFilters.category) search.category = filters.category
+  if (filters.city !== defaultFilters.city) search.city = filters.city
+  if (filters.price !== defaultFilters.price) search.price = filters.price
+  if (filters.sort !== defaultFilters.sort) search.sort = filters.sort
+  return search
+}
+
 function matchesPrice(price: number, option: string): boolean {
   if (option === 'free') return price === 0
   if (option === 'under10') return price < 10000
