@@ -7,12 +7,12 @@
   --tm-amber: #f59e0b;
   --tm-dark: #1c1917;
   --tm-dark-2: #292524;
-  --tm-bg: #e9e5e2;
+  --tm-bg: #f8fafc;
   --tm-shell: #f6f3f1;
   --tm-surface: #ffffff;
-  --tm-border: #e7e2de;
-  --tm-muted: #78716c;
-  --tm-text: #1c1917;
+  --tm-border: #e2e8f0;
+  --tm-muted: #64748b;
+  --tm-text: #0f172a;
   --tm-success: #16a34a;
   --tm-success-bg: #dcfce7;
 
@@ -20,9 +20,6 @@
   --tm-radius-sm: 10px;
   --tm-shadow: rgba(0, 0, 0, 0.08) 0 10px 30px -12px;
 
-  font: 14px/1.45 Inter, system-ui, 'Segoe UI', Arial, sans-serif;
-  color: var(--tm-text);
-  background: var(--tm-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -33,11 +30,8 @@
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-  background: var(--tm-bg);
-  color: var(--tm-text);
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+#root {
+  min-height: 100svh;
 }
 #root {
   min-height: 100svh;
@@ -522,10 +516,15 @@ hr {
 
 /* base styles (inside @layer base so Tailwind classes can still override them) */
 @layer base {
-  /* default border colour (Tailwind 4 uses black otherwise) */
   *, ::after, ::before { border-color: #e2e8f0; }
-  html { scroll-behavior: smooth; }
-  body { background: #ffffff; color: #475569; -webkit-font-smoothing: antialiased; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body { 
+    margin: 0;
+    background: #ffffff; 
+    color: #475569; 
+    -webkit-font-smoothing: antialiased; 
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
   h1, h2, h3, h4 { color: #0a1f47; }
   button { cursor: pointer; }
 }

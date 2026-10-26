@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { headerLinks } from '../routes/links'
 import SiteLink from './SiteLink'
@@ -8,12 +8,27 @@ import { useAuth } from '../features/authentication/useAuth'
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const location = useLocation()
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
     window.addEventListener('scroll', onScroll)
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Close menu on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    if (menuOpen) document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [menuOpen])
 
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -31,7 +46,8 @@ export default function Header() {
           Tic-EM
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex xl:gap-8">
+        {/* Desktop Nav */}
+        <nav aria-label="Main navigation" className="hidden items-center gap-6 lg:flex xl:gap-8">
           {headerLinks.map((item) => (
             <SiteLink key={item.label} item={item} className="text-sm font-medium text-slate-600 hover:text-navy" />
           ))}
@@ -58,13 +74,21 @@ export default function Header() {
           )}
         </nav>
 
-        <button aria-label="Menu" onClick={() => setMenuOpen(!menuOpen)} className="text-navy lg:hidden">
+        {/* Mobile Toggle */}
+        <button 
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
+          onClick={() => setMenuOpen(!menuOpen)} 
+          className="text-navy lg:hidden"
+        >
           {menuOpen ? <X /> : <Menu />}
         </button>
       </div>
 
+      {/* Mobile Nav */}
       {menuOpen && (
-        <nav className="flex flex-col border-t bg-white px-4 pb-4 lg:hidden">
+        <nav id="mobile-menu" aria-label="Mobile navigation" className="flex flex-col border-t bg-white px-4 pb-4 lg:hidden">
           {headerLinks.map((item) => (
             <SiteLink key={item.label} item={item} onClick={closeMenu} className="rounded-lg px-3 py-3 font-medium hover:bg-navy-50" />
           ))}

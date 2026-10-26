@@ -3,10 +3,12 @@ import { ShieldAlert, DollarSign, Check, X, Users } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listAllEvents, saveEvent, type StoredEvent } from '../../../lib/events'
 import { listAllKYC, saveKYC, type OrganizerKYC } from '../../../lib/verification'
+import { useToast } from '../../toast'
 import StatCard from '../../organizer/components/StatCard'
 
 export function AdminDashboardPage() {
   const queryClient = useQueryClient()
+  const { showToast } = useToast()
   const [events, setEvents] = useState<StoredEvent[]>(listAllEvents())
   const [kycs, setKycs] = useState<OrganizerKYC[]>(listAllKYC())
   const [activeTab, setActiveTab] = useState<'events' | 'organizers'>('organizers')
@@ -19,11 +21,13 @@ export function AdminDashboardPage() {
     saveEvent({ ...event, status: newStatus })
     setEvents(listAllEvents())
     queryClient.invalidateQueries({ queryKey: ['events'] })
+    showToast(`Event ${newStatus === 'Published' ? 'approved and published' : 'moved to ' + newStatus}`, 'success')
   }
 
   function updateKycStatus(kyc: OrganizerKYC, newStatus: 'Verified' | 'Rejected') {
     saveKYC({ ...kyc, status: newStatus })
     setKycs(listAllKYC())
+    showToast(`Organizer ${newStatus === 'Verified' ? 'verified' : 'rejected'}`, newStatus === 'Verified' ? 'success' : 'error')
   }
 
   return (
@@ -40,7 +44,6 @@ export function AdminDashboardPage() {
           <StatCard label="Pending KYC" value={pendingKyc.toString()} icon={Users} detail="Organizers to verify" />
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-4 mb-4 border-b border-slate-200">
           <button onClick={() => setActiveTab('organizers')} className={`pb-3 font-semibold text-sm ${activeTab === 'organizers' ? 'border-b-2 border-navy text-navy' : 'text-slate-500 hover:text-slate-700'}`}>Organizer Verification</button>
           <button onClick={() => setActiveTab('events')} className={`pb-3 font-semibold text-sm ${activeTab === 'events' ? 'border-b-2 border-navy text-navy' : 'text-slate-500 hover:text-slate-700'}`}>Event Moderation</button>
@@ -131,7 +134,6 @@ export function AdminDashboardPage() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
