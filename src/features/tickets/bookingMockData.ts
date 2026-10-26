@@ -1,9 +1,7 @@
-import { listBookings, type BookingRecord } from '../../lib/tickets'
+import { listBookings, listTickets, type BookingRecord } from '../../lib/tickets'
 import { withDelay } from '../../mocks/delay'
 import type { Booking } from './bookingTypes'
 
-// Bookings live in the shared store (src/lib/tickets.ts) next to the
-// tickets they own, so checkout shows up here automatically.
 function toBookingView(record: BookingRecord): Booking {
   return {
     id: record.id,
@@ -17,9 +15,12 @@ function toBookingView(record: BookingRecord): Booking {
 }
 
 export async function fetchBookings(email?: string): Promise<Booking[]> {
+  const allTickets = listTickets()
   return withDelay(
     listBookings()
-      .filter((b) => b.ticketIds.some((id) => listTickets().find((t) => t.id === id)?.ownerEmail === email))
+      .filter((b) =>
+        b.ticketIds.some((id) => allTickets.find((t) => t.id === id)?.ownerEmail === email)
+      )
       .map(toBookingView),
     400,
   )
