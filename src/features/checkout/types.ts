@@ -19,6 +19,7 @@ export interface TicketType {
 }
 
 export interface CheckoutInput {
+  userId: string
   event: CheckoutEvent
   ticketType: TicketType
   quantity: number

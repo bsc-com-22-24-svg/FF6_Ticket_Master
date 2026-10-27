@@ -90,7 +90,7 @@ export function CheckoutPage(): ReactNode {
       quantity,
       holder,
       email: user.email,
-      ownerEmail: user.email,
+      userId: user.id,
     })
   }
 
@@ -201,3 +201,4 @@ export function CheckoutPage(): ReactNode {
     </div>
   )
 }
+

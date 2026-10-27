@@ -7,12 +7,12 @@
   --tm-amber: #f59e0b;
   --tm-dark: #1c1917;
   --tm-dark-2: #292524;
-  --tm-bg: #f8fafc;
+  --tm-bg: #ffffff;
   --tm-shell: #f6f3f1;
   --tm-surface: #ffffff;
-  --tm-border: #e2e8f0;
-  --tm-muted: #64748b;
-  --tm-text: #0f172a;
+  --tm-border: #e7e2de;
+  --tm-muted: #78716c;
+  --tm-text: #475569;
   --tm-success: #16a34a;
   --tm-success-bg: #dcfce7;
 
@@ -20,6 +20,12 @@
   --tm-radius-sm: 10px;
   --tm-shadow: rgba(0, 0, 0, 0.08) 0 10px 30px -12px;
 
+  /* Base font size set to 16px per design guidelines */
+  font-size: 16px;
+  line-height: 1.45;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  color: var(--tm-text);
+  background: var(--tm-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,9 +36,6 @@
   box-sizing: border-box;
 }
 
-#root {
-  min-height: 100svh;
-}
 #root {
   min-height: 100svh;
 }
@@ -514,17 +517,13 @@ hr {
   --color-navy-100: #dbe6f8;
 }
 
-/* base styles (inside @layer base so Tailwind classes can still override them) */
+/* Base styles inside @layer base so Tailwind utilities can override them.
+ * Note: Unlayered styles have higher priority than layered styles in CSS cascade,
+ * so we keep body declared only inside @layer base to avoid conflicts. */
 @layer base {
   *, ::after, ::before { border-color: #e2e8f0; }
   html { scroll-behavior: smooth; font-size: 16px; }
-  body { 
-    margin: 0;
-    background: #ffffff; 
-    color: #475569; 
-    -webkit-font-smoothing: antialiased; 
-    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  }
+  body { background: #ffffff; color: #475569; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
   h1, h2, h3, h4 { color: #0a1f47; }
   button { cursor: pointer; }
 }

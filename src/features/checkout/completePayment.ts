@@ -65,7 +65,7 @@ async function run(txRef: string): Promise<CompletionResult> {
     ticketType,
     quantity: pending.quantity,
     holder: pending.holder,
-    ownerEmail: pending.ownerEmail,
+    userId: pending.userId,
   })
   incrementSold(event.id, ticketType.id, pending.quantity)
   markPaymentCompleted(pending.txRef, tickets.map((ticket) => ticket.id))

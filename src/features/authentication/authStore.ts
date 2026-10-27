@@ -39,6 +39,11 @@ export function getUser(): User | null{
     return readJson<User>(SESSION_KEY);
 }
 
+// Used when migrating legacy records that stored an owner email instead of an id.
+export function findUserByEmail(email: string): User | undefined{
+    return allAccounts().find((account) => account.email === email.trim().toLowerCase());
+}
+
 function startSession(account : StoredUser): User {
     const user:User = {id:account.id,name:account.name,email:account.email,role:account.role};
     localStorage.setItem(SESSION_KEY,JSON.stringify(user));

@@ -21,13 +21,21 @@ export function AdminDashboardPage() {
     saveEvent({ ...event, status: newStatus })
     setEvents(listAllEvents())
     queryClient.invalidateQueries({ queryKey: ['events'] })
-    showToast(`Event ${newStatus === 'Published' ? 'approved and published' : 'moved to ' + newStatus}`, 'success')
+    if (newStatus === 'Published') {
+      showToast('Event approved and published', 'success')
+    } else if (newStatus === 'Draft') {
+      showToast('Event rejected', 'info')
+    }
   }
 
   function updateKycStatus(kyc: OrganizerKYC, newStatus: 'Verified' | 'Rejected') {
     saveKYC({ ...kyc, status: newStatus })
     setKycs(listAllKYC())
-    showToast(`Organizer ${newStatus === 'Verified' ? 'verified' : 'rejected'}`, newStatus === 'Verified' ? 'success' : 'error')
+    if (newStatus === 'Verified') {
+      showToast('Organizer verified', 'success')
+    } else if (newStatus === 'Rejected') {
+      showToast('Organizer verification rejected', 'info')
+    }
   }
 
   return (
@@ -138,3 +146,4 @@ export function AdminDashboardPage() {
     </div>
   )
 }
+

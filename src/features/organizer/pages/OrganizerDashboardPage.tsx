@@ -2,26 +2,29 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { Users, Ticket, Coins, CheckCircle, Plus, Pencil, RotateCcw, ShieldAlert } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useAllEvents } from '../../events'
-import { remainingSeats } from '../../../types/event'
-import { listTickets, BOOKINGS_KEY, TICKETS_KEY } from '../../../lib/tickets'
+import { resetTicketStore } from '../../../lib/tickets'
 import { resetEvents } from '../../../lib/events'
 import { useAuth } from '../../authentication'
 import { getKYC, saveKYC, type KYCStatus } from '../../../lib/verification'
 import { Modal } from '../../../components/ui/Modal'
 import StatCard from '../components/StatCard'
 import SalesChart from '../components/SalesChart'
+import { useSalesSeries } from '../hooks/useSalesSeries'
+import { EMPTY_EVENT_STATS, useEventStats } from '../hooks/useEventStats'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
+import { useToast } from '../../toast'
 
 export function OrganizerDashboardPage() {
   const { user } = useAuth()
   const { data: events = [], isLoading } = useAllEvents()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const { showToast } = useToast()
   
   // KYC State
   const [kyc, setKyc] = useState(() => user ? getKYC(user.id) : null)
   const [showKycForm, setShowKycForm] = useState(false)
   const [kycError, setKycError] = useState<string | null>(null)
   const [formData, setFormData] = useState({ businessName: '', phoneNumber: '', nationalId: '' })
-
   // Reset confirmation state
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
@@ -30,22 +33,15 @@ export function OrganizerDashboardPage() {
     [events, selectedId],
   )
 
-  const stats = useMemo(() => {
-    if (!selected) return { sold: 0, capacity: 0, remaining: 0, revenue: 0, checkedIn: 0 }
-    const sold = selected.ticketTypes.reduce((sum, type) => sum + type.sold, 0)
-    const capacity = selected.ticketTypes.reduce((sum, type) => sum + type.capacity, 0)
-    const remaining = selected.ticketTypes.reduce((sum, type) => sum + remainingSeats(type), 0)
-    const revenue = selected.ticketTypes.reduce((sum, type) => sum + type.sold * type.price, 0)
-    const checkedIn = listTickets().filter(
-      (ticket) => ticket.eventId === selected.id && ticket.status === 'used',
-    ).length
-    return { sold, capacity, remaining, revenue, checkedIn }
-  }, [selected])
+  // Sales and attendance come from the same reactive query source, so buying
+  // or checking in a ticket updates the dashboard without a reload.
+  const { data: stats = EMPTY_EVENT_STATS } = useEventStats(selected?.id)
+  const { data: series = [] } = useSalesSeries(selected?.id)
 
-  function handleReset() {
+  function confirmReset() {
     resetEvents()
-    window.localStorage.removeItem(TICKETS_KEY)
-    window.localStorage.removeItem(BOOKINGS_KEY)
+    resetTicketStore()
+    showToast('Demo data reset', 'success')
     window.location.reload()
   }
 
@@ -77,6 +73,7 @@ export function OrganizerDashboardPage() {
     saveKYC(newKyc)
     setKyc(newKyc)
     setShowKycForm(false)
+    showToast('Verification submitted', 'success')
   }
 
   const kycStatus = kyc?.status || 'Unverified'
@@ -119,9 +116,26 @@ export function OrganizerDashboardPage() {
                 <Plus size={16} /> Create event
               </Link>
             ) : (
-              <button type="button" disabled aria-disabled="true" className="flex items-center gap-2 rounded-full bg-slate-300 px-5 py-2 text-sm font-semibold text-slate-500 cursor-not-allowed">
-                <Plus size={16} /> Create event
-              </button>
+              <div className="flex flex-col items-start gap-1">
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="flex items-center gap-2 rounded-full bg-slate-400 px-5 py-2 text-sm font-semibold text-white cursor-not-allowed"
+                >
+                  <Plus size={16} /> Create event
+                </button>
+                <p className="text-xs text-slate-600">
+                  You need to verify your account before you can create events.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowKycForm(true)}
+                    className="font-semibold text-navy underline hover:no-underline"
+                  >
+                    Verify now
+                  </button>
+                </p>
+              </div>
             )}
           </div>
         </div>
@@ -155,14 +169,16 @@ export function OrganizerDashboardPage() {
 
           <StatCard label="Tickets sold" value={stats.sold.toLocaleString()} detail={`${stats.capacity.toLocaleString()} total`} icon={Ticket} />
           <StatCard label="Remaining" value={stats.remaining.toLocaleString()} detail="seats left" icon={Users} />
-          <StatCard label="Revenue" value={`MK ${stats.revenue.toLocaleString()}`} detail="from sales" icon={Coins} />
+          <StatCard label="Revenue" value={`MK ${stats.revenue.toLocaleString()}`} detail={stats.fees > 0 ? `incl. MK ${stats.fees.toLocaleString()} fees` : 'from sales'} icon={Coins} />
           <StatCard label="Checked in" value={stats.checkedIn.toLocaleString()} detail="attendees admitted" icon={CheckCircle} />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Sales this week</h2>
-            <div className="mt-6"><SalesChart values={[12, 18, 9, 24, 31, 15, 20]} /></div>
+            <div className="mt-6">
+              <SalesChart data={series} eventName={selected?.title} />
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Ticket types</h2>
@@ -179,16 +195,17 @@ export function OrganizerDashboardPage() {
             </div>
           </div>
         </div>
+        <ConfirmDialog
+          open={showResetConfirm}
+          onClose={() => setShowResetConfirm(false)}
+          onConfirm={confirmReset}
+          title="Reset demo data"
+          description="Reset all demo data (events, tickets and bookings)? This action cannot be undone."
+          confirmLabel="Reset"
+          cancelLabel="Cancel"
+          variant="danger"
+        />
       </div>
-
-      {/* Reset Confirmation Modal */}
-      <Modal isOpen={showResetConfirm} onClose={() => setShowResetConfirm(false)} title="Reset demo data?">
-        <p className="text-slate-600 mb-6">This will permanently delete all events, tickets, and bookings, and restore the original seed data. This action cannot be undone.</p>
-        <div className="flex gap-3 justify-end">
-          <button onClick={() => setShowResetConfirm(false)} className="rounded-xl border px-4 py-2 font-semibold hover:bg-slate-50">Cancel</button>
-          <button onClick={handleReset} className="rounded-xl bg-red-600 px-4 py-2 font-semibold text-white hover:bg-red-700">Reset Data</button>
-        </div>
-      </Modal>
 
       {/* KYC Form Modal */}
       <Modal isOpen={showKycForm} onClose={() => setShowKycForm(false)} title="Organizer Verification">
@@ -217,3 +234,4 @@ export function OrganizerDashboardPage() {
     </div>
   )
 }
+

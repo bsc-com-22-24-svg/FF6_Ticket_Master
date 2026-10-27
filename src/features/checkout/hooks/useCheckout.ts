@@ -41,7 +41,7 @@ async function startPayment(input: CheckoutInput): Promise<never> {
     ticketTypeId: ticketType.id,
     quantity: input.quantity,
     holder: input.holder,
-    ownerEmail: input.ownerEmail,
+    userId: input.userId,
     amount,
     createdAt: new Date().toISOString(),
     status: 'pending',
@@ -72,3 +72,4 @@ async function startPayment(input: CheckoutInput): Promise<never> {
 export function useCheckout() {
   return useMutation({ mutationFn: startPayment })
 }
+

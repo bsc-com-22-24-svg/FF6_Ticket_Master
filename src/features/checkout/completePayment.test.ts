@@ -15,7 +15,7 @@ function pendingOrder(txRef: string, amount = 70500) {
     ticketTypeId: ticketType.id,
     quantity: 2,
     holder: 'Test Holder',
-    ownerEmail: 'customer@example.com',
+    userId: 'user-1',
     amount,
     createdAt: new Date().toISOString(),
     status: 'pending',

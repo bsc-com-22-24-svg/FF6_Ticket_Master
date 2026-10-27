@@ -23,6 +23,10 @@ export function BookingCard({ booking }: { booking: Booking }) {
         <p className={styles.meta}>
           {booking.id} · {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
         </p>
+        <p className={styles.meta}>
+          Subtotal MK {booking.subtotal.toLocaleString()} · Service fee MK{' '}
+          {booking.serviceFee.toLocaleString()}
+        </p>
       </div>
       <div className={styles.side}>
         <strong className={styles.total}>MK {booking.total.toLocaleString()}</strong>

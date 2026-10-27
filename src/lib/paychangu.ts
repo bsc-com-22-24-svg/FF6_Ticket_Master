@@ -8,7 +8,7 @@ export interface PendingPayment {
   ticketTypeId: string
   quantity: number
   holder: string
-  ownerEmail?: string
+  userId: string
   amount: number // total in MWK, what we expect PayChangu to confirm
   createdAt: string
   status: 'pending' | 'completed'
