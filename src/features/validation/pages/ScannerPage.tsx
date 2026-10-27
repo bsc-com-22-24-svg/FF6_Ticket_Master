@@ -111,7 +111,7 @@ export function ScannerPage(): ReactNode {
             <input
               className="in"
               style={{ margin: 0 }}
-              placeholder="Enter ticket ID, e.g. TM-2026-004871"
+              placeholder="Enter ticket ID, e.g. TM-2026-K7QX4ZP9R2WM"
               value={manualCode}
               onChange={(event) => setManualCode(event.target.value)}
             />
@@ -122,9 +122,10 @@ export function ScannerPage(): ReactNode {
 
           <div className="alert info">
             <b>Demo tickets for this event</b>
-            <p className="m">1. TM-2026-004871 — valid (accepts once)</p>
-            <p className="m">2. TM-2026-002540 — already used</p>
-            <p className="m">3. TM-2026-009999 — wrong event</p>
+            <p className="m">1. TM-2026-K7QX4ZP9R2WM — valid (accepts once)</p>
+            <p className="m">2. TM-2026-W9FJ2MXA4LEU — already used</p>
+            <p className="m">3. TM-2026-H3VN8DC5T6YB — wrong event</p>
+            <p className="m">4. TM-2026-K7QX4ZP9R2WM.AAAAAAAAAA — tampered (wrong security tag)</p>
             <p className="m">Any other code — invalid</p>
           </div>
         </div>

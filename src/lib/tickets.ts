@@ -2,6 +2,7 @@ import type { Event, TicketType } from '../types/event'
 import { calculateTotals } from '../features/checkout/format'
 import { SERVICE_FEE } from '../features/checkout/mockData'
 import { findUserByEmail } from '../features/authentication/authStore'
+import { isValidTicketTag, signTicket } from './ticketSignature'
 
 export type TicketStatus = 'valid' | 'used'
 
@@ -47,20 +48,32 @@ export interface TicketValidationResult {
   title: string
   message: string
   ticket?: TicketRecord
+  tampered?: boolean // the QR code carried a security tag that did not match
 }
 
 // Versioned keys. Records written by older builds are migrated on first read.
-export const TICKETS_KEY = 'tm.ticket-master.tickets.v2'
-export const BOOKINGS_KEY = 'tm.ticket-master.bookings.v2'
+export const TICKETS_KEY = 'tm.ticket-master.tickets.v3'
+export const BOOKINGS_KEY = 'tm.ticket-master.bookings.v3'
 const LEGACY_TICKETS_KEY = 'tm.ticket-master.tickets'
 const LEGACY_BOOKINGS_KEY = 'tm.ticket-master.bookings'
 
 // The seeded demo data belongs to the one-tap customer account.
 export const DEMO_CUSTOMER_ID = 'u-1'
 
-// QR codes encode "TICKET:<id>"; accept both forms everywhere.
+// A scanned or typed code can look like any of these (all accepted):
+//   TM-2026-ABCDEFGHJKLM                  plain ticket id (older form)
+//   TICKET:TM-2026-ABCDEFGHJKLM           QR code, unsigned (older form)
+//   TICKET:TM-2026-ABCDEFGHJKLM.1A2B3C4D5E   QR code with its security tag
+export function parseTicketCode(raw: string): { id: string; tag: string | null } {
+  const cleaned = raw.trim().toUpperCase().replace(/^TICKET:/, '')
+  const dot = cleaned.lastIndexOf('.')
+  if (dot === -1) return { id: cleaned, tag: null }
+  return { id: cleaned.slice(0, dot), tag: cleaned.slice(dot + 1) }
+}
+
+// the ticket id only, whichever form was scanned
 export function normalizeTicketCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/^TICKET:/, '')
+  return parseTicketCode(raw).id
 }
 
 // Demo timestamps are relative to first load so the "last 7 days" chart has
@@ -74,7 +87,7 @@ function demoCreatedAt(daysAgo: number, hour: number): string {
 
 const DEMO_TICKETS: TicketRecord[] = [
   {
-    id: 'TM-2026-004871',
+    id: 'TM-2026-K7QX4ZP9R2WM',
     userId: DEMO_CUSTOMER_ID,
     eventId: 'lake-of-stars',
     eventName: 'Lake of Stars Live',
@@ -89,7 +102,7 @@ const DEMO_TICKETS: TicketRecord[] = [
     createdAt: demoCreatedAt(2, 18),
   },
   {
-    id: 'TM-2026-009999',
+    id: 'TM-2026-H3VN8DC5T6YB',
     userId: DEMO_CUSTOMER_ID,
     eventId: 'dev-summit',
     eventName: 'Dev Summit 2026',
@@ -104,7 +117,7 @@ const DEMO_TICKETS: TicketRecord[] = [
     createdAt: demoCreatedAt(1, 9),
   },
   {
-    id: 'TM-2026-002540',
+    id: 'TM-2026-W9FJ2MXA4LEU',
     userId: DEMO_CUSTOMER_ID,
     eventId: 'mzuzu-food-fair',
     eventName: 'Mzuzu Food Fair',
@@ -134,7 +147,7 @@ const DEMO_BOOKINGS: BookingRecord[] = [
     serviceFee: SERVICE_FEE,
     total: 35500,
     status: 'confirmed',
-    ticketIds: ['TM-2026-004871'],
+    ticketIds: ['TM-2026-K7QX4ZP9R2WM'],
     createdAt: demoCreatedAt(2, 18),
   },
   {
@@ -149,7 +162,7 @@ const DEMO_BOOKINGS: BookingRecord[] = [
     serviceFee: SERVICE_FEE,
     total: 20500,
     status: 'confirmed',
-    ticketIds: ['TM-2026-009999'],
+    ticketIds: ['TM-2026-H3VN8DC5T6YB'],
     createdAt: demoCreatedAt(1, 9),
   },
   {
@@ -164,7 +177,7 @@ const DEMO_BOOKINGS: BookingRecord[] = [
     serviceFee: SERVICE_FEE,
     total: 20500,
     status: 'confirmed',
-    ticketIds: ['TM-2026-002540'],
+    ticketIds: ['TM-2026-W9FJ2MXA4LEU'],
     createdAt: demoCreatedAt(5, 11),
   },
   {
@@ -296,6 +309,19 @@ export function getTicket(id: string): TicketRecord | undefined {
   return listTickets().find((ticket) => ticket.id.toUpperCase() === normalized)
 }
 
+// What the QR code of a ticket contains: the id plus its security tag.
+// A ticket that is not in the store (sample data) gets the plain older form.
+export function ticketQrValue(id: string): string {
+  const ticket = getTicket(id)
+  if (!ticket) return 'TICKET:' + normalizeTicketCode(id)
+  return 'TICKET:' + ticket.id + '.' + signTicket(ticket.id, ticket.eventId)
+}
+
+// true when the tag from a scanned QR code matches this ticket
+export function hasValidSignature(ticket: TicketRecord, tag: string): boolean {
+  return isValidTicketTag(ticket.id, ticket.eventId, tag)
+}
+
 export function listBookings(): BookingRecord[] {
   return readList<LegacyBooking>(BOOKINGS_KEY, DEMO_BOOKINGS, LEGACY_BOOKINGS_KEY).map(normalizeBooking)
 }
@@ -313,9 +339,16 @@ export function resetTicketStore(): void {
   }
 }
 
+// 32 characters (no I, O, 0 or 1) so each random byte maps to one character evenly
+const ID_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+// 12 random characters = 60 bits, from the browser's secure random generator
 function generateId(prefix: string): string {
-  const serial = String(Math.floor(100000 + Math.random() * 900000))
-  return `${prefix}-2026-${serial}`
+  const bytes = new Uint8Array(12)
+  crypto.getRandomValues(bytes)
+  let serial = ''
+  for (const byte of bytes) serial += ID_ALPHABET.charAt(byte & 31)
+  return prefix + '-2026-' + serial
 }
 
 export interface IssueTicketInput {
