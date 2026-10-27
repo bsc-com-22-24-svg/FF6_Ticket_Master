@@ -1,80 +1,75 @@
 import { useMutation } from '@tanstack/react-query'
-import { issueBooking } from '../../../lib/tickets'
-import { getEvent, incrementSold } from '../../../lib/events'
-import type { CheckoutInput, CheckoutResult, PaymentDetails } from '../types'
+import { getEvent } from '../../../lib/events'
+import { remainingSeats } from '../../../types/event'
+import {
+  initiatePayment,
+  makeTxRef,
+  removePendingPayment,
+  savePendingPayment,
+} from '../../../lib/paychangu'
+import { calculateTotals } from '../format'
+import type { CheckoutInput } from '../types'
 
 export class CheckoutError extends Error {}
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
-export function validatePayment(payment: PaymentDetails): string | null {
-  if (payment.method === 'mobile_money') {
-    if (!payment.provider) return 'Choose a mobile money provider.'
-    const phone = payment.phoneNumber.replace(/\s+/g, '')
-    if (!/^\d{9,12}$/.test(phone)) return 'Enter a valid mobile money phone number.'
-    return null
-  }
-
-  const card = payment.cardNumber.replace(/\s+/g, '')
-  if (!/^\d{16}$/.test(card)) return 'Enter a valid 16-digit card number.'
-  if (!/^\d{2}\/\d{2}$/.test(payment.cardExpiry)) return 'Enter the card expiry as MM/YY.'
-  return null
-}
-
-function isPaymentAccepted(payment: PaymentDetails): boolean {
-  const reference =
-    payment.method === 'mobile_money' ? payment.phoneNumber : payment.cardNumber
-  const digits = reference.replace(/\s+/g, '')
-  return !digits.endsWith('00')
-}
-
-async function submitCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-  await delay(900)
-
-  const remaining = input.ticketType.capacity - input.ticketType.sold
-  if (input.quantity < 1) {
-    throw new CheckoutError('Select at least one ticket.')
-  }
-  if (remaining <= 0) {
-    throw new CheckoutError(`${input.ticketType.name} tickets are sold out for this event.`)
-  }
-  if (input.quantity > remaining) {
-    throw new CheckoutError(
-      `Only ${remaining} ${input.ticketType.name} ticket${remaining === 1 ? '' : 's'} left.`,
-    )
-  }
-
-  const paymentError = validatePayment(input.payment)
-  if (paymentError) throw new CheckoutError(paymentError)
-
-  if (!isPaymentAccepted(input.payment)) {
-    throw new CheckoutError('Payment was declined. No ticket was issued — please try again.')
-  }
-
-  const storedEvent = getEvent(input.event.id)
-  if (!storedEvent || storedEvent.status !== 'Published') {
+// Starts a real PayChangu payment. No ticket is issued here: tickets are issued on the
+// return page (completePayment.ts) only after PayChangu confirms the money arrived.
+async function startPayment(input: CheckoutInput): Promise<never> {
+  const stored = getEvent(input.event.id)
+  if (!stored || stored.status !== 'Published') {
     throw new CheckoutError('This event is not available for booking.')
   }
+  const ticketType = stored.ticketTypes.find((candidate) => candidate.id === input.ticketType.id)
+  if (!ticketType) throw new CheckoutError('That ticket type no longer exists.')
 
-  // One call creates the tickets AND the booking that owns them (Booking History reads it)
-  const { tickets } = issueBooking({
-    userId: input.userId,
-    event: storedEvent,
-    ticketType: input.ticketType,
+  if (input.quantity < 1) throw new CheckoutError('Select at least one ticket.')
+  const remaining = remainingSeats(ticketType)
+  if (remaining <= 0) throw new CheckoutError(`${ticketType.name} tickets are sold out for this event.`)
+  if (input.quantity > remaining) {
+    throw new CheckoutError(`Only ${remaining} ${ticketType.name} ticket${remaining === 1 ? '' : 's'} left.`)
+  }
+  if (!/^\S+@\S+\.\S+$/.test(input.email)) throw new CheckoutError('Your account needs a valid email address.')
+
+  const txRef = makeTxRef()
+  const amount = calculateTotals(ticketType.price, input.quantity).total
+  const [firstName, ...rest] = (input.holder.trim() || 'Customer').split(/\s+/)
+
+  // remember the order: PayChangu sends the customer back with only the reference
+  savePendingPayment({
+    txRef,
+    eventId: stored.id,
+    ticketTypeId: ticketType.id,
     quantity: input.quantity,
     holder: input.holder,
+    userId: input.userId,
+    amount,
+    createdAt: new Date().toISOString(),
+    status: 'pending',
   })
 
-  // Persist the sale so remaining seats drop across the whole app.
-  incrementSold(input.event.id, input.ticketType.id, input.quantity)
+  try {
+    const { checkout_url } = await initiatePayment({
+      amount,
+      email: input.email,
+      first_name: firstName,
+      last_name: rest.join(' ') || '-',
+      tx_ref: txRef,
+      callback_url: `${window.location.origin}/checkout/return`,
+      return_url: `${window.location.origin}/checkout/return`,
+      title: stored.title,
+      description: `${input.quantity} x ${ticketType.name} ticket${input.quantity === 1 ? '' : 's'}`,
+    })
+    window.location.assign(checkout_url)
+  } catch (error) {
+    removePendingPayment(txRef)
+    throw new CheckoutError(error instanceof Error ? error.message : 'Could not start the payment.')
+  }
 
-  return { reference: tickets[0].id, tickets }
+  // keep the button on "Redirecting…" until the browser leaves the page
+  return new Promise<never>(() => {})
 }
 
 export function useCheckout() {
-  return useMutation({ mutationFn: submitCheckout })
+  return useMutation({ mutationFn: startPayment })
 }
+

@@ -521,7 +521,6 @@ hr {
  * Note: Unlayered styles have higher priority than layered styles in CSS cascade,
  * so we keep body declared only inside @layer base to avoid conflicts. */
 @layer base {
-  /* default border colour (Tailwind 4 uses black otherwise) */
   *, ::after, ::before { border-color: #e2e8f0; }
   html { scroll-behavior: smooth; font-size: 16px; }
   body { background: #ffffff; color: #475569; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }

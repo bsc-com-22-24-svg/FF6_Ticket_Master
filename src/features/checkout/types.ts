@@ -1,7 +1,5 @@
 import type { TicketRecord } from '../../lib/tickets'
 
-export type PaymentMethod = 'mobile_money' | 'card'
-
 export interface CheckoutEvent {
   id: string
   name: string
@@ -20,21 +18,14 @@ export interface TicketType {
   sold: number
 }
 
-export interface PaymentDetails {
-  method: PaymentMethod
-  provider: string
-  phoneNumber: string
-  cardNumber: string
-  cardExpiry: string
-}
-
 export interface CheckoutInput {
   userId: string
   event: CheckoutEvent
   ticketType: TicketType
   quantity: number
   holder: string
-  payment: PaymentDetails
+  email: string // receipt email for PayChangu
+  ownerEmail?: string
 }
 
 export interface CheckoutResult {

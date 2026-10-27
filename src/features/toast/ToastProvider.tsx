@@ -26,6 +26,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismissToast],
   );
 
+  // clear pending timers when the provider unmounts
   useEffect(() => {
     const timeouts = timeoutIds.current;
     return () => {

@@ -6,6 +6,7 @@ import { resetTicketStore } from '../../../lib/tickets'
 import { resetEvents } from '../../../lib/events'
 import { useAuth } from '../../authentication'
 import { getKYC, saveKYC, type KYCStatus } from '../../../lib/verification'
+import { Modal } from '../../../components/ui/Modal'
 import StatCard from '../components/StatCard'
 import SalesChart from '../components/SalesChart'
 import { useSalesSeries } from '../hooks/useSalesSeries'
@@ -22,7 +23,9 @@ export function OrganizerDashboardPage() {
   // KYC State
   const [kyc, setKyc] = useState(() => user ? getKYC(user.id) : null)
   const [showKycForm, setShowKycForm] = useState(false)
+  const [kycError, setKycError] = useState<string | null>(null)
   const [formData, setFormData] = useState({ businessName: '', phoneNumber: '', nationalId: '' })
+  // Reset confirmation state
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const selected = useMemo(
@@ -35,10 +38,6 @@ export function OrganizerDashboardPage() {
   const { data: stats = EMPTY_EVENT_STATS } = useEventStats(selected?.id)
   const { data: series = [] } = useSalesSeries(selected?.id)
 
-  function handleReset() {
-    setShowResetConfirm(true)
-  }
-
   function confirmReset() {
     resetEvents()
     resetTicketStore()
@@ -48,6 +47,20 @@ export function OrganizerDashboardPage() {
 
   function submitKYC(e: FormEvent) {
     e.preventDefault()
+    setKycError(null)
+
+    // Inline Validation
+    if (!formData.businessName.trim()) {
+      return setKycError('Business name is required.')
+    }
+    const phoneClean = formData.phoneNumber.replace(/\s+/g, '')
+    if (!/^(\+?265|0)[89]\d{8}$/.test(phoneClean)) {
+      return setKycError('Enter a valid Malawian phone number (e.g. 0991 234 567).')
+    }
+    if (!formData.nationalId.trim()) {
+      return setKycError('National ID is required.')
+    }
+
     if (!user) return
     const newKyc = {
       userId: user.id,
@@ -82,38 +95,10 @@ export function OrganizerDashboardPage() {
             {kycStatus === 'Pending' ? (
               <span className="rounded-full bg-amber-200 px-4 py-2 text-sm font-bold text-amber-800">Under Review</span>
             ) : (
-              <button onClick={() => setShowKycForm(!showKycForm)} className="rounded-full bg-navy px-6 py-2 text-sm font-semibold text-white hover:bg-navy-dark whitespace-nowrap">
+              <button onClick={() => setShowKycForm(true)} className="rounded-full bg-navy px-6 py-2 text-sm font-semibold text-white hover:bg-navy-dark whitespace-nowrap">
                 {kycStatus === 'Rejected' ? 'Try Again' : 'Verify Now'}
               </button>
             )}
-          </div>
-        )}
-
-        {/* KYC Form Modal */}
-        {showKycForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <h2 className="text-xl font-bold mb-4">Organizer Verification</h2>
-              <p className="text-sm text-slate-600 mb-6">Please provide your legal details to prevent fraud and ensure secure payouts.</p>
-              <form onSubmit={submitKYC} className="space-y-4">
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Business / Organizer Name</span>
-                  <input required value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">Phone Number</span>
-                  <input required type="tel" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-slate-700">National ID / Registration Number</span>
-                  <input required value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
-                </label>
-                <div className="flex gap-3 pt-4">
-                  <button type="button" onClick={() => setShowKycForm(false)} className="flex-1 rounded-xl border py-2 text-sm font-semibold hover:bg-slate-50">Cancel</button>
-                  <button type="submit" className="flex-1 rounded-xl bg-navy py-2 text-sm font-semibold text-white hover:bg-navy-dark">Submit</button>
-                </div>
-              </form>
-            </div>
           </div>
         )}
 
@@ -123,7 +108,7 @@ export function OrganizerDashboardPage() {
             <p className="mt-2 text-slate-600">Track sales and attendance for your events</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={handleReset} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+            <button onClick={() => setShowResetConfirm(true)} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
               <RotateCcw size={16} /> Reset demo data
             </button>
             {kycStatus === 'Verified' ? (
@@ -221,6 +206,32 @@ export function OrganizerDashboardPage() {
           variant="danger"
         />
       </div>
+
+      {/* KYC Form Modal */}
+      <Modal isOpen={showKycForm} onClose={() => setShowKycForm(false)} title="Organizer Verification">
+        <p className="text-sm text-slate-600 mb-6">Please provide your legal details to prevent fraud and ensure secure payouts.</p>
+        <form onSubmit={submitKYC} className="space-y-4">
+          {kycError && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600 border border-red-200">{kycError}</div>}
+          
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Business / Organizer Name</span>
+            <input required value={formData.businessName} onChange={e => setFormData({...formData, businessName: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">Phone Number</span>
+            <input required type="tel" placeholder="0991 234 567" value={formData.phoneNumber} onChange={e => setFormData({...formData, phoneNumber: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-slate-700">National ID / Registration Number</span>
+            <input required value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none focus:border-navy" />
+          </label>
+          <div className="flex gap-3 pt-4 border-t mt-6">
+            <button type="button" onClick={() => setShowKycForm(false)} className="flex-1 rounded-xl border py-2 text-sm font-semibold hover:bg-slate-50">Cancel</button>
+            <button type="submit" className="flex-1 rounded-xl bg-navy py-2 text-sm font-semibold text-white hover:bg-navy-dark">Submit</button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
+
