@@ -12,13 +12,18 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
+  // keep the latest onClose without re-running the focus effect on every render
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
 
   // Handle Escape key & Body Scroll Lock
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') onCloseRef.current()
     }
     
     // Save current focus and lock scroll
@@ -40,7 +45,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       // Restore focus to where it was
       if (previousFocus.current) previousFocus.current.focus()
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   // Trap focus inside the modal
   const handleTabKey = (e: React.KeyboardEvent) => {
