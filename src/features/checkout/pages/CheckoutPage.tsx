@@ -9,8 +9,6 @@ import { getEvent } from '../../../lib/events'
 import { withDelay } from '../../../mocks/delay'
 import { useAuth } from '../../authentication'
 import type { CheckoutEvent, TicketType } from '../types'
-import { OrderSummary } from '../components/OrderSummary'
-import { TicketSummaryCard } from '../components/TicketSummaryCard'
 import { remainingSeats } from '../../../types/event'
 
 const toCheckoutEvent = (ev: import('../../../types/event').Event): CheckoutEvent => ({
@@ -37,7 +35,7 @@ export function CheckoutPage(): ReactNode {
     Number.isNaN(parsedQty) || parsedQty < 1 ? 1 : parsedQty,
   )
   const { user } = useAuth()
-  const [holder] = useState(user?.name ?? '')
+  const holder = user?.name ?? ''
   const [clientError, setClientError] = useState<string | null>(null)
 
   const { data: eventData, isLoading, isError } = useQuery({
@@ -116,89 +114,158 @@ export function CheckoutPage(): ReactNode {
   const errorMessage = clientError ?? mutationError
   const blocked = soldOut || exceedsAvailable
 
+  const MAX_PER_ORDER = 10
+  const maxQty = Math.max(1, Math.min(MAX_PER_ORDER, remaining))
+  const canPay = !blocked && !checkout.isPending && !!ticketType
+
   return (
-    <div>
-      <h1>Confirm your purchase</h1>
-      <div className="split" style={{ marginTop: 16 }}>
-        <div className="g">
-          <TicketSummaryCard
-            event={checkoutEvent}
-            ticketType={ticketType}
-            quantity={quantity}
-            onChangeQuantity={setQuantity}
-          />
+    <div className="bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <Link to="/events" className="text-sm font-medium text-slate-500 hover:text-navy">
+          ← Back to events
+        </Link>
+        <h1 className="mt-3 text-3xl font-bold text-navy sm:text-4xl">Confirm your purchase</h1>
+        <p className="mt-1 text-slate-500">Check your order, then pay securely.</p>
 
-          <div className="card">
-            <h4 style={{ marginTop: 0 }}>Ticket type</h4>
-            <div className="pills">
-              {ticketTypes.map((type) => {
-                const left = type.capacity - type.sold
-                const disabled = left <= 0
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    className={`pill ${type.id === selectedTypeId ? 'on' : ''}`}
-                    onClick={() => selectTicketType(type.id)}
-                    disabled={disabled}
-                    style={disabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-                  >
-                    {type.name} · {formatKwacha(type.price)}
-                    {disabled ? ' · sold out' : ''}
-                  </button>
-                )
-              })}
-            </div>
-            <label className="m" style={{ display: 'block' }}>
-              Ticket holder (Your Name)
-              <input
-                className="in"
-                style={{ marginTop: 4, backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
-                value={holder}
-                readOnly
-              />
-            </label>
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]">
+          <div className="space-y-6">
+            <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+              <div className="bg-navy px-6 py-5 text-white">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Your event</p>
+                <h2 className="mt-1 text-2xl font-bold">{checkoutEvent.name}</h2>
+                <p className="mt-2 text-sm text-slate-200">
+                  {checkoutEvent.date}
+                  {checkoutEvent.time ? ` · ${checkoutEvent.time}` : ''}
+                </p>
+                <p className="text-sm text-slate-200">
+                  {checkoutEvent.venue}
+                  {checkoutEvent.city ? `, ${checkoutEvent.city}` : ''}
+                </p>
+              </div>
+
+              <div className="space-y-6 p-6">
+                <div>
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ticket type</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    {ticketTypes.map((option) => {
+                      const left = option.capacity - option.sold
+                      const disabled = left <= 0
+                      const selected = option.id === ticketType?.id
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => selectTicketType(option.id)}
+                          disabled={disabled}
+                          aria-pressed={selected}
+                          className={`rounded-xl border-2 p-4 text-left transition ${
+                            selected
+                              ? 'border-navy bg-navy/5'
+                              : 'border-slate-200 hover:border-slate-300'
+                          } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
+                        >
+                          <span className="block font-semibold text-slate-900">{option.name}</span>
+                          <span className="mt-1 block text-lg font-bold text-navy">{formatKwacha(option.price)}</span>
+                          <span className="mt-1 block text-xs text-slate-500">
+                            {disabled ? 'Sold out' : `${left} left`}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-6">
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Quantity</h3>
+                    <p className="mt-1 text-xs text-slate-500">Up to {MAX_PER_ORDER} per order</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      aria-label="Decrease quantity"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                      className="h-10 w-10 rounded-full border border-slate-300 text-lg font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-lg font-bold" aria-live="polite">{quantity}</span>
+                    <button
+                      type="button"
+                      aria-label="Increase quantity"
+                      onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                      disabled={quantity >= maxQty}
+                      className="h-10 w-10 rounded-full border border-slate-300 text-lg font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Ticket holder</h3>
+                  <div className="mt-3 flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-bold text-white">
+                      {(holder || '?').charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-slate-900">{holder}</p>
+                      <p className="truncate text-xs text-slate-500">{user?.email}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {soldOut && ticketType && (
+              <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
+                <b>Sold out.</b> There are no {ticketType.name} tickets left.
+              </div>
+            )}
+            {!soldOut && exceedsAvailable && ticketType && (
+              <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
+                Only {remaining} ticket{remaining === 1 ? '' : 's'} left. Reduce the quantity to continue.
+              </div>
+            )}
+            {errorMessage && (
+              <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700 ring-1 ring-red-200">
+                {errorMessage}
+              </div>
+            )}
           </div>
 
-          <div className="card">
-            <h2>Payment</h2>
-            <p className="m">
-              You pay securely on PayChangu. Choose Airtel Money, TNM Mpamba or a bank card on the next screen.
-            </p>
-            <p className="m">
-              Your receipt goes to <b>{user?.email}</b>.
-            </p>
-            <p className="m">
-              A ticket is issued only after PayChangu confirms the payment. If it fails or you cancel, you are not
-              charged and no ticket is issued.
-            </p>
-          </div>
-
-          {soldOut && ticketType && (
-            <div className="alert error">
-              <b>Sold out.</b> There are no {ticketType.name} tickets left, so this purchase is
-              blocked.
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+              <h2 className="text-lg font-bold text-navy">Order summary</h2>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <dt>
+                    {quantity} × {ticketType?.name ?? 'Ticket'}
+                  </dt>
+                  <dd className="font-medium text-slate-900">{formatKwacha(totals.subtotal)}</dd>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <dt>Service fee</dt>
+                  <dd className="font-medium text-slate-900">{formatKwacha(totals.serviceFee)}</dd>
+                </div>
+                <div className="flex items-baseline justify-between border-t border-slate-200 pt-4">
+                  <dt className="text-base font-semibold text-slate-900">Total</dt>
+                  <dd className="text-2xl font-bold text-navy">{formatKwacha(totals.total)}</dd>
+                </div>
+              </dl>
+              <button
+                type="button"
+                onClick={handlePay}
+                disabled={!canPay}
+                className="mt-6 w-full rounded-xl bg-navy px-4 py-3.5 text-base font-semibold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {checkout.isPending ? 'Redirecting…' : `Pay ${formatKwacha(totals.total)}`}
+              </button>
             </div>
-          )}
-          {!soldOut && exceedsAvailable && ticketType && (
-            <div className="alert error">
-              Only {remaining} ticket{remaining === 1 ? '' : 's'} left — reduce the quantity to
-              continue.
-            </div>
-          )}
-          {errorMessage && <div className="alert error">{errorMessage}</div>}
+          </aside>
         </div>
-
-        <OrderSummary
-          subtotal={totals.subtotal}
-          serviceFee={totals.serviceFee}
-          total={totals.total}
-          disabled={blocked}
-          paying={checkout.isPending}
-          onPay={handlePay}
-        />
       </div>
     </div>
   )
 }
-
