@@ -1,6 +1,7 @@
 // lib/audit.ts
-// Append-only audit log. Only administrators can read or write it.
-// There is deliberately NO update/delete export: records cannot be edited or removed through this API.
+// Audit log. Only administrators can read or write it.
+// Records can never be edited. Administrators may delete records, but every deletion is itself
+// recorded (who, when, how many) and those deletion records can never be deleted.
 
 export type AuditAction =
   | 'USER_DISABLED'
@@ -14,6 +15,7 @@ export type AuditAction =
   | 'EVENT_REJECTED'
   | 'EVENT_UNPUBLISHED'
   | 'ACCESS_DENIED'
+  | 'LOGS_DELETED'
 
 export type AuditTargetType = 'user' | 'event' | 'organizer' | 'system'
 
@@ -60,6 +62,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditAction, string> = {
   EVENT_REJECTED: 'Event rejected',
   EVENT_UNPUBLISHED: 'Event unpublished',
   ACCESS_DENIED: 'Access denied',
+  LOGS_DELETED: 'Audit records deleted',
 }
 
 // ---------- helpers ----------
@@ -217,4 +220,50 @@ export function verifyAuditLog(actor: AuditActor | null | undefined): { intact: 
     prev = hash
   }
   return { intact: true, brokenAt: null }
+}
+
+/**
+ * Delete audit records by id (single, a week, a month, or everything).
+ * - Admin only.
+ * - Records of type LOGS_DELETED are protected and are never removed.
+ * - The remaining records are re-chained so integrity checks still pass.
+ * - The deletion itself is written to the log (who, when, how many, which scope).
+ * Returns the number of records removed.
+ */
+export function deleteAuditEntries(actor: AuditActor | null | undefined, ids: string[], scope: string): number {
+  assertAdmin(actor)
+  const idSet = new Set(ids)
+  const all = readAll()
+  const remaining = all.filter((e) => !(idSet.has(e.id) && e.action !== 'LOGS_DELETED'))
+  const removed = all.length - remaining.length
+  if (removed === 0) return 0
+
+  let prev = GENESIS_HASH
+  const rechained: AuditEntry[] = remaining.map((e) => {
+    const base: Omit<AuditEntry, 'hash'> = {
+      id: e.id,
+      timestamp: e.timestamp,
+      actorId: e.actorId,
+      actorName: e.actorName,
+      action: e.action,
+      targetType: e.targetType,
+      targetId: e.targetId,
+      targetLabel: e.targetLabel,
+      details: e.details,
+      prevHash: prev,
+    }
+    const hash = computeHash(base)
+    prev = hash
+    return { ...base, hash }
+  })
+  writeAll(rechained)
+
+  append(actor, {
+    action: 'LOGS_DELETED',
+    targetType: 'system',
+    targetId: 'audit-log',
+    targetLabel: 'Audit Log',
+    details: `Deleted ${removed} record${removed === 1 ? '' : 's'}: ${scope}`,
+  })
+  return removed
 }
