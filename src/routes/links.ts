@@ -14,15 +14,11 @@ export const headerLinks: NavLink[] = [
 
 export const quickLinks: NavLink[] = [
   { label: 'Browse Events', to: '/events' },
-  { label: 'Concerts', slug: 'concerts' },
-  { label: 'Sports', slug: 'sports' },
-  { label: 'Festivals', slug: 'festivals' },
-  { label: 'Workshops', slug: 'workshops' },
+ 
 ]
 
 export const organizerLinks: NavLink[] = [
   { label: 'Create Event', to: '/organizer/events/new' },
-  { label: 'Pricing & Fees', slug: 'pricing-and-fees' },
   { label: 'Dashboard', to: '/organizer/dashboard' },
   { label: 'Ticket Validation', to: '/scan' },
 ]
