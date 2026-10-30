@@ -23,6 +23,8 @@ const MOCK_USERS: StoredUser[] = [
 
 const SESSION_KEY = 'tm_user';
 const ACCOUNTS_KEY= 'tm_accounts';
+// Demo only: passwords changed through the mock "forgot password" flow, keyed by email.
+const PASSWORD_OVERRIDES_KEY = 'tm_password_overrides';
 
 function readJson<T>(key:string): T | null {
     try{
@@ -33,7 +35,10 @@ function readJson<T>(key:string): T | null {
     }
 }
 function allAccounts():StoredUser[]{
-    return [...MOCK_USERS, ...(readJson<StoredUser[]>(ACCOUNTS_KEY)?? [])];
+    const overrides = readJson<Record<string, string>>(PASSWORD_OVERRIDES_KEY) ?? {};
+    return [...MOCK_USERS, ...(readJson<StoredUser[]>(ACCOUNTS_KEY)?? [])].map((account) =>
+        overrides[account.email] ? { ...account, password: overrides[account.email] } : account,
+    );
 }
 const wait = ()=> new Promise((resolve) => setTimeout(resolve,400));
 
@@ -83,4 +88,26 @@ export async function registerRequest(name:string,email:string,password:string,r
 
 export function logoutRequest():void{
     localStorage.removeItem(SESSION_KEY);
+}
+
+// ---- Demo-only password reset (no backend, no email is ever sent) ----
+
+/** Step 1: "request" a reset. Only checks that the demo account exists. */
+export async function requestPasswordReset(email: string): Promise<void> {
+    await wait();
+    const account = allAccounts().find((a) => a.email === email.trim().toLowerCase());
+    if (!account) throw new Error('No account uses this email address');
+    if (isUserDisabled(account.id)) throw new Error('This account has been disabled. Contact an administrator.');
+}
+
+/** Step 2: save a new password for the account in this browser's mock store. */
+export async function resetPasswordRequest(email: string, newPassword: string): Promise<void> {
+    await wait();
+    const cleanEmail = email.trim().toLowerCase();
+    const account = allAccounts().find((a) => a.email === cleanEmail);
+    if (!account) throw new Error('No account uses this email address');
+    if (isUserDisabled(account.id)) throw new Error('This account has been disabled. Contact an administrator.');
+    if (newPassword.length < 8) throw new Error('Password must be at least 8 characters');
+    const overrides = readJson<Record<string, string>>(PASSWORD_OVERRIDES_KEY) ?? {};
+    localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify({ ...overrides, [cleanEmail]: newPassword }));
 }
