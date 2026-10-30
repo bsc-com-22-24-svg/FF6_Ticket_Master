@@ -1,3 +1,5 @@
+import { isUserDisabled } from '../../lib/adminUsers';
+
 export type Role = 'customer' | 'organizer' | 'staff' | 'admin';
 
 export interface User{
@@ -35,6 +37,11 @@ function allAccounts():StoredUser[]{
 }
 const wait = ()=> new Promise((resolve) => setTimeout(resolve,400));
 
+// Accounts without passwords, for the admin User Management tab.
+export function listAccounts(): User[] {
+    return allAccounts().map(({ id, name, email, role }) => ({ id, name, email, role }));
+}
+
 export function getUser(): User | null{
     return readJson<User>(SESSION_KEY);
 }
@@ -60,6 +67,7 @@ export async function loginRequest(email:string,password:string):Promise<User>{
     await wait();
     const account = allAccounts().find((a) => a.email ===email.trim().toLowerCase() && a.password ===password);
     if(!account) throw new Error('Wrong email or password');
+    if(isUserDisabled(account.id)) throw new Error('This account has been disabled. Contact an administrator.');
     return startSession(account);
 }
 
