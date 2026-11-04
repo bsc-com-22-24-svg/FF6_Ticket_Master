@@ -3,6 +3,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 import type { Ticket } from '../ticketTypes';
 import { formatDate, formatMoney } from '../ticketFormat';
 import { downloadTicketImage, ticketFromView } from '../ticketImage';
+import { ticketQrValue } from '../../../lib/tickets';
 import styles from './TicketDetail.module.css';
 
 export function TicketDetail({ ticket }: { ticket: Ticket }) {
@@ -51,7 +52,7 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
       <div className={styles.qrBox}>
         <QRCodeCanvas
           ref={qrRef}
-          value={`TICKET:${ticket.id}`}
+          value={ticketQrValue(ticket.id)}
           size={168}
           level="M"
         />
