@@ -5,7 +5,7 @@ import { EventsPage, EventDetailsPage } from '../features/events';
 import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
-import { OrganizerDashboardPage, CreateEventPage } from '../features/organizer';
+import { OrganizerDashboardPage, CreateEventPage, StaffManagementPage } from '../features/organizer';
 import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
@@ -49,6 +49,7 @@ const routeTree = rootRoute.addChildren([
   page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
   page('/organizer/events/new', CreateEventPage, requireVerifiedOrganizer()),
   page('/organizer/events/$eventId/edit', CreateEventPage, requireVerifiedOrganizer()),
+  page('/organizer/staff', StaffManagementPage, requireAuth('organizer')),
   page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),
   notFoundRoute,

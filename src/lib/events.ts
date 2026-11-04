@@ -17,6 +17,7 @@ export interface EventInput {
   date: string
   time: string
   organizer: string
+  ownerId?: string
   image: string
   status: EventStatus
   ticketTypes: TicketType[]
@@ -83,6 +84,7 @@ export function saveEvent(input: EventInput): StoredEvent {
     date: input.date,
     time: input.time,
     organizer: input.organizer,
+    ownerId: existing?.ownerId ?? input.ownerId,
     image: input.image || '/images/events/event-1.webp',
     status: input.status,
     ticketTypes: input.ticketTypes.map((type) => ({ ...type })),
@@ -111,4 +113,14 @@ export function incrementSold(eventId: string, ticketTypeId: string, quantity: n
 
 export function resetEvents(): void {
   writeEvents(seed())
+}
+
+
+// An event belongs to the organizer account saved on it. Older events that have no
+// owner yet fall back to matching the organizer name.
+export function isEventOwnedBy(
+  event: { ownerId?: string; organizer: string },
+  user: { id: string; name: string },
+): boolean {
+  return event.ownerId ? event.ownerId === user.id : event.organizer === user.name
 }

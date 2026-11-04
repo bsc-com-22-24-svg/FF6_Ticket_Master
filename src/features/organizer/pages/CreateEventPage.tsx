@@ -3,12 +3,14 @@ import { useNavigate, useParams } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import EventForm from '../components/EventForm'
 import { getEvent, saveEvent, type EventInput } from '../../../lib/events'
+import { useAuth } from '../../authentication'
 
 export function CreateEventPage() {
   const { eventId } = useParams({ strict: false }) as { eventId?: string }
   const isEdit = !!eventId
   const initial = eventId ? getEvent(eventId) : undefined
 
+  const { user } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isSaving, setIsSaving] = useState(false)
@@ -17,7 +19,7 @@ export function CreateEventPage() {
     setIsSaving(true)
     // Simulate a network round-trip, then persist to the shared store.
     await new Promise((resolve) => setTimeout(resolve, 400))
-    saveEvent(values)
+    saveEvent({ ...values, ownerId: initial?.ownerId ?? user?.id })
     await queryClient.invalidateQueries({ queryKey: ['events'] })
     setIsSaving(false)
     await navigate({ to: '/organizer/dashboard' })

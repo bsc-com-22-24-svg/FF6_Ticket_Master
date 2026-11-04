@@ -4,8 +4,19 @@ import {
   normalizeTicketCode,
   type TicketValidationResult,
 } from '../../../lib/tickets'
+import { getUser, staffEventIds } from '../../authentication/authStore'
 
 export function validateTicket(rawCode: string, eventId: string): TicketValidationResult {
+  // Staff can only scan the events their organizer assigned to them.
+  const user = getUser()
+  if (!user || user.role !== 'staff' || !staffEventIds(user.id).includes(eventId)) {
+    return {
+      status: 'invalid',
+      title: 'Not allowed',
+      message: 'You are not assigned to this event, or your account is no longer active.',
+    }
+  }
+
   const code = normalizeTicketCode(rawCode)
 
   if (!code) {
