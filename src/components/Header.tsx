@@ -56,6 +56,7 @@ export default function Header() {
               <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>
               {user.role === 'customer' && <Link to="/tickets" className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/staff" className="text-sm font-medium text-slate-600 hover:text-navy">Staff</Link>}
               {user.role === 'staff' && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
               {user.role === 'admin' && <Link to="/admin" className="text-sm font-medium text-red-600 hover:text-red-800 font-bold">Admin Panel</Link>}
               <div className="flex items-center gap-2.5">
@@ -97,6 +98,7 @@ export default function Header() {
               <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>
               {user.role === 'customer' && <Link to="/tickets" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/staff" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Staff</Link>}
               {user.role === 'staff' && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}
               {user.role === 'admin' && <Link to="/admin" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50">Admin Panel</Link>}
               <div className="mt-1 flex items-center gap-2.5 border-t border-slate-100 px-3 pt-3">

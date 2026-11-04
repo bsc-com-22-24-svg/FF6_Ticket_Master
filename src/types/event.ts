@@ -16,6 +16,7 @@ export interface Event {
   time: string // 24h, e.g. 18:00
   description: string
   organizer: string
+  ownerId?: string // id of the organizer account that owns the event
   image: string
   ticketTypes: TicketType[]
 }

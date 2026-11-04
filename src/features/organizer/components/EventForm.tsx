@@ -51,7 +51,7 @@ export default function EventForm({ initialEvent, onSubmit, isSaving }: Props) {
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); void onSubmit({ ...values, status: 'Pending' }) }}>
+    <form onSubmit={(e) => { e.preventDefault(); void onSubmit({ ...values, status: 'Published' }) }}>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
@@ -137,10 +137,10 @@ export default function EventForm({ initialEvent, onSubmit, isSaving }: Props) {
         <aside>
           <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold">Publish</h2>
-            <p className="mt-2 text-sm text-slate-600">Save as a draft, or submit it to the Admin for review before it goes live to the public.</p>
+            <p className="mt-2 text-sm text-slate-600">Save as a draft, or publish it immediately to the public.</p>
             <div className="mt-6 grid gap-3">
               <button type="button" disabled={isSaving} onClick={() => onSubmit({ ...values, status: 'Draft' })} className="w-full rounded-xl border px-4 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">Save draft</button>
-              <button type="submit" disabled={isSaving} className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-dark disabled:opacity-50">{isSaving ? 'Saving…' : 'Submit for Review'}</button>
+              <button type="submit" disabled={isSaving} className="w-full rounded-xl bg-navy px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-dark disabled:opacity-50">{isSaving ? 'Saving…' : 'Publish Event'}</button>
             </div>
           </section>
         </aside>

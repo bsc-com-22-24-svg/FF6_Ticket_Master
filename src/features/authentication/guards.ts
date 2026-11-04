@@ -1,9 +1,6 @@
-import {redirect} from '@tanstack/react-router';
-import { getUser,type Role } from './authStore';
-import { getKYC } from '../../lib/verification';
+import { redirect } from '@tanstack/react-router';
+import { getUser, type Role } from './authStore';
 
-
-// Which role a path belongs to (undefined = open to everyone logged in or not)
 export function roleForPath(path: string): Role | undefined {
     if (path.startsWith('/organizer')) return 'organizer';
     if (path.startsWith('/admin')) return 'admin';
@@ -16,22 +13,15 @@ export function canAccess(role: Role, path: string): boolean {
     return !needed || needed === role;
 }
 
-// Organizer pages that create or change events: the organizer must be KYC-verified.
-// Typing the URL by hand no longer skips the verification on the dashboard.
-export function requireVerifiedOrganizer():(ctx: {location:{href:string}}) => void {
-    const base = requireAuth('organizer');
-    return (ctx) => {
-        base(ctx);
-        const user = getUser();
-        if (!user || getKYC(user.id)?.status !== 'Verified') throw redirect({to: '/organizer/dashboard'});
-    };
+// Bypassed: Organizers no longer require KYC verification before creating/publishing events.
+export function requireVerifiedOrganizer(): (ctx: { location: { href: string } }) => void {
+    return requireAuth('organizer');
 }
 
-export function requireAuth(role?:Role):(ctx: {location:{href:string}}) => void {
-    return({ location })=>{
+export function requireAuth(role?: Role): (ctx: { location: { href: string } }) => void {
+    return ({ location }) => {
         const user = getUser();
-        if(!user) throw redirect({to: '/login' , search:{ redirect:location.href}});
-        // wrong role: ask them to log in with the right account
-        if(role && user.role !== role) throw redirect({to: '/login', search:{ redirect:location.href}});
+        if (!user) throw redirect({ to: '/login', search: { redirect: location.href } });
+        if (role && user.role !== role) throw redirect({ to: '/login', search: { redirect: location.href } });
     };
 }
