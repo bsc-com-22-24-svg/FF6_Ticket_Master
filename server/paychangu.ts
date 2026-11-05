@@ -51,11 +51,16 @@ function text(value: unknown, max: number): string {
 
 // Redirect URLs must point back at this same site (stops the endpoint being used to
 // send customers somewhere else).
-function sameSite(url: unknown, host: string | undefined): url is string {
-  if (typeof url !== 'string' || !host) return false
+function publicHost(req: IncomingMessage): string[] {
+  const fwd = req.headers['x-forwarded-host']
+  const list = [req.headers.host, ...(Array.isArray(fwd) ? fwd : (fwd ?? '').split(','))]
+  return list.map((h) => (h ?? '').trim()).filter(Boolean)
+}
+function sameSite(url: unknown, hosts: string[]): url is string {
+  if (typeof url !== 'string' || hosts.length === 0) return false
   try {
     const parsed = new URL(url)
-    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.host === host
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && hosts.includes(parsed.host)
   } catch {
     return false
   }
@@ -101,7 +106,7 @@ async function initiate(env: Env, req: IncomingMessage, res: ServerResponse): Pr
   if (!EMAIL.test(email)) return send(res, 400, { error: 'A valid email address is required.' })
   const txRef = text(input.tx_ref, 64)
   if (!TX_REF.test(txRef)) return send(res, 400, { error: 'Invalid transaction reference.' })
-  if (!sameSite(input.callback_url, req.headers.host) || !sameSite(input.return_url, req.headers.host)) {
+  if (!sameSite(input.callback_url, publicHost(req)) || !sameSite(input.return_url, publicHost(req))) {
     return send(res, 400, { error: 'Invalid redirect URL.' })
   }
 

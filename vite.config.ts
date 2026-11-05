@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 // PayChangu secret key: read from .env here on the server side only (no VITE_ prefix = never sent to the browser)
 export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss(), paychanguApi(loadEnv(mode, process.cwd(), ''))],
-  server: { allowedHosts: ['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io'] },
+  server: { allowedHosts: ['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io', '.app.github.dev'] },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
