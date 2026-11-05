@@ -19,7 +19,7 @@ export default function Footer() {
           </p>
           <div className="mt-5 flex gap-3">
             {/* social buttons (letters for now - put real icons/links here later) */}
-            {['', '', ''].map((name) => (
+            {['f', 'in', 'x'].map((name) => (
               <span key={name} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-xs font-bold uppercase hover:bg-white/20">{name}</span>
             ))}
           </div>

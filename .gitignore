@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 all-code.txt
 .env
+*.pdf
+my_full_code.txt
+*.rej

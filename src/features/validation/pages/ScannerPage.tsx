@@ -5,6 +5,8 @@ import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
 import { listEvents } from '../../../lib/events'
 import { ScanResult } from '../components/ScanResult'
 import { SCAN_EVENT } from '../mockData'
+import { useAuth } from '../../authentication'
+import { staffEventIds } from '../../authentication/authStore'
 import { useQrScanner } from '../hooks/useQrScanner'
 import { validateTicket } from '../hooks/useTicketValidator'
 
@@ -13,14 +15,17 @@ export function ScannerPage(): ReactNode {
   const [history, setHistory] = useState<TicketValidationResult[]>([])
   const [manualCode, setManualCode] = useState('')
   const queryClient = useQueryClient()
-  const events = listEvents()
-  const [selectedEventId, setSelectedEventId] = useState(SCAN_EVENT.id)
-  const selectedEvent =
-    events.find((e) => e.id === selectedEventId) ?? { id: SCAN_EVENT.id, title: SCAN_EVENT.name }
+  const { user } = useAuth()
+  // Only the published events this staff member was assigned to
+  const assigned = user ? staffEventIds(user.id) : []
+  const events = listEvents().filter((e) => assigned.includes(e.id))
+  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? '')
+  const selectedEvent = events.find((e) => e.id === selectedEventId) ?? events[0]
+  const activeEventId = selectedEvent?.id ?? ''
 
   const handleCode = useCallback(
     (rawCode: string) => {
-      const outcome = validateTicket(rawCode, selectedEventId)
+      const outcome = validateTicket(rawCode, activeEventId)
       setResult(outcome)
       setHistory((previous) => [outcome, ...previous].slice(0, 6))
       setManualCode('')
@@ -28,7 +33,7 @@ export function ScannerPage(): ReactNode {
         queryClient.invalidateQueries({ queryKey: ['event-stats'] })
       }
     },
-    [queryClient, selectedEventId],
+    [queryClient, activeEventId],
   )
 
   const { videoRef, status, error, start, stop } = useQrScanner(handleCode)
@@ -39,10 +44,21 @@ export function ScannerPage(): ReactNode {
   }
 
   const checkedIn = listTickets().filter(
-    (ticket) => ticket.eventId === selectedEventId && ticket.status === 'used',
+    (ticket) => ticket.eventId === activeEventId && ticket.status === 'used',
   ).length
 
   const scanning = status === 'scanning'
+
+  if (!selectedEvent) {
+    return (
+      <div>
+        <h1>Scan tickets</h1>
+        <div className="alert info" style={{ marginTop: 14 }}>
+          No events are assigned to you yet. Ask your organizer to assign you to an event.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -55,7 +71,7 @@ export function ScannerPage(): ReactNode {
             <select
               className="in"
               style={{ marginTop: 4 }}
-              value={selectedEventId}
+              value={selectedEvent.id}
               onChange={(event) => {
                 setSelectedEventId(event.target.value)
                 setResult(null)
