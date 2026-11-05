@@ -15,6 +15,7 @@ export function toTicketView(record: TicketRecord): Ticket {
     price: record.price ?? 0,
     holder: record.holder || 'Guest',
     status: record.status || 'valid',
+    purchasedAt: record.createdAt,
   }
 }
 

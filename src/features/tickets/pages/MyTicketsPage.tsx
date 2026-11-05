@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { useParams } from '@tanstack/react-router';
-import { TicketDetail } from '../components/TicketDetail';
 import { TicketsTable } from '../components/TicketsTable';
 import { useTickets } from '../hooks/useTickets';
-import { formatDate, isUpcoming } from '../ticketFormat';
-import type { Ticket } from '../ticketTypes';
+import { isUpcoming } from '../ticketFormat';
 import styles from './MyTicketsPage.module.css';
 
 type Tab = 'all' | 'upcoming' | 'past';
@@ -18,34 +15,18 @@ const tabs: { key: Tab; label: string }[] = [
 export function MyTicketsPage() {
   const { data, isLoading, isError, refetch } = useTickets();
   const [tab, setTab] = useState<Tab>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  // route is /tickets/$ticketId - show that ticket first when the id matches
-  const { ticketId } = useParams({ strict: false }) as { ticketId?: string };
-  const activeId = selectedId ?? ticketId ?? null;
 
   const tickets = data ?? [];
-  
-  // Find the specific ticket, or default to the very first one
-  const featured: Ticket | undefined =
-    tickets.find((t) => t.id === activeId) ?? tickets[0];
-  const others = tickets.filter((t) => t.id !== featured?.id);
-
   const visible = tickets.filter((t) => {
     if (tab === 'all') return true;
     return tab === 'upcoming' ? isUpcoming(t.date) : !isUpcoming(t.date);
   });
 
-  function handleView(id: string) {
-    setSelectedId(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <h1 className={styles.heading}>My Tickets</h1>
-        <p className={styles.sub}>Your tickets, QR codes and entry status</p>
+        <p className={styles.sub}>Open a ticket to see its QR code, details and entry status</p>
       </header>
 
       {isLoading && <p className={styles.state}>Loading your tickets...</p>}
@@ -59,51 +40,12 @@ export function MyTicketsPage() {
         </p>
       )}
 
-      {!isLoading && !isError && !featured && (
+      {!isLoading && !isError && tickets.length === 0 && (
         <p className={styles.state}>You have no tickets yet.</p>
-      )}
-
-      {featured && <TicketDetail ticket={featured} />}
-
-      {others.length > 0 && (
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Other tickets</h2>
-          <div className={styles.list}>
-            {others.map((t) => (
-              <article key={t.id} className={styles.item}>
-                <div className={styles.itemInfo}>
-                  <h3 className={styles.itemTitle}>{t.eventTitle}</h3>
-                  <p className={styles.meta}>
-                    {t.venue}, {t.city} · {formatDate(t.date)}
-                  </p>
-                  <p className={styles.meta} style={{ fontWeight: 500, color: '#0a1f47' }}>
-                    Holder: {t.holder}
-                  </p>
-                </div>
-                <div className={styles.itemSide}>
-                  <span
-                    className={`${styles.badge} ${t.status === 'valid' ? styles.valid : styles.used}`}
-                  >
-                    {t.status}
-                  </span>
-                  <button
-                    type="button"
-                    className={styles.retry}
-                    onClick={() => handleView(t.id)}
-                  >
-                    View ticket
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
       )}
 
       {tickets.length > 0 && (
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>All bookings</h2>
-
           <div className={styles.filters}>
             {tabs.map((tabItem) => (
               <button
@@ -120,7 +62,7 @@ export function MyTicketsPage() {
           {visible.length === 0 ? (
             <p className={styles.state}>No tickets to show.</p>
           ) : (
-            <TicketsTable tickets={visible} onView={handleView} />
+            <TicketsTable tickets={visible} />
           )}
         </section>
       )}

@@ -1,11 +1,13 @@
 import { useRef } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
 import type { Ticket } from '../ticketTypes';
-import { formatDate, formatMoney } from '../ticketFormat';
+import { formatDate } from '../ticketFormat';
 import { downloadTicketImage, ticketFromView } from '../ticketImage';
 import { ticketQrValue } from '../../../lib/tickets';
 import styles from './TicketDetail.module.css';
 
+// The ticket itself: status, event, QR code and the download button.
+// The full details (venue, price, purchase time...) are in TicketInfoTable.
 export function TicketDetail({ ticket }: { ticket: Ticket }) {
   const qrRef = useRef<HTMLCanvasElement>(null);
   const statusClass = ticket.status === 'valid' ? styles.valid : styles.used;
@@ -15,30 +17,12 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
       <div className={styles.info}>
         <span className={`${styles.badge} ${statusClass}`}>{ticket.status}</span>
         <h2 className={styles.title}>{ticket.eventTitle}</h2>
-        <p className={styles.venue}>{ticket.venue}, {ticket.city}</p>
-
-        <div className={styles.details}>
-          <div>
-            <span className={styles.label}>Date</span>
-            <span className={styles.value}>{formatDate(ticket.date)}</span>
-          </div>
-          <div>
-            <span className={styles.label}>Time</span>
-            <span className={styles.value}>{ticket.time}</span>
-          </div>
-          <div>
-            <span className={styles.label}>Ticket</span>
-            <span className={styles.value}>{ticket.ticketType}</span>
-          </div>
-          <div>
-            <span className={styles.label}>Entry</span>
-            <span className={styles.value}>{ticket.seat}</span>
-          </div>
-          <div>
-            <span className={styles.label}>Price</span>
-            <span className={styles.value}>{formatMoney(ticket.price)}</span>
-          </div>
-        </div>
+        <p className={styles.venue}>
+          {ticket.venue}, {ticket.city}
+        </p>
+        <p className={styles.venue}>
+          {formatDate(ticket.date)} · {ticket.time}
+        </p>
 
         <button
           type="button"
