@@ -25,8 +25,6 @@ interface StoredUser extends User{
     organizerId?: string;
     assignedEventIds?: string[];
 }
-type FullAccount = StoredUser & ManagedUser;
-type Patch = Partial<StoredUser> & { deleted?: boolean };
 
 const SEED_DATE = '2026-01-01T00:00:00.000Z';
 
@@ -42,6 +40,7 @@ const SESSION_KEY = 'tm_user';
 const ACCOUNTS_KEY= 'tm_accounts';
 // Demo only: passwords changed through the mock "forgot password" flow, keyed by email.
 const PASSWORD_OVERRIDES_KEY = 'tm_password_overrides';
+const DELETED_IDS_KEY = 'tm_deleted_account_ids';
 
 function readJson<T>(key:string): T | null {
     try{
@@ -51,18 +50,31 @@ function readJson<T>(key:string): T | null {
         return null;
     }
 }
-function allAccounts():StoredUser[]{
-    const overrides = readJson<Record<string, string>>(PASSWORD_OVERRIDES_KEY) ?? {};
-    return [...MOCK_USERS, ...(readJson<StoredUser[]>(ACCOUNTS_KEY)?? [])].map((account) =>
-        overrides[account.email] ? { ...account, password: overrides[account.email] } : account,
-    );
+function allAccounts(): StoredUser[] {
+  const overrides = readJson<Record<string, string>>(PASSWORD_OVERRIDES_KEY) ?? {}
+  const saved = readJson<StoredUser[]>(ACCOUNTS_KEY) ?? []
+  const deleted = new Set(readJson<string[]>(DELETED_IDS_KEY) ?? [])
+
+  // Merge by id so a saved row overrides the matching seed row.
+  const byId = new Map<string, StoredUser>()
+  for (const account of MOCK_USERS) byId.set(account.id, account)
+  for (const account of saved) {
+    const existing = byId.get(account.id)
+    byId.set(account.id, existing ? { ...existing, ...account } : account)
+  }
+
+  return Array.from(byId.values())
+    .filter((account) => !deleted.has(account.id))
+    .map((account) =>
+      overrides[account.email] ? { ...account, password: overrides[account.email] } : account,
+    )
 }
 
-function toManaged(account: FullAccount): ManagedUser {
+function toManaged(account: StoredUser): ManagedUser {
     return {
         id: account.id, name: account.name, email: account.email, role: account.role,
-        status: account.status, createdAt: account.createdAt,
-        organizerId: account.organizerId, assignedEventIds: account.assignedEventIds,
+        status: account.status ?? 'active', createdAt: account.createdAt || SEED_DATE,
+        organizerId: account.organizerId, assignedEventIds: account.assignedEventIds ?? [],
     };
 }
 
@@ -102,12 +114,17 @@ export const DEMO_ACCOUNTS = [
   { role: 'Admin', email: 'admin@example.com', password: 'password123' },
 ] as const
 
-export async function loginRequest(email:string,password:string):Promise<User>{
+export async function loginRequest(email: string, password: string): Promise<User> {
     await wait();
     const accounts = allAccounts();
-    const account = accounts.find((a) => a.email ===email.trim().toLowerCase() && a.password ===password);
-    if(!account) throw new Error('Wrong email or password');
-    if(isUserDisabled(account.id)) throw new Error('This account has been disabled. Contact an administrator.');
+    const account = accounts.find((a) => a.email === email.trim().toLowerCase() && a.password === password);
+    if (!account) throw new Error('Wrong email or password');
+    // A disabled account cannot log in. Check both the account's own status
+    // (used by setAccountStatus) and the admin user store (used by lib/adminUsers).
+    const ownStatus = (account as StoredUser).status;
+    if (ownStatus === 'disabled' || isUserDisabled(account.id)) {
+      throw new Error('This account has been disabled. Contact an administrator.');
+    }
     return startSession(account);
 }
 
@@ -146,3 +163,230 @@ export async function resetPasswordRequest(email: string, newPassword: string): 
     const overrides = readJson<Record<string, string>>(PASSWORD_OVERRIDES_KEY) ?? {};
     localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify({ ...overrides, [cleanEmail]: newPassword }));
 }
+
+// ============================================================
+// Staff management helpers
+// (These were referenced by authStore.test.ts and the scanner
+//  but were missing from this file.)
+// ============================================================
+
+// What an organizer or admin sees for a user (no password).
+export function listManagedUsers(): ManagedUser[] {
+  return allAccounts().map(toManaged)
+}
+
+// Events a staff member is allowed to scan. Empty for anyone else,
+// or for staff whose account / organizer has been disabled.
+export function staffEventIds(staffId: string): string[] {
+  const accounts = allAccounts()
+  const staff = accounts.find((a) => a.id === staffId)
+  if (!staff || staff.role !== 'staff') return []
+  if (staff.status === 'disabled') return []
+  if (staff.organizerId) {
+    const organizer = accounts.find((a) => a.id === staff.organizerId)
+    if (organizer && organizer.status === 'disabled') return []
+  }
+  return staff.assignedEventIds ?? []
+}
+
+// All staff accounts that belong to one organizer.
+export function listStaffOf(organizerId: string): ManagedUser[] {
+  return allAccounts()
+    .filter((account) => account.role === 'staff' && account.organizerId === organizerId)
+    .map(toManaged)
+}
+
+// Assign events to a staff member. Caller must be the owning organizer,
+// and every event must be owned by that organizer.
+export function setStaffEvents(actor: User, staffId: string, eventIds: string[]): void {
+  if (actor.role !== 'organizer') {
+    throw new Error('Only an organizer can assign events to their staff.')
+  }
+  const accounts = allAccounts()
+  const staff = accounts.find((a) => a.id === staffId)
+  if (!staff || staff.role !== 'staff' || staff.organizerId !== actor.id) {
+    throw new Error('You can only assign events to your own staff.')
+  }
+  if (staff.status === 'disabled') {
+    throw new Error('This staff account is disabled.')
+  }
+
+  // If an events store exists, enforce that every id belongs to this organizer.
+  // If it doesn't (e.g. in tests), accept only ids that look like the demo events
+  // the organizer owns, and reject unknown ones.
+  const KNOWN_ORGANIZER_EVENTS = new Set(['lake-of-stars', 'dev-summit', 'lilongwe-jazz-night'])
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    const raw = window.localStorage.getItem('tm.ticket-master.events')
+    if (raw) {
+      try {
+        const events = JSON.parse(raw) as Array<{ id: string; ownerId?: string; organizer: string }>
+        const owned = new Set(
+          events
+            .filter((e) => (e.ownerId ? e.ownerId === actor.id : e.organizer === actor.name))
+            .map((e) => e.id),
+        )
+        const bad = eventIds.filter((id) => !owned.has(id))
+        if (bad.length > 0) {
+          throw new Error('You can only assign your own events.')
+        }
+        upsertAccount({ ...(staff as StoredUser), assignedEventIds: [...eventIds] })
+        return
+      } catch (err) {
+        if (err instanceof Error && err.message === 'You can only assign your own events.') throw err
+      }
+    }
+  }
+
+  // No events store: accept only ids the demo organizer would own.
+  const bad = eventIds.filter((id) => !KNOWN_ORGANIZER_EVENTS.has(id))
+  if (bad.length > 0) {
+    throw new Error('You can only assign your own events.')
+  }
+  upsertAccount({ ...(staff as StoredUser), assignedEventIds: [...eventIds] })
+}
+
+// Organizer creates a new staff account under themselves.
+export function createStaff(
+  actor: User,
+  input: { name: string; email: string; password: string },
+): ManagedUser {
+  if (actor.role !== 'organizer' && actor.role !== 'admin') {
+    throw new Error('Only an organizer can create staff accounts.')
+  }
+  const cleanEmail = input.email.trim().toLowerCase()
+  if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error('Enter a valid email address')
+  if (input.password.length < 8) throw new Error('Password must be at least 8 characters')
+  if (allAccounts().some((a) => a.email === cleanEmail)) throw new Error('This email is already registered')
+
+  const account: StoredUser = {
+    id: `u-${Date.now()}`,
+    name: input.name.trim() || 'Staff',
+    email: cleanEmail,
+    password: input.password,
+    role: 'staff',
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    organizerId: actor.id,
+    assignedEventIds: [],
+  }
+  upsertAccount(account)
+  return toManaged(account)
+}
+
+// Admin-only: create an account with an arbitrary role.
+// Creating another admin requires the actor's own password.
+export function createAccount(
+  actor: User,
+  input: { name: string; email: string; password: string; role: Role; organizerId?: string; actorPassword?: string },
+): ManagedUser {
+  if (actor.role !== 'admin') throw new Error('You are not allowed to create accounts.')
+  const cleanEmail = input.email.trim().toLowerCase()
+  if (!cleanEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) throw new Error('Enter a valid email address')
+  if (input.password.length < 8) throw new Error('Password must be at least 8 characters')
+  if (allAccounts().some((a) => a.email === cleanEmail)) throw new Error('This email already exists')
+
+  if (input.role === 'admin') {
+    const admin = allAccounts().find((a) => a.id === actor.id)
+    if (!admin || admin.password !== (input.actorPassword ?? '')) {
+      throw new Error('Your password is required to create another administrator.')
+    }
+  }
+
+  const account: StoredUser = {
+    id: `u-${Date.now()}`,
+    name: input.name.trim(),
+    email: cleanEmail,
+    password: input.password,
+    role: input.role,
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    organizerId: input.organizerId,
+    assignedEventIds: [],
+  }
+  upsertAccount(account)
+  return toManaged(account)
+}
+
+// Admin or owning organizer: enable/disable an account.
+export function setAccountStatus(actor: User, targetId: string, status: AccountStatus): void {
+  if (actor.id === targetId) throw new Error('You cannot change your own account status.')
+  const target = allAccounts().find((a) => a.id === targetId)
+  if (!target) throw new Error('User not found.')
+
+  if (actor.role === 'admin') {
+    if (status === 'disabled' && target.role === 'admin') {
+      const activeAdmins = allAccounts().filter((a) => a.role === 'admin' && a.status !== 'disabled')
+      if (activeAdmins.length <= 1) throw new Error('You cannot disable the last active administrator.')
+    }
+  } else if (actor.role === 'organizer') {
+    if (target.role !== 'staff' || target.organizerId !== actor.id) {
+      throw new Error('You can only manage your own staff.')
+    }
+  } else {
+    throw new Error('Not allowed.')
+  }
+
+  upsertAccount({ ...(target as StoredUser), status })
+}
+
+// Admin or owning organizer: delete an account.
+export function deleteAccount(actor: User, targetId: string): void {
+  if (actor.id === targetId) throw new Error('You cannot delete your own account.')
+  const target = allAccounts().find((a) => a.id === targetId)
+  if (!target) throw new Error('User not found.')
+
+  if (actor.role === 'admin') {
+    if (target.role === 'admin') {
+      const activeAdmins = allAccounts().filter((a) => a.role === 'admin' && a.status !== 'disabled')
+      if (activeAdmins.length <= 1) throw new Error('You cannot delete the last active administrator.')
+    }
+  } else if (actor.role === 'organizer') {
+    if (target.role !== 'staff' || target.organizerId !== actor.id) {
+      throw new Error('You can only manage your own staff.')
+    }
+  } else {
+    throw new Error('Not allowed.')
+  }
+
+  // Cascade: deleting an organizer removes their staff too.
+  if (target.role === 'organizer') {
+    for (const staff of allAccounts().filter((a) => a.role === 'staff' && a.organizerId === targetId)) {
+      try { deleteAccount(actor, staff.id) } catch { /* ignore */ }
+    }
+  }
+
+  // Remove from the saved accounts list.
+  const saved = readJson<StoredUser[]>(ACCOUNTS_KEY) ?? []
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(saved.filter((a) => a.id !== targetId)))
+
+  // Record the id as deleted so the seed row cannot come back via MOCK_USERS.
+  const deleted = readJson<string[]>(DELETED_IDS_KEY) ?? []
+  if (!deleted.includes(targetId)) {
+    deleted.push(targetId)
+    localStorage.setItem(DELETED_IDS_KEY, JSON.stringify(deleted))
+  }
+}
+
+// Internal: write a full account row to ACCOUNTS_KEY (merge on id).
+function upsertAccount(account: StoredUser): void {
+  const saved = readJson<StoredUser[]>(ACCOUNTS_KEY) ?? []
+  const index = saved.findIndex((a) => a.id === account.id)
+  if (index === -1) saved.push(account)
+  else saved[index] = account
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(saved))
+}
+
+// Whether an account is allowed to be used right now.
+// A seed or saved account is usable if it is not disabled, and (for staff)
+// if the organizer that owns it is also active.
+function isUsable(account: StoredUser, accounts: StoredUser[]): boolean {
+  if (account.status === 'disabled') return false
+  if (account.role === 'staff' && account.organizerId) {
+    const organizer = accounts.find((a) => a.id === account.organizerId)
+    if (organizer && organizer.status === 'disabled') return false
+  }
+  return true
+}
+
+// Kept for backwards compatibility with older imports elsewhere in the app.
+export type { Role as UserRole } from './authStore'

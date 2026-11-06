@@ -107,7 +107,7 @@ describe('ticket ownership', () => {
 
   it('keeps the seeded demo data for the demo customer', () => {
     expect(listTicketsForUser(DEMO_CUSTOMER_ID).map((ticket) => ticket.id)).toEqual(
-      expect.arrayContaining(['TM-2026-004871', 'TM-2026-002540', 'TM-2026-009999']),
+      expect.arrayContaining(['TM-2026-K7QX4ZP9R2WM', 'TM-2026-H3VN8DC5T6YB', 'TM-2026-W9FJ2MXA4LEU']),
     )
     expect(listBookingsForUser(DEMO_CUSTOMER_ID).length).toBeGreaterThan(0)
   })

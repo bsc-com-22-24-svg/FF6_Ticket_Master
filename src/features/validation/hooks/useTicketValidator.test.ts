@@ -4,6 +4,38 @@ import { issueTicket, normalizeTicketCode, ticketQrValue } from '../../../lib/ti
 import { signTicket } from '../../../lib/ticketSignature'
 import { validateTicket } from './useTicketValidator'
 
+// validateTicket requires a logged-in staff user who is assigned to the event.
+// Seed both the session (tm_user) and the account row (tm_accounts) before each test.
+function loginAsStaff(assignedEventIds: string[] = ['event-one', 'lake-of-stars', 'dev-summit']) {
+  window.localStorage.setItem(
+    'tm_user',
+    JSON.stringify({ id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', role: 'staff' }),
+  )
+  window.localStorage.setItem(
+    'tm_accounts',
+    JSON.stringify([
+      {
+        id: 'u-3',
+        name: 'Gate Staff',
+        email: 'staff@example.com',
+        password: 'password123',
+        role: 'staff',
+        status: 'active',
+        organizerId: 'u-2',
+        assignedEventIds,
+      },
+      {
+        id: 'u-2',
+        name: 'Nyasa Events',
+        email: 'organizer@example.com',
+        password: 'password123',
+        role: 'organizer',
+        status: 'active',
+      },
+    ]),
+  )
+}
+
 function newTicket(eventId = 'event-one') {
   return issueTicket({
     userId: 'u-test',
@@ -20,7 +52,10 @@ function newTicket(eventId = 'event-one') {
 }
 
 describe('ticket ids', () => {
-  beforeEach(() => window.localStorage.clear())
+  beforeEach(() => {
+    window.localStorage.clear()
+    loginAsStaff()
+  })
 
   it('are long, random looking and unique', () => {
     const ids = Array.from({ length: 40 }, () => newTicket().id)
@@ -38,7 +73,10 @@ describe('normalizeTicketCode', () => {
 })
 
 describe('validateTicket', () => {
-  beforeEach(() => window.localStorage.clear())
+  beforeEach(() => {
+    window.localStorage.clear()
+    loginAsStaff()
+  })
 
   it('accepts a ticket scanned from its signed QR code, once', () => {
     const ticket = newTicket()

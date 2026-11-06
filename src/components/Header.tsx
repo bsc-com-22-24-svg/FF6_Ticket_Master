@@ -4,7 +4,6 @@ import { Menu, X } from 'lucide-react'
 import { headerLinks } from '../routes/links'
 import SiteLink from './SiteLink'
 import { useAuth } from '../features/authentication/useAuth'
-import { navAccess } from './navAccess'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)

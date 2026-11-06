@@ -10,6 +10,23 @@ const organizer: User = { id: 'u-2', name: 'Nyasa Events', email: 'organizer@exa
 
 beforeEach(() => localStorage.clear())
 
+describe('managed account defaults', () => {
+  it('fills missing metadata on older saved accounts', () => {
+    localStorage.setItem(
+      'tm_accounts',
+      JSON.stringify([{ id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' }]),
+    )
+
+    const customer = listManagedUsers().find((account) => account.id === 'u-1')
+
+    expect(customer).toMatchObject({
+      status: 'active',
+      createdAt: expect.any(String),
+      assignedEventIds: [],
+    })
+  })
+})
+
 describe('disabled accounts', () => {
   it('cannot log in', async () => {
     setAccountStatus(admin, 'u-1', 'disabled')

@@ -10,11 +10,11 @@ import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
 import NotFoundPage from '../components/NotFoundPage';
-import type { ReactNode } from 'react';
+import type { ComponentType } from 'react';
 
 const rootRoute = createRootRoute({ component: AppLayout });
 
-const page = <P extends string>(path: P, component: () => ReactNode, beforeLoad?: ReturnType<typeof requireAuth>) => createRoute({ getParentRoute: () => rootRoute, path, component, beforeLoad });
+const page = <P extends string>(path: P, component: ComponentType<any>, beforeLoad?: ReturnType<typeof requireAuth>) => createRoute({ getParentRoute: () => rootRoute, path, component: component as any, beforeLoad });
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,

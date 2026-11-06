@@ -1,9 +1,10 @@
 import React from 'react';
+import type { ReactNode } from 'react';
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  icon?: string;
+  icon?: ReactNode;
   color?: string;
 }
 
