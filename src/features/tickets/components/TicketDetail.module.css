@@ -1,0 +1,115 @@
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px 24px;
+}
+
+.info {
+  min-width: 0;
+  flex: 1;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.valid {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.used {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.title {
+  margin: 10px 0 4px;
+  font-size: 20px;
+  color: #0a1f47;
+}
+
+.venue {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin-bottom: 18px;
+}
+
+.label {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.value {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0a1f47;
+}
+
+.download {
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 99px;
+  background: #12326b;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.download:hover {
+  background: #0a1f47;
+}
+
+.qrBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+}
+
+.qrId {
+  margin: 8px 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0a1f47;
+}
+
+.qrNote {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  .card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qrBox {
+    align-self: center;
+  }
+}
