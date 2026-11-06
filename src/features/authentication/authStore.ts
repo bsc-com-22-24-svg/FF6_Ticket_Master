@@ -1,3 +1,4 @@
+import { USE_BACKEND, api, setToken } from '../../lib/backend';
 import { isUserDisabled } from '../../lib/adminUsers';
 
 export type Role = 'customer' | 'organizer' | 'staff' | 'admin';
@@ -88,6 +89,8 @@ export function listAccounts(): User[] {
 export function getUser(): User | null{
     const session = readJson<User>(SESSION_KEY);
     if (!session) return null;
+    // With the backend, the account lives in the database, not in this browser.
+    if (USE_BACKEND) return session;
     const accounts = allAccounts();
     const account = accounts.find((a) => a.id === session.id);
     if (!account || !isUsable(account, accounts)) {
@@ -107,6 +110,46 @@ function startSession(account : StoredUser): User {
     localStorage.setItem(SESSION_KEY,JSON.stringify(user));
     return user;
 }
+
+// ---- Real backend (only used when VITE_USE_BACKEND=true) ----
+
+// The backend names roles differently from this app.
+type BackendRole = 'ATTENDEE' | 'ORGANIZER' | 'CHECK_IN_STAFF' | 'ADMIN';
+const FROM_BACKEND: Record<BackendRole, Role> = {
+    ATTENDEE: 'customer',
+    ORGANIZER: 'organizer',
+    CHECK_IN_STAFF: 'staff',
+    ADMIN: 'admin',
+};
+
+interface AuthResponse {
+    accessToken: string;
+    user: { id: string; name: string; email: string; role: BackendRole };
+}
+
+async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
+    try {
+        return await api<AuthResponse>(path, { method: 'POST', body });
+    } catch (error) {
+        const status = (error as { status?: number }).status;
+        if (status === 401) throw new Error('Wrong email or password');
+        if (status === 409) throw new Error('This account already exists');
+        throw error;
+    }
+}
+
+function startBackendSession(result: AuthResponse): User {
+    const user: User = {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: FROM_BACKEND[result.user.role] ?? 'customer',
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    setToken(result.accessToken);
+    return user;
+}
+
 export const DEMO_ACCOUNTS = [
   { role: 'Customer', email: 'customer@example.com', password: 'password123' },
   { role: 'Organizer', email: 'organizer@example.com', password: 'password123' },
@@ -115,6 +158,7 @@ export const DEMO_ACCOUNTS = [
 ] as const
 
 export async function loginRequest(email: string, password: string): Promise<User> {
+    if (USE_BACKEND) return startBackendSession(await postAuth('/auth/login', { email: email.trim(), password }));
     await wait();
     const accounts = allAccounts();
     const account = accounts.find((a) => a.email === email.trim().toLowerCase() && a.password === password);
@@ -129,6 +173,9 @@ export async function loginRequest(email: string, password: string): Promise<Use
 }
 
 export async function registerRequest(name:string,email:string,password:string,role: 'customer' | 'organizer' = 'customer'): Promise<User>{
+    if (USE_BACKEND) {
+        return startBackendSession(await postAuth('/auth/register', { name: name.trim(), email: email.trim(), password, role: role === 'organizer' ? 'ORGANIZER' : 'ATTENDEE' }));
+    }
     await wait();
     const cleanEmail = email.trim().toLowerCase();
     if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exists');
@@ -140,6 +187,7 @@ export async function registerRequest(name:string,email:string,password:string,r
 
 export function logoutRequest():void{
     localStorage.removeItem(SESSION_KEY);
+    setToken(null);
 }
 
 // ---- Demo-only password reset (no backend, no email is ever sent) ----
