@@ -6,33 +6,45 @@ interface AttendeeTableProps {
 }
 
 export const AttendeeTable: React.FC<AttendeeTableProps> = ({ attendees }) => {
+  if (attendees.length === 0) {
+    return (
+      <div className="table-responsive">
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--slate-500)' }}>
+          No ticket purchases found for your events.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="table-responsive">
       <table className="dashboard-table">
         <thead>
           <tr>
-            <th>Name</th>
+            <th>Customer</th>
             <th>Email</th>
             <th>Event</th>
+            <th>Ticket Type</th>
+            <th>Qty</th>
+            <th>Amount Paid</th>
             <th>Purchase Date</th>
             <th>Status</th>
-            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {attendees.map((attendee) => (
             <tr key={attendee.id}>
               <td className="font-semibold">{attendee.name}</td>
-              <td>{attendee.email}</td>
+              <td>{attendee.email || 'No email on file'}</td>
               <td>{attendee.event}</td>
+              <td>{attendee.ticketType}</td>
+              <td>{attendee.quantity.toLocaleString()}</td>
+              <td className="font-semibold">MK {attendee.amount.toLocaleString()}</td>
               <td>{attendee.purchaseDate}</td>
               <td>
                 <span className={`status-badge ${attendee.status === 'Checked In' ? 'published' : 'draft'}`}>
                   {attendee.status}
                 </span>
-              </td>
-              <td>
-                <button className="btn-action">🎟️ Ticket</button>
               </td>
             </tr>
           ))}
