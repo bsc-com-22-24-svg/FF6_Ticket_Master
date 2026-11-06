@@ -1,131 +1,151 @@
-import { useMemo, useState } from 'react'
-import { Users, Ticket, Coins, CheckCircle, Plus, Pencil, RotateCcw } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
-import { useAllEvents } from '../../events'
-import { resetTicketStore } from '../../../lib/tickets'
-import { resetEvents } from '../../../lib/events'
-import StatCard from '../components/StatCard'
-import SalesChart from '../components/SalesChart'
-import { useSalesSeries } from '../hooks/useSalesSeries'
-import { EMPTY_EVENT_STATS, useEventStats } from '../hooks/useEventStats'
-import { ConfirmDialog } from '../../../components/ConfirmDialog'
-import { useToast } from '../../toast'
-import { AttendeeList } from '../components/AttendeeList'
+import React, { useState } from 'react';
+import '../Organiser.css/organiser.css' ;
 
-export function OrganizerDashboardPage() {
-  const { data: events = [], isLoading } = useAllEvents()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const { showToast } = useToast()
-  
-  // Reset confirmation state
-  const [showResetConfirm, setShowResetConfirm] = useState(false)
+import { StatCard } from '../components/StatCard';
+import { SearchBar } from '../components/searchBar';
+import { EventTable } from '../components/EventTable';
+import { StaffTable } from '../components/staffTable';
+import { AttendeeTable } from '../components/Attendee';
+import { SalesChart } from '../components/SalesChart';
+import { CreateEventPage } from './CreateEventPage';
 
-  const selected = useMemo(
-    () => events.find((event) => event.id === (selectedId ?? events[0]?.id)),
-    [events, selectedId],
-  )
+import { useEvents } from '../hooks/useEventStats';
+import { useStaff } from '../hooks/useStaff';
+import { useAttendees } from '../hooks/useAttendee';
 
-  const { data: stats = EMPTY_EVENT_STATS } = useEventStats(selected?.id)
-  const { data: series = [] } = useSalesSeries(selected?.id)
+export const OrganizerDashboardPage: React.FC = () => {
+  const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
-  function confirmReset() {
-    resetEvents()
-    resetTicketStore()
-    showToast('Demo data reset', 'success')
-    window.location.reload()
-  }
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent } = useEvents();
+  const { staff, totalStaff, activeStaff, onLeaveStaff, search: stSearch, setSearch: setStSearch } = useStaff();
+  const { attendees, totalAttendees, checkedInCount, search: atSearch, setSearch: setAtSearch } = useAttendees();
+
+  const handleEventFormSubmission = (newEvent: any) => {
+    addEvent(newEvent);
+    setCurrentTab('events');
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16 pt-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold sm:text-4xl">Organizer Dashboard</h1>
-            <p className="mt-2 text-slate-600">Track sales and attendance for your events</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link to="/organizer/staff" className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              <Users size={16} /> Manage staff
-            </Link>
-            <button onClick={() => setShowResetConfirm(true)} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
-              <RotateCcw size={16} /> Reset demo data
-            </button>
-            <Link to="/organizer/events/new" className="flex items-center gap-2 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy-dark">
-              <Plus size={16} /> Create event
-            </Link>
+    <div className="dashboard-root">
+      {/* Sidebar Architecture Layout */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-logo">FF6</div>
+          <div className="brand-info">
+            <span className="panel-title">FF6 Ticket</span>
+            <span className="panel-subtitle">Organizer Panel</span>
           </div>
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-4">
-          <div className="lg:col-span-1">
-            <label className="block text-sm font-semibold">Select event</label>
-            <select value={selected?.id ?? ''} onChange={(e) => setSelectedId(e.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-navy">
-              {events.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.title} {event.status === 'Draft' ? '(draft)' : ''}
-                </option>
-              ))}
-            </select>
-            {isLoading && <p className="mt-2 text-sm text-slate-500">Loading events…</p>}
-            {!isLoading && events.length === 0 && <p className="mt-2 text-sm text-slate-500">No events yet — create one to get started.</p>}
+        <div className="user-profile-badge">
+          <div className="avatar-placeholder">JD</div>
+          <div className="user-details">
+            <span className="user-name">John Doe</span>
+            <span className="user-role">Organizer ▼</span>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          <button className={`nav-link-btn ${currentTab === 'events' ? 'active' : ''}`} onClick={() => setCurrentTab('events')}>
+            <span className="nav-icon">📅</span> My Events
+          </button>
+          <button className={`nav-link-btn ${currentTab === 'create' ? 'active' : ''}`} onClick={() => setCurrentTab('create')}>
+            <span className="nav-icon">➕</span> Create Event
+          </button>
+          <button className={`nav-link-btn ${currentTab === 'staff' ? 'active' : ''}`} onClick={() => setCurrentTab('staff')}>
+            <span className="nav-icon">👥</span> Staff Roster
+          </button>
+          <button className={`nav-link-btn ${currentTab === 'attendees' ? 'active' : ''}`} onClick={() => setCurrentTab('attendees')}>
+            <span className="nav-icon">🎟️</span> Attendees
+          </button>
+        </nav>
+      </aside>
+
+      {/* Main Core View Area */}
+      <main className="dashboard-viewport">
+        {currentTab === 'create' ? (
+          <CreateEventPage onEventCreated={handleEventFormSubmission} onCancel={() => setCurrentTab('events')} />
+        ) : (
+          <div className="page-content-wrapper">
             
-            {selected && (
-              <div className="mt-4">
-                <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${selected.status === 'Published' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>
-                    {selected.status}
-                  </span>
-                </div>
-                <Link to="/organizer/events/$eventId/edit" params={{ eventId: selected.id }} className="mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold hover:bg-slate-50">
-                  <Pencil size={14} /> Edit event
-                </Link>
-              </div>
-            )}
-          </div>
-
-          <StatCard label="Tickets sold" value={stats.sold.toLocaleString()} detail={`${stats.capacity.toLocaleString()} total`} icon={Ticket} />
-          <StatCard label="Remaining" value={stats.remaining.toLocaleString()} detail="seats left" icon={Users} />
-          <StatCard label="Revenue" value={`MK ${stats.revenue.toLocaleString()}`} detail={stats.fees > 0 ? `incl. MK ${stats.fees.toLocaleString()} fees` : 'from sales'} icon={Coins} />
-          <StatCard label="Checked in" value={stats.checkedIn.toLocaleString()} detail="attendees admitted" icon={CheckCircle} />
-        </div>
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <h2 className="text-xl font-bold">Sales this week</h2>
-            <div className="mt-6">
-              <SalesChart data={series} eventName={selected?.title} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">
-            <h2 className="text-xl font-bold">Ticket types</h2>
-            <div className="mt-4 space-y-3">
-              {selected?.ticketTypes.map((type) => (
-                <div key={type.id} className="flex items-center justify-between rounded-xl border p-3">
+            {/* Context Dependent Metric Row Blocks */}
+            {currentTab === 'events' && (
+              <>
+                <div className="content-header">
                   <div>
-                    <p className="font-semibold">{type.name}</p>
-                    <p className="text-sm text-slate-600">MK {type.price.toLocaleString()} · {type.capacity} cap</p>
+                    <h2 className="view-title">My Events</h2>
+                    <p className="view-subtitle">Manage and track your active performance profiles.</p>
                   </div>
-                  <span className="text-sm font-semibold">{type.sold} sold</span>
+                  <button className="btn-primary-header" onClick={() => setCurrentTab('create')}>+ Create Event</button>
                 </div>
-              ))}
-            </div>
+                <div className="metrics-grid">
+                  <StatCard title="Total Events" value={totalEvents} icon="📊" color="#3b82f6" />
+                  <StatCard title="Published" value={publishedCount} icon="✅" color="#10b981" />
+                  <StatCard title="Draft" value={draftCount} icon="🕒" color="#64748b" />
+                  <StatCard title="Total Tickets Sold" value={totalTickets.toLocaleString()} icon="📈" color="#f59e0b" />
+                </div>
+                <div className="filter-toolbar">
+                  <SearchBar value={evSearch} onChange={setEvSearch} placeholder="Search events by profile name or venue location..." />
+                  <select className="toolbar-dropdown" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                    <option value="All">All Statuses</option>
+                    <option value="Published">Published Only</option>
+                    <option value="Draft">Drafts Only</option>
+                  </select>
+                </div>
+                <EventTable events={events} />
+              </>
+            )}
+
+            {currentTab === 'staff' && (
+              <>
+                <div className="content-header">
+                  <div>
+                    <h2 className="view-title">My Staff Roster</h2>
+                    <p className="view-subtitle">Manage structural credentials for active deployable members.</p>
+                  </div>
+                </div>
+                <div className="metrics-grid">
+                  <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
+                  <StatCard title="Active Staff" value={activeStaff} icon="🟢" color="#10b981" />
+                  <StatCard title="On Leave" value={onLeaveStaff} icon="🟠" color="#f59e0b" />
+                </div>
+                <div className="filter-toolbar">
+                  <SearchBar value={stSearch} onChange={setStSearch} placeholder="Search staff members by credential names or titles..." />
+                </div>
+                <StaffTable staff={staff} />
+              </>
+            )}
+
+            {currentTab === 'attendees' && (
+              <>
+                <div className="content-header">
+                  <div>
+                    <h2 className="view-title">Registered Attendees</h2>
+                    <p className="view-subtitle">Track entry vectors and validation configurations.</p>
+                  </div>
+                </div>
+                <div className="metrics-grid">
+                  <StatCard title="Total Attendees" value={totalAttendees} icon="🎟️" color="#3b82f6" />
+                  <StatCard title="Checked In" value={checkedInCount} icon="✓" color="#10b981" />
+                  <StatCard title="Attendance Rate" value={`${Math.round((checkedInCount / (totalAttendees || 1)) * 100)}%`} icon="📊" color="#a855f7" />
+                </div>
+                <div className="filter-toolbar">
+                  <SearchBar value={atSearch} onChange={setAtSearch} placeholder="Search participants by purchase reference points..." />
+                </div>
+                <div className="split-view-layout">
+                  <div className="split-table-side">
+                    <AttendeeTable attendees={attendees} />
+                  </div>
+                  <div className="split-analytics-side">
+                    <SalesChart />
+                  </div>
+                </div>
+              </>
+            )}
+
           </div>
-        </div>
-        <div className="mt-8">
-          <AttendeeList eventId={selected?.id} />
-        </div>
-        <ConfirmDialog
-          open={showResetConfirm}
-          onClose={() => setShowResetConfirm(false)}
-          onConfirm={confirmReset}
-          title="Reset demo data"
-          description="Reset all demo data (events, tickets and bookings)? This action cannot be undone."
-          confirmLabel="Reset"
-          cancelLabel="Cancel"
-          variant="danger"
-        />
-      </div>
+        )}
+      </main>
     </div>
-  )
-}
+  );
+};

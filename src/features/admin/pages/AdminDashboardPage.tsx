@@ -3,7 +3,7 @@ import { ShieldAlert, DollarSign, Ban, RotateCcw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listAllEvents, saveEvent, type StoredEvent } from '../../../lib/events'
 import { useToast } from '../../toast'
-import StatCard from '../../organizer/components/StatCard'
+import {StatCard} from '../../organizer/components/StatCard'
 import { UserManagement } from '../components/UserManagement'
 
 export function AdminDashboardPage() {
@@ -32,9 +32,9 @@ export function AdminDashboardPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <StatCard label="Total Platform Revenue" value={`MK ${totalRevenue.toLocaleString()}`} icon={DollarSign} />
-          
-          <StatCard label="Total Events" value={events.length.toString()} icon={ShieldAlert} detail="Across all organizers" />
+          <StatCard title="Total Platform Revenue" value={`MK ${totalRevenue.toLocaleString()}`} icon={DollarSign as any} />
+
+          <StatCard title="Total Events" value={events.length.toString()} icon={ShieldAlert as any} />
         </div>
 
         <div className="flex gap-4 mb-4 border-b border-slate-200">
