@@ -1,7 +1,9 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
+import { USE_BACKEND } from '../../../lib/backend'
+import { useEvents } from '../../events/hooks/useEvents'
 import { listEvents } from '../../../lib/events'
 import { ScanResult } from '../components/ScanResult'
 import { SCAN_EVENT } from '../mockData'
@@ -14,18 +16,40 @@ export function ScannerPage(): ReactNode {
   const [result, setResult] = useState<TicketValidationResult | null>(null)
   const [history, setHistory] = useState<TicketValidationResult[]>([])
   const [manualCode, setManualCode] = useState('')
+  const [checking, setChecking] = useState(false)
+  const checkingRef = useRef(false)
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  // Only the published events this staff member was assigned to
+  const { data: backendEvents = [], isLoading: loadingEvents } = useEvents()
+  // With the backend, the server authorises the scan. Without it, staff can only
+  // scan the events their organizer assigned to them in the browser.
   const assigned = user ? staffEventIds(user.id) : []
-  const events = listEvents().filter((e) => assigned.includes(e.id))
+  const events = USE_BACKEND ? backendEvents : listEvents().filter((e) => assigned.includes(e.id))
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? '')
   const selectedEvent = events.find((e) => e.id === selectedEventId) ?? events[0]
   const activeEventId = selectedEvent?.id ?? ''
 
   const handleCode = useCallback(
-    (rawCode: string) => {
-      const outcome = validateTicket(rawCode, activeEventId)
+    async (rawCode: string) => {
+      const outcome = await (async (): Promise<TicketValidationResult> => {
+        if (!activeEventId) {
+          return {
+            status: 'invalid',
+            title: 'No event selected',
+            message: 'Choose the event you are checking tickets for.',
+          }
+        }
+        try {
+          return await validateTicket(rawCode, activeEventId)
+        } catch (caught) {
+          return {
+            status: 'invalid',
+            title: 'Could not check ticket',
+            message: caught instanceof Error ? caught.message : 'The ticket could not be checked. Try again.',
+          }
+        }
+      })()
+
       setResult(outcome)
       setHistory((previous) => [outcome, ...previous].slice(0, 6))
       setManualCode('')
@@ -36,18 +60,42 @@ export function ScannerPage(): ReactNode {
     [queryClient, activeEventId],
   )
 
-  const { videoRef, status, error, start, stop } = useQrScanner(handleCode)
+  const checkCode = useCallback(
+    (rawCode: string) => {
+      if (checkingRef.current) return
+      checkingRef.current = true
+      setChecking(true)
+      void handleCode(rawCode).finally(() => {
+        checkingRef.current = false
+        setChecking(false)
+      })
+    },
+    [handleCode],
+  )
+
+  const { videoRef, status, error, start, stop } = useQrScanner(checkCode)
 
   function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    handleCode(manualCode)
+    checkCode(manualCode)
   }
 
-  const checkedIn = listTickets().filter(
-    (ticket) => ticket.eventId === activeEventId && ticket.status === 'used',
-  ).length
+  const checkedIn = USE_BACKEND
+    ? history.filter((item) => item.status === 'valid').length
+    : listTickets().filter(
+        (ticket) => ticket.eventId === activeEventId && ticket.status === 'used',
+      ).length
 
   const scanning = status === 'scanning'
+
+  if (!selectedEvent && loadingEvents) {
+    return (
+      <div>
+        <h1>Scan tickets</h1>
+        <div className="alert info" style={{ marginTop: 14 }}>Loading events…</div>
+      </div>
+    )
+  }
 
   if (!selectedEvent) {
     return (
@@ -87,7 +135,7 @@ export function ScannerPage(): ReactNode {
           </label>
         </div>
         <div className="card stat" style={{ minWidth: 160 }}>
-          <span className="m">Checked in · {selectedEvent.title}</span>
+          <span className="m">{USE_BACKEND ? 'Checked in this session' : `Checked in · ${selectedEvent.title}`}</span>
           <b>{checkedIn}</b>
         </div>
       </div>
@@ -114,7 +162,7 @@ export function ScannerPage(): ReactNode {
                 type="button"
                 className="btn"
                 onClick={start}
-                disabled={status === 'starting'}
+                disabled={status === 'starting' || checking}
               >
                 {status === 'starting' ? 'Starting camera…' : 'Start camera'}
               </button>
@@ -127,22 +175,31 @@ export function ScannerPage(): ReactNode {
             <input
               className="in"
               style={{ margin: 0 }}
-              placeholder="Enter ticket ID, e.g. TM-2026-K7QX4ZP9R2WM"
+              placeholder={USE_BACKEND ? 'Paste or scan the ticket QR token' : 'Enter ticket ID, e.g. TM-2026-K7QX4ZP9R2WM'}
               value={manualCode}
               onChange={(event) => setManualCode(event.target.value)}
             />
-            <button type="submit" className="btn" disabled={!manualCode.trim()}>
-              Validate
+            <button type="submit" className="btn" disabled={!manualCode.trim() || checking}>
+              {checking ? 'Checking…' : 'Validate'}
             </button>
           </form>
 
           <div className="alert info">
-            <b>Demo tickets for this event</b>
-            <p className="m">1. TM-2026-K7QX4ZP9R2WM — valid (accepts once)</p>
-            <p className="m">2. TM-2026-W9FJ2MXA4LEU — already used</p>
-            <p className="m">3. TM-2026-H3VN8DC5T6YB — wrong event</p>
-            <p className="m">4. TM-2026-K7QX4ZP9R2WM.AAAAAAAAAA — tampered (wrong security tag)</p>
-            <p className="m">Any other code — invalid</p>
+            {USE_BACKEND ? (
+              <>
+                <b>Server-checked tickets</b>
+                <p className="m">The backend records each scan, so a ticket is accepted only once.</p>
+              </>
+            ) : (
+              <>
+                <b>Demo tickets for this event</b>
+                <p className="m">1. TM-2026-K7QX4ZP9R2WM — valid (accepts once)</p>
+                <p className="m">2. TM-2026-W9FJ2MXA4LEU — already used</p>
+                <p className="m">3. TM-2026-H3VN8DC5T6YB — wrong event</p>
+                <p className="m">4. TM-2026-K7QX4ZP9R2WM.AAAAAAAAAA — tampered (wrong security tag)</p>
+                <p className="m">Any other code — invalid</p>
+              </>
+            )}
           </div>
         </div>
 

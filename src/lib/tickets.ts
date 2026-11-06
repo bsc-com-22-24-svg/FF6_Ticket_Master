@@ -21,6 +21,7 @@ export interface TicketRecord {
   status: TicketStatus
   createdAt: string // ISO timestamp, used for sales reporting
   checkedInAt?: string
+  qrCodeDataUrl?: string // backend-issued QR image; local tickets generate their QR in the browser
 }
 
 export type BookingStatus = 'confirmed' | 'cancelled'
@@ -380,6 +381,16 @@ export function issueTicket(input: IssueTicketInput): TicketRecord {
 
   writeList(TICKETS_KEY, [ticket, ...tickets])
   return ticket
+}
+
+// Stores tickets issued by the backend so My Tickets and the confirmation page can
+// read them through the same local ticket accessors. The backend remains the source
+// of truth; this is only a cache of what it has already issued.
+export function saveIssuedTickets(tickets: TicketRecord[]): void {
+  if (tickets.length === 0) return
+  const ids = new Set(tickets.map((ticket) => ticket.id))
+  const remaining = listTickets().filter((ticket) => !ids.has(ticket.id))
+  writeList(TICKETS_KEY, [...tickets, ...remaining])
 }
 
 export function markTicketUsed(id: string): TicketRecord | undefined {

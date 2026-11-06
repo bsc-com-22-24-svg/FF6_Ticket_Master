@@ -78,65 +78,65 @@ describe('validateTicket', () => {
     loginAsStaff()
   })
 
-  it('accepts a ticket scanned from its signed QR code, once', () => {
+  it('accepts a ticket scanned from its signed QR code, once', async () => {
     const ticket = newTicket()
     const qr = ticketQrValue(ticket.id)
     expect(qr).toBe('TICKET:' + ticket.id + '.' + signTicket(ticket.id, ticket.eventId))
 
-    expect(validateTicket(qr, 'event-one').status).toBe('valid')
-    expect(validateTicket(qr, 'event-one').status).toBe('used')
+    expect((await validateTicket(qr, 'event-one')).status).toBe('valid')
+    expect((await validateTicket(qr, 'event-one')).status).toBe('used')
   })
 
-  it('rejects a forged tag with a specific message', () => {
+  it('rejects a forged tag with a specific message', async () => {
     const ticket = newTicket()
-    const result = validateTicket('TICKET:' + ticket.id + '.0000000000', 'event-one')
+    const result = await validateTicket('TICKET:' + ticket.id + '.0000000000', 'event-one')
     expect(result.status).toBe('invalid')
     expect(result.tampered).toBe(true)
     expect(result.title).toBe('Tampered ticket')
     expect(result.ticket).toBeUndefined()
   })
 
-  it('does not admit the ticket after a forged scan', () => {
+  it('does not admit the ticket after a forged scan', async () => {
     const ticket = newTicket()
-    validateTicket('TICKET:' + ticket.id + '.0000000000', 'event-one')
-    expect(validateTicket(ticketQrValue(ticket.id), 'event-one').status).toBe('valid')
+    await validateTicket('TICKET:' + ticket.id + '.0000000000', 'event-one')
+    expect((await validateTicket(ticketQrValue(ticket.id), 'event-one')).status).toBe('valid')
   })
 
-  it('rejects another ticket\'s tag on this ticket id', () => {
+  it('rejects another ticket\'s tag on this ticket id', async () => {
     const first = newTicket()
     const second = newTicket()
     const forged = 'TICKET:' + second.id + '.' + signTicket(first.id, first.eventId)
-    expect(validateTicket(forged, 'event-one').tampered).toBe(true)
+    expect((await validateTicket(forged, 'event-one')).tampered).toBe(true)
   })
 
-  it('rejects a tag that belongs to a different event', () => {
+  it('rejects a tag that belongs to a different event', async () => {
     const ticket = newTicket('event-one')
     const forged = 'TICKET:' + ticket.id + '.' + signTicket(ticket.id, 'another-event')
-    expect(validateTicket(forged, 'event-one').tampered).toBe(true)
+    expect((await validateTicket(forged, 'event-one')).tampered).toBe(true)
   })
 
-  it('rejects an altered id that still carries a tag as tampered', () => {
+  it('rejects an altered id that still carries a tag as tampered', async () => {
     const ticket = newTicket()
     const altered = 'TICKET:' + ticket.id.slice(0, -1) + (ticket.id.endsWith('A') ? 'B' : 'A') + '.' + signTicket(ticket.id, ticket.eventId)
-    const result = validateTicket(altered, 'event-one')
+    const result = await validateTicket(altered, 'event-one')
     expect(result.status).toBe('invalid')
     expect(result.tampered).toBe(true)
   })
 
-  it('rejects an unknown id as invalid', () => {
-    const result = validateTicket('TICKET:TM-2026-ZZZZZZZZZZZZ', 'event-one')
+  it('rejects an unknown id as invalid', async () => {
+    const result = await validateTicket('TICKET:TM-2026-ZZZZZZZZZZZZ', 'event-one')
     expect(result.status).toBe('invalid')
     expect(result.tampered).toBeUndefined()
     expect(result.title).toBe('Invalid ticket')
   })
 
-  it('still accepts a plain ticket id without a tag (legacy form)', () => {
+  it('still accepts a plain ticket id without a tag (legacy form)', async () => {
     const ticket = newTicket()
-    expect(validateTicket(ticket.id, 'event-one').status).toBe('valid')
+    expect((await validateTicket(ticket.id, 'event-one')).status).toBe('valid')
   })
 
-  it('still accepts the seeded demo ticket, plain or from its signed QR code', () => {
-    expect(validateTicket('TM-2026-K7QX4ZP9R2WM', 'lake-of-stars').status).toBe('valid')
-    expect(validateTicket(ticketQrValue('TM-2026-H3VN8DC5T6YB'), 'dev-summit').status).toBe('valid')
+  it('still accepts the seeded demo ticket, plain or from its signed QR code', async () => {
+    expect((await validateTicket('TM-2026-K7QX4ZP9R2WM', 'lake-of-stars')).status).toBe('valid')
+    expect((await validateTicket(ticketQrValue('TM-2026-H3VN8DC5T6YB'), 'dev-summit')).status).toBe('valid')
   })
 })

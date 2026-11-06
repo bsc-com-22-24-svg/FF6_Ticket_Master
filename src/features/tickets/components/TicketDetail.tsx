@@ -27,19 +27,29 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
         <button
           type="button"
           className={styles.download}
-          onClick={() => void downloadTicketImage(ticketFromView(ticket), qrRef.current)}
+          onClick={() => void downloadTicketImage(ticketFromView(ticket), qrRef.current, ticket.qrCodeDataUrl)}
         >
           Download ticket
         </button>
       </div>
 
       <div className={styles.qrBox}>
-        <QRCodeCanvas
-          ref={qrRef}
-          value={ticketQrValue(ticket.id)}
-          size={168}
-          level="M"
-        />
+        {ticket.qrCodeDataUrl ? (
+          <img
+            src={ticket.qrCodeDataUrl}
+            width={168}
+            height={168}
+            alt=""
+            style={{ width: 168, height: 168, objectFit: 'contain' }}
+          />
+        ) : (
+          <QRCodeCanvas
+            ref={qrRef}
+            value={ticketQrValue(ticket.id)}
+            size={168}
+            level="M"
+          />
+        )}
         <p className={styles.qrId}>{ticket.id}</p>
         <p className={styles.qrNote}>
           {ticket.status === 'valid'

@@ -78,6 +78,19 @@ export function markPaymentCompleted(txRef: string, ticketIds: string[]): void {
   )
 }
 
+// Used when a multi-ticket order is partially fulfilled. The payment stays pending
+// so a retry can claim only the tickets that are still missing.
+export function addPendingTickets(txRef: string, ticketIds: string[]): void {
+  if (ticketIds.length === 0) return
+  writePending(
+    readPending().map((item) =>
+      item.txRef === txRef
+        ? { ...item, ticketIds: Array.from(new Set([...(item.ticketIds ?? []), ...ticketIds])) }
+        : item,
+    ),
+  )
+}
+
 export function makeTxRef(): string {
   const random = Math.random().toString(36).slice(2, 10)
   return `TM-${Date.now().toString(36)}-${random}`.toUpperCase()
