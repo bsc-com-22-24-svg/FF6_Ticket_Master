@@ -29,7 +29,7 @@ export function validateTicket(rawCode: string, eventId: string): TicketValidati
     }
   }
 
-  const code = normalizeTicketCode(rawCode)
+  const { id: code, tag } = parseTicketCode(rawCode)
 
   if (!code) {
     return {
