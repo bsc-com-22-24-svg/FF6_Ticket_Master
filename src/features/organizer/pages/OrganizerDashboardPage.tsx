@@ -18,7 +18,13 @@ export const OrganizerDashboardPage: React.FC = () => {
 
   const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent } = useEvents();
   const { staff, totalStaff, activeStaff, onLeaveStaff, search: stSearch, setSearch: setStSearch } = useStaff();
-  const { attendees, totalAttendees, checkedInCount, search: atSearch, setSearch: setAtSearch } = useAttendees();
+  const {
+    attendees, totalAttendees, checkedInCount,
+    search: atSearch, setSearch: setAtSearch,
+    eventId: atEventId, setEventId: setAtEventId,
+    ticketType: atTicketType, setTicketType: setAtTicketType,
+    eventOptions, ticketTypeOptions,
+  } = useAttendees();
 
   const handleEventFormSubmission = (newEvent: any) => {
     addEvent(newEvent);
@@ -120,8 +126,8 @@ export const OrganizerDashboardPage: React.FC = () => {
               <>
                 <div className="content-header">
                   <div>
-                    <h2 className="view-title">Registered Attendees</h2>
-                    <p className="view-subtitle">Track entry vectors and validation configurations.</p>
+                    <h2 className="view-title">Customers &amp; Purchases</h2>
+                    <p className="view-subtitle">Track ticket sales and customers across your events.</p>
                   </div>
                 </div>
                 <div className="metrics-grid">
@@ -130,7 +136,19 @@ export const OrganizerDashboardPage: React.FC = () => {
                   <StatCard title="Attendance Rate" value={`${Math.round((checkedInCount / (totalAttendees || 1)) * 100)}%`} icon="📊" color="#a855f7" />
                 </div>
                 <div className="filter-toolbar">
-                  <SearchBar value={atSearch} onChange={setAtSearch} placeholder="Search participants by purchase reference points..." />
+                  <SearchBar value={atSearch} onChange={setAtSearch} placeholder="Search by customer name, email, event or ticket..." />
+                  <select className="toolbar-dropdown" value={atEventId} onChange={(e) => setAtEventId(e.target.value)}>
+                    <option value="all">All Events</option>
+                    {eventOptions.map((event) => (
+                      <option key={event.id} value={event.id}>{event.title}</option>
+                    ))}
+                  </select>
+                  <select className="toolbar-dropdown" value={atTicketType} onChange={(e) => setAtTicketType(e.target.value)}>
+                    <option value="all">All Ticket Types</option>
+                    {ticketTypeOptions.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="split-view-layout">
                   <div className="split-table-side">
