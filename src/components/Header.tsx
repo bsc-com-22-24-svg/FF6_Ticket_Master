@@ -32,7 +32,9 @@ export default function Header() {
   }, [menuOpen])
 
   const { user, logout } = useAuth()
-  const nav = navAccess(user?.role)
+  const isAdmin = user?.role === 'admin'
+  // Admins don't see the Events or Bookings links; everyone else sees the full menu.
+  const visibleLinks = isAdmin ? headerLinks.filter((item) => !/event|booking/i.test(item.label)) : headerLinks
   const navigate = useNavigate()
   const closeMenu = () => setMenuOpen(false)
   const handleLogout = () => {
@@ -50,17 +52,16 @@ export default function Header() {
 
         {/* Desktop Nav */}
         <nav aria-label="Main navigation" className="hidden items-center gap-6 lg:flex xl:gap-8">
-          {nav.publicLinks && headerLinks.map((item) => (
+          {visibleLinks.map((item) => (
             <SiteLink key={item.label} item={item} className="text-sm font-medium text-slate-600 hover:text-navy" />
           ))}
           {user ? (
             <div className="flex items-center gap-4 border-l border-slate-200 pl-5">
-              {nav.bookings && <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>}
-              {nav.tickets && <Link to="/tickets" className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
-              {nav.dashboard && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
-              {nav.staffManagement && <Link to="/organizer/staff" className="text-sm font-medium text-slate-600 hover:text-navy">Staff</Link>}
-              {nav.scan && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
-              {nav.admin && <Link to="/admin" className="text-sm font-medium text-red-600 hover:text-red-800 font-bold">Admin Panel</Link>}
+              {!isAdmin && <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>}
+              {user.role === 'customer' && <Link to="/tickets" className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
+              {user.role === 'staff' && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
+              {user.role === 'admin' && <Link to="/admin" className="text-sm font-medium text-red-600 hover:text-red-800 font-bold">Admin Panel</Link>}
               <div className="flex items-center gap-2.5">
                 <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-50 text-xs font-bold uppercase text-navy">
                   {user.name.trim().charAt(0)}
@@ -92,17 +93,16 @@ export default function Header() {
       {/* Mobile Nav */}
       {menuOpen && (
         <nav id="mobile-menu" aria-label="Mobile navigation" className="flex flex-col border-t bg-white px-4 pb-4 lg:hidden">
-          {nav.publicLinks && headerLinks.map((item) => (
+          {visibleLinks.map((item) => (
             <SiteLink key={item.label} item={item} onClick={closeMenu} className="rounded-lg px-3 py-3 font-medium hover:bg-navy-50" />
           ))}
           {user ? (
             <div className="flex flex-col gap-2 pt-2">
-              {nav.bookings && <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>}
-              {nav.tickets && <Link to="/tickets" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
-              {nav.dashboard && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
-              {nav.staffManagement && <Link to="/organizer/staff" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Staff</Link>}
-              {nav.scan && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}
-              {nav.admin && <Link to="/admin" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50">Admin Panel</Link>}
+              {!isAdmin && <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>}
+              {user.role === 'customer' && <Link to="/tickets" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
+              {user.role === 'organizer' && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
+              {user.role === 'staff' && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}
+              {user.role === 'admin' && <Link to="/admin" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium text-red-600 hover:bg-red-50">Admin Panel</Link>}
               <div className="mt-1 flex items-center gap-2.5 border-t border-slate-100 px-3 pt-3">
                 <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-navy-50 text-xs font-bold uppercase text-navy">
                   {user.name.trim().charAt(0)}
