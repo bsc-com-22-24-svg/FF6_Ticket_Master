@@ -20,6 +20,7 @@ export const quickLinks: NavLink[] = [
 export const organizerLinks: NavLink[] = [
   { label: 'Create Event', to: '/organizer/events/new' },
   { label: 'Dashboard', to: '/organizer/dashboard' },
+  { label: 'Staff', to: '/organizer/staff' },
   { label: 'Ticket Validation', to: '/scan' },
 ]
 

@@ -17,6 +17,25 @@ export function formatMoney(amount: number | undefined | null): string {
   return `MK ${amount.toLocaleString()}`;
 }
 
+// A moment in time (for example when a ticket was bought), shown in the
+// viewer's own time zone: "24 Oct 2026, 18:00".
+export function formatDateTime(iso: string | undefined | null): string {
+  if (!iso) return '—';
+  const moment = new Date(iso);
+  if (Number.isNaN(moment.getTime())) return '—';
+  const day = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(moment);
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(moment);
+  return `${day}, ${time}`;
+}
+
 // true when the event date is today or later
 export function isUpcoming(iso: string): boolean {
   if (!iso) return false;

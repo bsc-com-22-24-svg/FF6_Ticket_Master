@@ -12,4 +12,5 @@ export type Ticket = {
   price: number; // in MK
   holder: string;
   status: TicketStatus;
+  purchasedAt?: string; // ISO timestamp of the purchase
 };

@@ -1,63 +1,38 @@
-import { useQuery } from '@tanstack/react-query'
-import { getEvent } from '../../../lib/events'
-import { listBookings, listTickets } from '../../../lib/tickets'
-import { remainingSeats } from '../../../types/event'
+import { useState } from 'react';
+import { mockEvents, type EventItem } from '../Data/Events';
 
-export interface EventStats {
-  sold: number
-  capacity: number
-  remaining: number
-  revenue: number
-  fees: number
-  checkedIn: number
-}
+export const useEvents = () => {
+  const [events, setEvents] = useState<EventItem[]>(mockEvents);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
 
-export const EMPTY_EVENT_STATS: EventStats = {
-  sold: 0,
-  capacity: 0,
-  remaining: 0,
-  revenue: 0,
-  fees: 0,
-  checkedIn: 0,
-}
+  const addEvent = (newEvent: Omit<EventItem, 'id' | 'ticketsSold'>) => {
+    const freshItem: EventItem = {
+      ...newEvent,
+      id: String(events.length + 1),
+      ticketsSold: 0
+    };
+    setEvents([freshItem, ...events]);
+  };
 
-export function buildEventStats(eventId: string): EventStats {
-  const event = getEvent(eventId)
-  if (!event) return EMPTY_EVENT_STATS
+  const filteredEvents = events.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || item.venue.toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
-  const sold = event.ticketTypes.reduce((sum, type) => sum + type.sold, 0)
-  const capacity = event.ticketTypes.reduce((sum, type) => sum + type.capacity, 0)
-  const remaining = event.ticketTypes.reduce((sum, type) => sum + remainingSeats(type), 0)
-  const ticketSales = event.ticketTypes.reduce((sum, type) => sum + type.sold * type.price, 0)
-
-  const eventTickets = listTickets().filter((ticket) => ticket.eventId === eventId)
-  const eventTicketIds = new Set(eventTickets.map((ticket) => ticket.id))
-  const fees = listBookings()
-    .filter(
-      (booking) =>
-        booking.status === 'confirmed' &&
-        booking.ticketIds.some((id) => eventTicketIds.has(id)),
-    )
-    .reduce((sum, booking) => sum + booking.serviceFee, 0)
-
-  const checkedIn = eventTickets.filter((ticket) => ticket.status === 'used').length
+  const totalTickets = events.reduce((sum, item) => sum + item.ticketsSold, 0);
 
   return {
-    sold,
-    capacity,
-    remaining,
-    revenue: ticketSales + fees,
-    fees,
-    checkedIn,
-  }
-}
-
-// The same reactive source as the sales chart, so check-ins and sales show up
-// without a manual refresh.
-export function useEventStats(eventId?: string) {
-  return useQuery({
-    queryKey: ['event-stats', eventId],
-    queryFn: () => buildEventStats(eventId ?? ''),
-    enabled: !!eventId,
-  })
-}
+    events: filteredEvents,
+    totalEvents: events.length,
+    publishedCount: events.filter(e => e.status === 'Published').length,
+    draftCount: events.filter(e => e.status === 'Draft').length,
+    totalTickets,
+    search,
+    setSearch,
+    filterStatus,
+    setFilterStatus,
+    addEvent
+  };
+};

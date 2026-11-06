@@ -132,7 +132,7 @@ export function CheckoutPage(): ReactNode {
             <section className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
               <div className="bg-navy px-6 py-5 text-white">
                 <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Your event</p>
-                <h2 className="mt-1 text-2xl font-bold">{checkoutEvent.name}</h2>
+                <h2 className="mt-1 text-2xl font-bold text-white">{checkoutEvent.name}</h2>
                 <p className="mt-2 text-sm text-slate-200">
                   {checkoutEvent.date}
                   {checkoutEvent.time ? ` · ${checkoutEvent.time}` : ''}

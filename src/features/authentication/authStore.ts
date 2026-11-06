@@ -1,6 +1,7 @@
 import { isUserDisabled } from '../../lib/adminUsers';
 
 export type Role = 'customer' | 'organizer' | 'staff' | 'admin';
+export type AccountStatus = 'active' | 'disabled';
 
 export interface User{
     id:string;
@@ -9,16 +10,32 @@ export interface User{
     role:Role;
 }
 
+// What the admin and organizer screens see (never includes the password)
+export interface ManagedUser extends User {
+    status: AccountStatus;
+    createdAt: string;
+    organizerId?: string;       // staff only: the organizer who owns this staff account
+    assignedEventIds: string[]; // staff only: events this person may scan
+}
+
 interface StoredUser extends User{
     password: string;
+    status?: AccountStatus;
+    createdAt?: string;
+    organizerId?: string;
+    assignedEventIds?: string[];
 }
+type FullAccount = StoredUser & ManagedUser;
+type Patch = Partial<StoredUser> & { deleted?: boolean };
+
+const SEED_DATE = '2026-01-01T00:00:00.000Z';
 
 // Mock accounts until the backend exists
 const MOCK_USERS: StoredUser[] = [
-  { id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' },
-  { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', password: 'password123', role: 'organizer' },
-  { id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', password: 'password123', role: 'staff' },
-  { id: 'u-4', name: 'Platform Admin', email: 'admin@example.com', password: 'password123', role: 'admin' },
+  { id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer', createdAt: SEED_DATE },
+  { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', password: 'password123', role: 'organizer', createdAt: SEED_DATE },
+  { id: 'u-3', name: 'Gate Staff', email: 'staff@example.com', password: 'password123', role: 'staff', createdAt: SEED_DATE, organizerId: 'u-2', assignedEventIds: ['lake-of-stars'] },
+  { id: 'u-4', name: 'Platform Admin', email: 'admin@example.com', password: 'password123', role: 'admin', createdAt: SEED_DATE },
 ];
 
 const SESSION_KEY = 'tm_user';
@@ -40,6 +57,15 @@ function allAccounts():StoredUser[]{
         overrides[account.email] ? { ...account, password: overrides[account.email] } : account,
     );
 }
+
+function toManaged(account: FullAccount): ManagedUser {
+    return {
+        id: account.id, name: account.name, email: account.email, role: account.role,
+        status: account.status, createdAt: account.createdAt,
+        organizerId: account.organizerId, assignedEventIds: account.assignedEventIds,
+    };
+}
+
 const wait = ()=> new Promise((resolve) => setTimeout(resolve,400));
 
 // Accounts without passwords, for the admin User Management tab.
@@ -48,7 +74,15 @@ export function listAccounts(): User[] {
 }
 
 export function getUser(): User | null{
-    return readJson<User>(SESSION_KEY);
+    const session = readJson<User>(SESSION_KEY);
+    if (!session) return null;
+    const accounts = allAccounts();
+    const account = accounts.find((a) => a.id === session.id);
+    if (!account || !isUsable(account, accounts)) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+    }
+    return { id: account.id, name: account.name, email: account.email, role: account.role };
 }
 
 // Used when migrating legacy records that stored an owner email instead of an id.
@@ -70,7 +104,8 @@ export const DEMO_ACCOUNTS = [
 
 export async function loginRequest(email:string,password:string):Promise<User>{
     await wait();
-    const account = allAccounts().find((a) => a.email ===email.trim().toLowerCase() && a.password ===password);
+    const accounts = allAccounts();
+    const account = accounts.find((a) => a.email ===email.trim().toLowerCase() && a.password ===password);
     if(!account) throw new Error('Wrong email or password');
     if(isUserDisabled(account.id)) throw new Error('This account has been disabled. Contact an administrator.');
     return startSession(account);
@@ -80,7 +115,7 @@ export async function registerRequest(name:string,email:string,password:string,r
     await wait();
     const cleanEmail = email.trim().toLowerCase();
     if(allAccounts().some((a) => a.email===cleanEmail)) throw new Error('This account already exists');
-    const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role};
+    const account: StoredUser = {id: `u-${Date.now()}`,name:name.trim(),email:cleanEmail,password,role,status:'active',createdAt:new Date().toISOString()};
     const saved = readJson<StoredUser[]>(ACCOUNTS_KEY)??[];
     localStorage.setItem(ACCOUNTS_KEY,JSON.stringify([...saved,account]));
     return startSession(account);
