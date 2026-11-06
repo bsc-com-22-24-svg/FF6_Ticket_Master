@@ -13,4 +13,5 @@ export type Ticket = {
   holder: string;
   status: TicketStatus;
   purchasedAt?: string; // ISO timestamp of the purchase
+  qrCodeDataUrl?: string; // server-issued QR image, when the backend owns the ticket
 };

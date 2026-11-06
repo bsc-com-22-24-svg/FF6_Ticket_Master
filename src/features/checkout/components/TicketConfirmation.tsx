@@ -66,13 +66,13 @@ function TicketPass({ ticket }: { ticket: TicketRecord }): ReactNode {
           type="button"
           className="btn"
           style={{ marginTop: 8 }}
-          onClick={() => void downloadTicketImage(ticketFromRecord(ticket), qrRef.current)}
+          onClick={() => void downloadTicketImage(ticketFromRecord(ticket), qrRef.current, ticket.qrCodeDataUrl)}
         >
           Download ticket PNG
         </button>
       </div>
       <div className="ticket-pass-qr">
-        <QrCode value={ticket.id} canvasRef={qrRef} />
+        <QrCode value={ticket.id} canvasRef={qrRef} dataUrl={ticket.qrCodeDataUrl} />
         <p className="m" style={{ marginTop: 8 }}>Scan at the entrance</p>
       </div>
     </article>

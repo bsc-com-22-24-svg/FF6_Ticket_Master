@@ -1,7 +1,15 @@
 import { getEvent, incrementSold } from '../../lib/events'
-import { issueBooking, listTickets, type TicketRecord } from '../../lib/tickets'
-import { remainingSeats } from '../../types/event'
 import {
+  issueBooking,
+  listTickets,
+  saveIssuedTickets,
+  type TicketRecord,
+} from '../../lib/tickets'
+import { remainingSeats } from '../../types/event'
+import { USE_BACKEND } from '../../lib/backend'
+import { backendTicketToRecord, purchaseBackendTicket } from '../../lib/backendTickets'
+import {
+  addPendingTickets,
   getPendingPayment,
   markPaymentCompleted,
   verifyPayment,
@@ -10,6 +18,13 @@ import {
 
 export type CompletionResult =
   | { kind: 'success'; tickets: TicketRecord[]; payment: PendingPayment }
+  | {
+      kind: 'partial'
+      tickets: TicketRecord[]
+      message: string
+      eventId: string
+      payment: PendingPayment
+    }
   | { kind: 'pending' } // payment not confirmed yet (for example the phone prompt is still open)
   | { kind: 'failed'; message: string; eventId?: string }
   | { kind: 'unknown' } // we have no record of this payment on this browser
@@ -19,6 +34,58 @@ const inFlight = new Map<string, Promise<CompletionResult>>()
 function ticketsFor(payment: PendingPayment): TicketRecord[] {
   const ids = new Set(payment.ticketIds ?? [])
   return listTickets().filter((ticket) => ids.has(ticket.id))
+}
+
+// The backend owns ticket stock and the secret QR token. Claim each missing seat
+// separately so a partial failure can be retried without buying extra tickets.
+async function claimBackendTickets(
+  pending: PendingPayment,
+  event: NonNullable<ReturnType<typeof getEvent>>,
+  ticketType: NonNullable<ReturnType<typeof getEvent>>['ticketTypes'][number],
+): Promise<CompletionResult> {
+  const missing = Math.max(0, pending.quantity - ticketsFor(pending).length)
+  let failure: string | null = null
+
+  for (let index = 0; index < missing; index += 1) {
+    try {
+      const purchased = await purchaseBackendTicket(event.id, ticketType.id)
+      const ticket = backendTicketToRecord(purchased, {
+        userId: pending.userId,
+        event,
+        ticketType,
+        holder: pending.holder,
+      })
+      saveIssuedTickets([ticket])
+      addPendingTickets(pending.txRef, [ticket.id])
+    } catch (caught) {
+      failure = caught instanceof Error ? caught.message : 'The ticket service could not issue the ticket.'
+      break
+    }
+  }
+
+  const updated = getPendingPayment(pending.txRef) ?? pending
+  const tickets = ticketsFor(updated)
+
+  if (tickets.length >= pending.quantity) {
+    markPaymentCompleted(pending.txRef, tickets.map((ticket) => ticket.id))
+    const done = getPendingPayment(pending.txRef) ?? {
+      ...pending,
+      status: 'completed' as const,
+      ticketIds: tickets.map((ticket) => ticket.id),
+    }
+    return { kind: 'success', tickets, payment: done }
+  }
+
+  const issued = tickets.length
+  const message =
+    issued > 0
+      ? `Your payment (ref ${pending.txRef}) went through. ${issued} of ${pending.quantity} tickets were issued${failure ? `: ${failure}` : '.'} Contact support with this reference for the remaining ticket(s).`
+      : `Your payment (ref ${pending.txRef}) went through, but no tickets could be issued${failure ? `: ${failure}` : '.'} Contact support for a refund.`
+
+  if (issued > 0) {
+    return { kind: 'partial', tickets, message, eventId: pending.eventId, payment: updated }
+  }
+  return { kind: 'failed', eventId: pending.eventId, message }
 }
 
 async function run(txRef: string): Promise<CompletionResult> {
@@ -52,7 +119,19 @@ async function run(txRef: string): Promise<CompletionResult> {
 
   const event = getEvent(pending.eventId)
   const ticketType = event?.ticketTypes.find((candidate) => candidate.id === pending.ticketTypeId)
-  if (!event || !ticketType || remainingSeats(ticketType) < pending.quantity) {
+  if (!event || !ticketType) {
+    return {
+      kind: 'failed',
+      eventId: pending.eventId,
+      message: `Your payment (ref ${pending.txRef}) went through, but this ticket is no longer available. Please contact support for a refund.`,
+    }
+  }
+
+  if (USE_BACKEND) {
+    return claimBackendTickets(pending, event, ticketType)
+  }
+
+  if (remainingSeats(ticketType) < pending.quantity) {
     return {
       kind: 'failed',
       eventId: pending.eventId,

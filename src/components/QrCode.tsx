@@ -6,9 +6,10 @@ interface QrCodeProps {
   value: string
   size?: number
   canvasRef?: Ref<HTMLCanvasElement>
+  dataUrl?: string
 }
 
-export function QrCode({ value, size = 170, canvasRef }: QrCodeProps) {
+export function QrCode({ value, size = 170, canvasRef, dataUrl }: QrCodeProps) {
   // the code holds the ticket id plus its security tag
   const qrValue = useMemo(() => ticketQrValue(value), [value])
 
@@ -19,12 +20,22 @@ export function QrCode({ value, size = 170, canvasRef }: QrCodeProps) {
       aria-label={`QR code for ${value}`}
       style={{ width: size + 18 }}
     >
-      <QRCodeCanvas
-        ref={canvasRef}
-        value={qrValue}
-        size={size}
-        level="M"
-      />
+      {dataUrl ? (
+        <img
+          src={dataUrl}
+          width={size}
+          height={size}
+          alt=""
+          style={{ width: size, height: size, objectFit: 'contain' }}
+        />
+      ) : (
+        <QRCodeCanvas
+          ref={canvasRef}
+          value={qrValue}
+          size={size}
+          level="M"
+        />
+      )}
     </div>
   )
 }
