@@ -4,8 +4,8 @@
   --slate-700: #334155;
   --slate-400: #94a3b8;
   --slate-100: #f1f5f9;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
+  --blue-600: #12326b;
+  --blue-700: #0a1f47;
   --emerald-600: #059669;
   --emerald-50: #ecfdf5;
   --amber-600: #d97706;
@@ -80,7 +80,7 @@
 .avatar-placeholder {
   width: 40px;
   height: 40px;
-  background-color: var(--slate-700);
+  background-color: rgba(255,255,255,0.18);
   border-radius: 50%;
   display: flex;
   align-items: center;
