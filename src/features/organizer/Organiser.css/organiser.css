@@ -15,7 +15,8 @@
   --border-element: #e2e8f0;
 }
 
-* {
+.dashboard-root,
+.dashboard-root * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
