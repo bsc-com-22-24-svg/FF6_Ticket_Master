@@ -6,6 +6,8 @@ import {
   type TicketValidationResult,
 } from '../../../lib/tickets'
 import { getUser, staffEventIds } from '../../authentication/authStore'
+import { USE_BACKEND } from '../../../lib/backend'
+import { backendValidationToResult, validateBackendTicket } from '../../../lib/backendTickets'
 
 // The QR code carried a security tag that does not match the ticket.
 // Real ticket details are not shown for a forged code.
@@ -18,7 +20,13 @@ function tamperedResult(id: string): TicketValidationResult {
   }
 }
 
-export function validateTicket(rawCode: string, eventId: string): TicketValidationResult {
+export async function validateTicket(rawCode: string, eventId: string): Promise<TicketValidationResult> {
+  // With the backend, the server owns ticket issuance and the single-use check-in state.
+  if (USE_BACKEND) {
+    const response = await validateBackendTicket(rawCode, eventId)
+    return backendValidationToResult(response)
+  }
+
   // Staff can only scan the events their organizer assigned to them.
   const user = getUser()
   if (!user || user.role !== 'staff' || !staffEventIds(user.id).includes(eventId)) {

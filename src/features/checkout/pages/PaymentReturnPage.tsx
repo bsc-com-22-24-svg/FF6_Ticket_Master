@@ -32,7 +32,7 @@ export function PaymentReturnPage(): ReactNode {
         if (!active) return
         setError(null)
         setResult(outcome)
-        if (outcome.kind === 'success') {
+        if (outcome.kind === 'success' || outcome.kind === 'partial') {
           for (const key of ['events', 'checkout-event', 'tickets', 'bookings']) {
             queryClient.invalidateQueries({ queryKey: [key] })
           }
@@ -66,6 +66,28 @@ export function PaymentReturnPage(): ReactNode {
 
   if (result?.kind === 'success') {
     return <TicketConfirmation tickets={result.tickets} onBuyAgain={() => navigate({ to: '/events' })} />
+  }
+
+  if (result?.kind === 'partial') {
+    return (
+      <div>
+        <div className="alert error" style={{ marginBottom: 14 }}>
+          <p>{result.message}</p>
+          <button
+            type="button"
+            className="btn o"
+            style={{ marginTop: 8 }}
+            onClick={() => {
+              setResult(null)
+              setAttempt((n) => n + 1)
+            }}
+          >
+            Try missing tickets
+          </button>
+        </div>
+        <TicketConfirmation tickets={result.tickets} onBuyAgain={() => navigate({ to: '/events' })} />
+      </div>
+    )
   }
 
   if (result?.kind === 'failed' || (returnedStatus === 'failed' && !result)) {

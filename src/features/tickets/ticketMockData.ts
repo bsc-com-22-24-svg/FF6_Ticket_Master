@@ -16,6 +16,7 @@ export function toTicketView(record: TicketRecord): Ticket {
     holder: record.holder || 'Guest',
     status: record.status || 'valid',
     purchasedAt: record.createdAt,
+    qrCodeDataUrl: record.qrCodeDataUrl,
   }
 }
 

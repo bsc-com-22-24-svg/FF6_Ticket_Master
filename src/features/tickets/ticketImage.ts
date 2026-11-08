@@ -196,11 +196,33 @@ export function ticketImageBlob(
   })
 }
 
+function qrCanvasFromDataUrl(dataUrl: string): Promise<HTMLCanvasElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => {
+      const canvas = createCanvasElement(360, 360)
+      const context = canvas.getContext('2d')
+      if (!context) {
+        resolve(null)
+        return
+      }
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      resolve(canvas)
+    }
+    image.onerror = () => resolve(null)
+    image.src = dataUrl
+  })
+}
+
 export async function downloadTicketImage(
   ticket: TicketImageData,
   qrCanvas: HTMLCanvasElement | null,
+  qrDataUrl?: string,
 ): Promise<void> {
-  const blob = await ticketImageBlob(ticket, qrCanvas)
+  const codeCanvas = qrCanvas ?? (qrDataUrl ? await qrCanvasFromDataUrl(qrDataUrl) : null)
+  const blob = await ticketImageBlob(ticket, codeCanvas)
   if (!blob) return
 
   const url = URL.createObjectURL(blob)
