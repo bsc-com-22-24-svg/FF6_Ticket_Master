@@ -1,9 +1,9 @@
 import React from 'react';
 import { EventForm } from '../components/EventForm';
-import type { EventItem } from '../Data/Events';
+import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 interface CreateEventPageProps {
-  onEventCreated: (event: Omit<EventItem, 'id' | 'ticketsSold'>) => void;
+  onEventCreated: (event: NewEventInput) => Promise<void> | void;
   onCancel: () => void;
 }
 

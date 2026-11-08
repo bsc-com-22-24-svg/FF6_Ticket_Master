@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { ShieldAlert, DollarSign, Ban, Trash2, ShieldCheck, ChevronDown, ChevronRight, AlertTriangle, RotateCcw } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { listAllEvents, saveEvent, type StoredEvent } from '../../../lib/events'
-import { listAllKYC, saveKYC, type OrganizerKYC } from '../../../lib/verification'
 import {
   AUDIT_ACTION_LABELS,
   deleteAuditEntries,
@@ -20,7 +19,7 @@ import { useToast } from '../../toast'
 import {StatCard} from '../../organizer/components/StatCard'
 import { UserManagement } from '../components/UserManagement'
 
-type Tab = 'organizers' | 'events' | 'users' | 'audit'
+type Tab = 'events' | 'users' | 'audit'
 
 interface WeekGroup { key: string; label: string; entries: AuditEntry[] }
 interface MonthGroup { key: string; label: string; count: number; weeks: WeekGroup[] }
@@ -79,9 +78,8 @@ export function AdminDashboardPage() {
   const authorized = isAdmin(actor)
 
   const [events, setEvents] = useState<StoredEvent[]>(() => listAllEvents())
-  const [kycs, setKycs] = useState<OrganizerKYC[]>(() => listAllKYC())
   const [logs, setLogs] = useState<AuditEntry[]>(() => (isAdmin(actor) ? listAuditLogs(actor) : []))
-  const [activeTab, setActiveTab] = useState<Tab>('organizers')
+  const [activeTab, setActiveTab] = useState<Tab>('events')
   const [auditFilter, setAuditFilter] = useState<'all' | AuditAction>('all')
   const [auditSearch, setAuditSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string> | null>(null)
@@ -127,12 +125,10 @@ export function AdminDashboardPage() {
     (sum, event) => sum + event.ticketTypes.reduce((tSum, type) => tSum + type.sold * type.price, 0),
     0,
   )
-  const pendingKyc = kycs.filter((k) => k.status === 'Pending').length
   const integrity = verifyAuditLog(admin)
 
   function refreshAll() {
     setEvents(listAllEvents())
-    setKycs(listAllKYC())
     setLogs(listAuditLogs(admin))
   }
 
@@ -172,23 +168,6 @@ export function AdminDashboardPage() {
     updateEventStatus(event, event.status === 'Published' ? 'Draft' : 'Published')
   }
 
-  function updateKycStatus(kyc: OrganizerKYC, newStatus: 'Verified' | 'Rejected') {
-    attempt(
-      () => {
-        recordAudit(admin, {
-          action: newStatus === 'Verified' ? 'KYC_VERIFIED' : 'KYC_REJECTED',
-          targetType: 'organizer',
-          targetId: String(kyc.userId),
-          targetLabel: kyc.businessName,
-          details: `${kyc.status} → ${newStatus}`,
-        })
-        saveKYC({ ...kyc, status: newStatus })
-      },
-      newStatus === 'Verified' ? 'Organizer verified' : 'Organizer verification rejected',
-      newStatus === 'Verified' ? 'success' : 'info',
-    )
-  }
-
   const defaultOpen = new Set<string>(
     [groups[0]?.key, groups[0]?.weeks[0]?.key].filter((k): k is string => !!k),
   )
@@ -223,7 +202,7 @@ export function AdminDashboardPage() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold sm:text-4xl text-navy-dark">Admin Control Center</h1>
-          <p className="mt-2 text-slate-600">Verify organizers, moderate events, manage users and review the audit trail.</p>
+          <p className="mt-2 text-slate-600">Moderate events, manage users and review the audit trail.</p>
         </div>
 
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -232,93 +211,12 @@ export function AdminDashboardPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap gap-x-6 gap-y-2 border-b border-slate-200">
-          <button onClick={() => setActiveTab('organizers')} className={tabClass(activeTab === 'organizers')}>Organizer Verification</button>
           <button onClick={() => setActiveTab('events')} className={tabClass(activeTab === 'events')}>Event Moderation</button>
           <button onClick={() => setActiveTab('users')} className={tabClass(activeTab === 'users')}>User Management</button>
           <button onClick={() => setActiveTab('audit')} className={tabClass(activeTab === 'audit')}>Audit Log</button>
         </div>
 
         {activeTab === 'users' && <UserManagement />}
-
-        {activeTab === 'organizers' && (
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-bold text-navy-dark">Organizer Verification</h2>
-                <p className="mt-1 text-sm text-slate-500">Review submitted business details and approve or reject organizer applications.</p>
-              </div>
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-800">
-                {pendingKyc} pending
-              </span>
-            </div>
-
-            {kycs.length === 0 ? (
-              <p className="rounded-xl bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
-                No organizer verification requests have been submitted yet.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm text-slate-600">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3">Business</th>
-                      <th className="px-4 py-3">Phone</th>
-                      <th className="px-4 py-3">National ID</th>
-                      <th className="px-4 py-3">Submitted</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {kycs.map((kyc) => (
-                      <tr key={kyc.userId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                        <td className="px-4 py-3 font-semibold text-navy-dark">{kyc.businessName}</td>
-                        <td className="px-4 py-3">{kyc.phoneNumber || '—'}</td>
-                        <td className="px-4 py-3">{kyc.nationalId || '—'}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {kyc.submittedAt ? new Date(kyc.submittedAt).toLocaleDateString() : '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            kyc.status === 'Verified'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : kyc.status === 'Rejected'
-                                ? 'bg-red-100 text-red-700'
-                                : kyc.status === 'Pending'
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-slate-100 text-slate-700'
-                          }`}>
-                            {kyc.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {kyc.status === 'Pending' ? (
-                            <div className="flex justify-end gap-2">
-                              <button
-                                onClick={() => updateKycStatus(kyc, 'Verified')}
-                                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
-                              >
-                                Verify
-                              </button>
-                              <button
-                                onClick={() => updateKycStatus(kyc, 'Rejected')}
-                                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50"
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="block text-right text-xs text-slate-400">Reviewed</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        )}
 
         {activeTab === 'events' && (
           <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sm:p-8">

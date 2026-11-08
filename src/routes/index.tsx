@@ -6,6 +6,7 @@ import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage, TicketDetailPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage, StaffManagementPage } from '../features/organizer';
+import { OrganizerKycPage } from '../features/organizer/pages/OrganizerKycPage';
 import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
@@ -46,10 +47,11 @@ const routeTree = rootRoute.addChildren([
   page('/tickets', MyTicketsPage, requireAuth('customer')),         // <-- Added base tickets route
   page('/tickets/$ticketId', TicketDetailPage, requireAuth('customer')), // <-- Kept specific route
   page('/bookings', BookingHistoryPage, requireAuth('customer')),
-  page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
+  page('/organizer/kyc', OrganizerKycPage, requireAuth('organizer')), // first login: business details, accepted at once
+  page('/organizer/dashboard', OrganizerDashboardPage, requireVerifiedOrganizer()),
   page('/organizer/events/new', CreateEventPage, requireVerifiedOrganizer()),
   page('/organizer/events/$eventId/edit', CreateEventPage, requireVerifiedOrganizer()),
-  page('/organizer/staff', StaffManagementPage, requireAuth('organizer')),
+  page('/organizer/staff', StaffManagementPage, requireVerifiedOrganizer()),
   page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),
   notFoundRoute,
