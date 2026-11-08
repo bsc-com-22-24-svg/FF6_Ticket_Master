@@ -4,7 +4,7 @@ export interface EventItem {
   date: string;
   venue: string;
   ticketsSold: number;
-  status: 'Published' | 'Draft';
+  status: 'Published' | 'Draft' | 'Cancelled';
 }
 
 export const mockEvents: EventItem[] = [

@@ -12,11 +12,12 @@ import { CreateEventPage } from './CreateEventPage';
 import { useEvents } from '../hooks/useEventStats';
 import { useStaff } from '../hooks/useStaff';
 import { useAttendees } from '../hooks/useAttendee';
+import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
-  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent } = useEvents();
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
   const { staff, totalStaff, activeStaff, onLeaveStaff, search: stSearch, setSearch: setStSearch } = useStaff();
   const {
     attendees, totalAttendees, checkedInCount,
@@ -26,8 +27,9 @@ export const OrganizerDashboardPage: React.FC = () => {
     eventOptions, ticketTypeOptions,
   } = useAttendees();
 
-  const handleEventFormSubmission = (newEvent: any) => {
-    addEvent(newEvent);
+  // Throws when the backend refuses, so the form can show the message and stay open.
+  const handleEventFormSubmission = async (newEvent: NewEventInput) => {
+    await addEvent(newEvent);
     setCurrentTab('events');
   };
 
@@ -98,7 +100,8 @@ export const OrganizerDashboardPage: React.FC = () => {
                     <option value="Draft">Drafts Only</option>
                   </select>
                 </div>
-                <EventTable events={events} />
+                {evError && <div className="form-error-banner">{evError}</div>}
+                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
               </>
             )}
 

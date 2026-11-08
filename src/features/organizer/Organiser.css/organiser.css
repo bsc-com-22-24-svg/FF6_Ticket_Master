@@ -310,6 +310,11 @@
   color: var(--slate-700);
 }
 
+.status-badge.cancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
 .btn-action {
   background: none;
   border: 1px solid var(--border-element);
@@ -418,4 +423,65 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
+}
+
+
+/* Event form: extra fields */
+.form-group textarea {
+  padding: 12px;
+  border: 1px solid var(--border-element);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.ticket-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.ticket-row input {
+  padding: 12px;
+  border: 1px solid var(--border-element);
+  border-radius: 8px;
+  font-size: 1rem;
+  min-width: 0;
+}
+
+.ticket-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.form-hint {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.form-error-banner {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 640px) {
+  .form-row { grid-template-columns: 1fr; }
+  .ticket-row { grid-template-columns: 1fr 1fr; }
+  .ticket-row input:first-child { grid-column: 1 / -1; }
 }
