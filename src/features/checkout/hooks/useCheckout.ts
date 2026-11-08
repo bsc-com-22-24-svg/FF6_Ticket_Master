@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { getEvent } from '../../../lib/events'
+import { fetchBackendEvent } from '../../../lib/backendEvents'
 import { remainingSeats } from '../../../types/event'
 import {
   initiatePayment,
@@ -15,7 +15,7 @@ export class CheckoutError extends Error {}
 // Starts a real PayChangu payment. No ticket is issued here: tickets are issued on the
 // return page (completePayment.ts) only after PayChangu confirms the money arrived.
 async function startPayment(input: CheckoutInput): Promise<never> {
-  const stored = getEvent(input.event.id)
+  const stored = await fetchBackendEvent(input.event.id)
   if (!stored || stored.status !== 'Published') {
     throw new CheckoutError('This event is not available for booking.')
   }
@@ -72,4 +72,3 @@ async function startPayment(input: CheckoutInput): Promise<never> {
 export function useCheckout() {
   return useMutation({ mutationFn: startPayment })
 }
-

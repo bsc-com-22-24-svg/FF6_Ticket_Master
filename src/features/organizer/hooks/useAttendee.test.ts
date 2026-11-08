@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { saveEvent, type EventInput } from '../../../lib/events'
 import { DEMO_CUSTOMER_ID, issueBooking } from '../../../lib/tickets'
-import { buildAttendeePurchases, filterAttendees } from './useAttendee'
+import { buildAttendeePurchases, fetchBackendAttendees, filterAttendees } from './useAttendee'
 
 const ORGANIZER = { id: 'u-2', name: 'Nyasa Events' }
 
@@ -26,6 +26,55 @@ const eventInput: EventInput = {
 
 beforeEach(() => {
   window.localStorage.clear()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+describe('fetchBackendAttendees', () => {
+  it('loads sold tickets for the organizer events and excludes unowned or unsold tickets', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      let body: unknown
+      if (url.includes('/events/mine')) {
+        body = {
+          data: [{ id: '42', title: 'Organizer Test Fest', venue: 'Test Grounds', startAt: '2026-12-01T18:00:00.000Z', status: 'PUBLISHED' }],
+          meta: { totalPages: 1 },
+        }
+      } else if (url.endsWith('/events/42/sales-summary')) {
+        body = { totals: { sold: 2 } }
+      } else if (url.endsWith('/tickets/events/42')) {
+        body = [
+          { ticketNumber: 'TKT-1', ticketTypeId: 'vip', customerId: 'customer-7', status: 'ISSUED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
+          { ticketNumber: 'TKT-2', ticketTypeId: 'vip', customerId: null, status: 'ISSUED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
+          { ticketNumber: 'TKT-3', ticketTypeId: 'vip', customerId: 'customer-8', status: 'CANCELLED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
+        ]
+      } else if (url.endsWith('/events/42/ticket-types')) {
+        body = [{ ticketTypeId: 'vip', name: 'VIP', price: 25000 }]
+      } else {
+        throw new Error(`Unexpected request: ${url}`)
+      }
+
+      return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const attendees = await fetchBackendAttendees()
+
+    expect(attendees).toHaveLength(1)
+    expect(attendees[0]).toMatchObject({
+      id: 'TKT-1',
+      name: 'Customer #customer-7',
+      event: 'Organizer Test Fest',
+      eventId: '42',
+      ticketType: 'VIP',
+      quantity: 1,
+      amount: 25000,
+      status: 'Registered',
+    })
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/tickets/events/42'))).toBe(true)
+  })
 })
 
 describe('buildAttendeePurchases', () => {

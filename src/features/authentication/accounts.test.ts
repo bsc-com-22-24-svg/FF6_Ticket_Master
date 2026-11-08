@@ -80,6 +80,7 @@ describe('organizer staff', () => {
     expect(staff.role).toBe('staff')
     expect(staff.organizerId).toBe('u-2')
     expect(listStaffOf('u-2').map((s) => s.id)).toContain(staff.id)
+    expect(listStaffOf('another-organizer')).toEqual([])
   })
 
   it('cannot touch another organizer or a non-staff account', () => {

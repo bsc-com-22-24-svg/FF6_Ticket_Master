@@ -1,7 +1,7 @@
 import { events as SEED_EVENTS } from '../mocks/events'
 import type { Event, TicketType } from '../types/event'
 
-export type EventStatus = 'Draft' | 'Pending' | 'Published'
+export type EventStatus = 'Draft' | 'Pending' | 'Published' | 'Cancelled'
 
 export interface StoredEvent extends Event {
   status: EventStatus

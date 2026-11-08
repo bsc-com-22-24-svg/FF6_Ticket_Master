@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
+import { useRef, useState, type FormEvent, type RefObject } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { requestPasswordReset, resetPasswordRequest, type User } from '../authStore';
+import type { User } from '../authStore';
 import { useAuth } from '../useAuth';
 import { canAccess } from '../guards';
 import { useToast } from '../../toast';
@@ -14,32 +14,24 @@ function homeForRole(role: User['role']): string {
   return '/events';
 }
 
-type Mode = 'login' | 'register' | 'forgot';
-type ForgotStep = 'request' | 'reset';
-type Field = 'name' | 'email' | 'password' | 'confirm';
+type Mode = 'login' | 'register';
+type Field = 'name' | 'email' | 'password';
 type FieldErrors = Partial<Record<Field, string>>;
 
 // Order used to decide which invalid field receives focus first
-const FIELD_ORDER: Field[] = ['name', 'email', 'password', 'confirm'];
+const FIELD_ORDER: Field[] = ['name', 'email', 'password'];
 
 interface Values {
   name: string;
   email: string;
   password: string;
-  confirm: string;
 }
 
-function validate(mode: Mode, step: ForgotStep, v: Values): FieldErrors {
+function validate(mode: Mode, v: Values): FieldErrors {
   const errors: FieldErrors = {};
-  const needsEmail = mode !== 'forgot' || step === 'request';
-  const needsPassword = mode !== 'forgot' || step === 'reset';
-
   if (mode === 'register' && !v.name.trim()) errors.name = 'Enter your full name';
-  if (needsEmail && !/^\S+@\S+\.\S+$/.test(v.email)) errors.email = 'Enter a valid email address';
-  if (needsPassword && v.password.length < 8) errors.password = 'Password must be at least 8 characters';
-  if (mode === 'forgot' && step === 'reset' && v.password.length >= 8 && v.confirm !== v.password) {
-    errors.confirm = 'Passwords do not match';
-  }
+  if (!/^\S+@\S+\.\S+$/.test(v.email)) errors.email = 'Enter a valid email address';
+  if (v.password.length < 8) errors.password = 'Password must be at least 8 characters';
   return errors;
 }
 
@@ -55,11 +47,9 @@ export function LoginPage() {
   const { redirect } = useSearch({ strict: false }) as { redirect?: string };
 
   const [mode, setMode] = useState<Mode>('login');
-  const [forgotStep, setForgotStep] = useState<ForgotStep>('request');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
   const organizerArea = !!redirect && redirect.startsWith('/organizer');
   const [accountType, setAccountType] = useState<'customer' | 'organizer'>(organizerArea ? 'organizer' : 'customer');
   const [showPassword, setShowPassword] = useState(false);
@@ -68,12 +58,10 @@ export function LoginPage() {
   const nameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const confirmRef = useRef<HTMLInputElement>(null);
   const fieldRefs: Record<Field, RefObject<HTMLInputElement | null>> = {
     name: nameRef,
     email: emailRef,
     password: passwordRef,
-    confirm: confirmRef,
   };
 
   const goAfterLogin = (user: User) =>
@@ -94,42 +82,9 @@ export function LoginPage() {
     },
   });
 
-  // Demo flow, step 1: "request" a reset (nothing is emailed).
-  const requestReset = useMutation({
-    mutationFn: () => requestPasswordReset(email),
-    onSuccess: () => {
-      showToast(`Demo only: reset requested for ${email.trim()}. No email is sent.`, 'info');
-      setForgotStep('reset');
-      setPassword('');
-      setConfirm('');
-    },
-    onError: (error) => {
-      setErrors({ email: error.message });
-      emailRef.current?.focus();
-    },
-  });
-
-  // Demo flow, step 2: save the new password in the local mock store.
-  const reset = useMutation({
-    mutationFn: () => resetPasswordRequest(email, password),
-    onSuccess: () => {
-      showToast('Password updated (demo). Log in with your new password.', 'success');
-      setMode('login');
-      setForgotStep('request');
-      setPassword('');
-      setConfirm('');
-      setErrors({});
-    },
-  });
-
-  // Move focus to the new-password field when the reset step appears
-  useEffect(() => {
-    if (mode === 'forgot' && forgotStep === 'reset') passwordRef.current?.focus();
-  }, [mode, forgotStep]);
-
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const found = validate(mode, forgotStep, { name, email, password, confirm });
+    const found = validate(mode, { name, email, password });
     setErrors(found);
 
     const firstInvalid = FIELD_ORDER.find((field) => found[field]);
@@ -138,22 +93,13 @@ export function LoginPage() {
       return;
     }
 
-    if (mode === 'forgot') {
-      if (forgotStep === 'request') requestReset.mutate();
-      else reset.mutate();
-    } else {
-      submit.mutate();
-    }
+    submit.mutate();
   };
 
   const clearAll = () => {
     setErrors({});
     setPassword('');
-    setConfirm('');
-    setForgotStep('request');
     submit.reset();
-    requestReset.reset();
-    reset.reset();
   };
 
   const switchMode = (next: Mode) => {
@@ -166,7 +112,6 @@ export function LoginPage() {
     if (field === 'name') setName(value);
     if (field === 'email') setEmail(value);
     if (field === 'password') setPassword(value);
-    if (field === 'confirm') setConfirm(value);
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
@@ -183,30 +128,18 @@ export function LoginPage() {
     ) : null;
 
   // Server-side problems (e.g. wrong password) are announced as an alert
-  const alertMessage = submit.error?.message ?? reset.error?.message ?? null;
-  const isPending = submit.isPending || requestReset.isPending || reset.isPending;
-  const showEmailField = mode !== 'forgot' || forgotStep === 'request';
-  const showPasswordField = mode !== 'forgot' || forgotStep === 'reset';
+  const alertMessage = submit.error?.message ?? null;
+  const isPending = submit.isPending;
 
-  const title =
-    mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password';
-  const subtitle =
-    mode === 'login'
-      ? 'Log in to buy tickets and see your bookings.'
-      : mode === 'register'
-        ? 'It only takes a minute to get started.'
-        : forgotStep === 'request'
-          ? 'Enter the email address of your account.'
-          : 'Choose a new password for your account.';
+  const title = mode === 'login' ? 'Welcome back' : 'Create your account';
+  const subtitle = mode === 'login'
+    ? 'Log in to buy tickets and see your bookings.'
+    : 'It only takes a minute to get started.';
   const submitLabel = isPending
     ? 'Please wait…'
     : mode === 'login'
       ? 'Log in'
-      : mode === 'register'
-        ? 'Create account'
-        : forgotStep === 'request'
-          ? 'Request reset'
-          : 'Reset password';
+      : 'Create account';
 
   return (
     <main className={styles.page}>
@@ -232,23 +165,14 @@ export function LoginPage() {
           <h2 className={styles.title}>{title}</h2>
           <p className={styles.subtitle}>{subtitle}</p>
 
-          {mode !== 'forgot' && (
-            <div className={styles.tabs}>
-              <button type="button" aria-pressed={mode === 'login'} onClick={() => switchMode('login')} className={`${styles.tab} ${mode === 'login' ? styles.active : ''}`}>
-                Log in
-              </button>
-              <button type="button" aria-pressed={mode === 'register'} onClick={() => switchMode('register')} className={`${styles.tab} ${mode === 'register' ? styles.active : ''}`}>
-                Register
-              </button>
-            </div>
-          )}
-
-          {mode === 'forgot' && (
-            <p className={styles.demoNote}>
-              <strong>Demo flow:</strong> there is no backend, so no email is sent. This only changes the password
-              stored in this browser's mock account list.
-            </p>
-          )}
+          <div className={styles.tabs}>
+            <button type="button" aria-pressed={mode === 'login'} onClick={() => switchMode('login')} className={`${styles.tab} ${mode === 'login' ? styles.active : ''}`}>
+              Log in
+            </button>
+            <button type="button" aria-pressed={mode === 'register'} onClick={() => switchMode('register')} className={`${styles.tab} ${mode === 'register' ? styles.active : ''}`}>
+              Register
+            </button>
+          </div>
 
           <form onSubmit={onSubmit} noValidate>
             {mode === 'register' && (
@@ -280,34 +204,28 @@ export function LoginPage() {
               </>
             )}
 
-            {showEmailField && (
-              <>
-                <label htmlFor="auth-email" className={styles.srOnly}>Email address</label>
-                <input
-                  id="auth-email"
-                  ref={emailRef}
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  aria-required="true"
-                  placeholder="Email address"
-                  value={email}
-                  onChange={(e) => change('email', e.target.value)}
-                  className={styles.field}
-                  {...a11y('email', 'auth-email')}
-                />
-                {fieldError('email', 'auth-email')}
-              </>
-            )}
+            <>
+              <label htmlFor="auth-email" className={styles.srOnly}>Email address</label>
+              <input
+                id="auth-email"
+                ref={emailRef}
+                type="email"
+                name="email"
+                autoComplete="email"
+                aria-required="true"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => change('email', e.target.value)}
+                className={styles.field}
+                {...a11y('email', 'auth-email')}
+              />
+              {fieldError('email', 'auth-email')}
+            </>
 
-            {mode === 'forgot' && forgotStep === 'reset' && (
-              <p className={styles.resetFor}>Resetting the password for <strong>{email.trim()}</strong></p>
-            )}
-
-            {showPasswordField && (
+            {
               <>
                 <label htmlFor="auth-password" className={styles.srOnly}>
-                  {mode === 'forgot' ? 'New password' : 'Password'}
+                  Password
                 </label>
                 <div className={styles.passwordRow}>
                   <input
@@ -317,7 +235,7 @@ export function LoginPage() {
                     name="password"
                     autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                     aria-required="true"
-                    placeholder={mode === 'forgot' ? 'New password' : 'Password'}
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => change('password', e.target.value)}
                     className={styles.field}
@@ -334,35 +252,8 @@ export function LoginPage() {
                 </div>
                 {fieldError('password', 'auth-password')}
               </>
-            )}
+            }
 
-            {mode === 'forgot' && forgotStep === 'reset' && (
-              <>
-                <label htmlFor="auth-confirm" className={styles.srOnly}>Confirm new password</label>
-                <input
-                  id="auth-confirm"
-                  ref={confirmRef}
-                  type={showPassword ? 'text' : 'password'}
-                  name="confirm-password"
-                  autoComplete="new-password"
-                  aria-required="true"
-                  placeholder="Confirm new password"
-                  value={confirm}
-                  onChange={(e) => change('confirm', e.target.value)}
-                  className={styles.field}
-                  {...a11y('confirm', 'auth-confirm')}
-                />
-                {fieldError('confirm', 'auth-confirm')}
-              </>
-            )}
-
-            {mode === 'login' && (
-              <div className={styles.linkRow}>
-                <button type="button" onClick={() => switchMode('forgot')} className={styles.linkButton}>
-                  Forgot password?
-                </button>
-              </div>
-            )}
 
             {alertMessage && <p role="alert" className={styles.error}>{alertMessage}</p>}
 
@@ -370,13 +261,6 @@ export function LoginPage() {
               {submitLabel}
             </button>
 
-            {mode === 'forgot' && (
-              <div className={styles.linkRow} style={{ justifyContent: 'center', margin: '16px 0 0' }}>
-                <button type="button" onClick={() => switchMode('login')} className={styles.linkButton}>
-                  Back to log in
-                </button>
-              </div>
-            )}
           </form>
         </div>
       </section>

@@ -19,8 +19,10 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
   const [description, setDescription] = useState('');
   const [venue, setVenue] = useState('');
   const [location, setLocation] = useState('');
-  const [startAt, setStartAt] = useState('');
-  const [endAt, setEndAt] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [rows, setRows] = useState<TicketRow[]>([emptyRow('General')]);
   const [status, setStatus] = useState<'Published' | 'Draft'>('Draft');
   const [error, setError] = useState('');
@@ -35,14 +37,22 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
     quantity: Number(row.quantity),
   }));
   const capacity = totalCapacity(ticketTypes.filter((type) => Number.isFinite(type.quantity)));
+  const startAt = startDate && startTime ? `${startDate}T${startTime}` : '';
+  const endAt = endDate && endTime ? `${endDate}T${endTime}` : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !description.trim() || !venue.trim() || !location.trim() || !startAt || !endAt) {
-      setError('Fill in the title, description, venue, city and both dates.');
+      setError('Fill in the title, description, venue, city, start date and time, and end date and time.');
       return;
     }
-    if (new Date(endAt) <= new Date(startAt)) {
+    const startDateTime = new Date(startAt);
+    const endDateTime = new Date(endAt);
+    if (Number.isNaN(startDateTime.getTime()) || Number.isNaN(endDateTime.getTime())) {
+      setError('Enter a valid start and end date and time.');
+      return;
+    }
+    if (endDateTime <= startDateTime) {
       setError('The event must end after it starts.');
       return;
     }
@@ -61,8 +71,8 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
         description,
         venue,
         location,
-        startAt: new Date(startAt).toISOString(),
-        endAt: new Date(endAt).toISOString(),
+        startAt: startDateTime.toISOString(),
+        endAt: endDateTime.toISOString(),
         ticketTypes,
         status,
       });
@@ -99,12 +109,20 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
 
       <div className="form-row">
         <div className="form-group">
-          <label>Starts</label>
-          <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} />
+          <label>Start date</label>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
         </div>
         <div className="form-group">
-          <label>Ends</label>
-          <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} />
+          <label>Start time</label>
+          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>End date</label>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>End time</label>
+          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
         </div>
       </div>
 

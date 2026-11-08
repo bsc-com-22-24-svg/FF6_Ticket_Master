@@ -8,6 +8,7 @@ import {
 import { remainingSeats } from '../../types/event'
 import { USE_BACKEND } from '../../lib/backend'
 import { backendTicketToRecord, purchaseBackendTicket } from '../../lib/backendTickets'
+import { fetchBackendEvent } from '../../lib/backendEvents'
 import {
   addPendingTickets,
   getPendingPayment,
@@ -117,7 +118,16 @@ async function run(txRef: string): Promise<CompletionResult> {
     }
   }
 
-  const event = getEvent(pending.eventId)
+  let event: NonNullable<ReturnType<typeof getEvent>> | undefined
+  try {
+    event = USE_BACKEND ? await fetchBackendEvent(pending.eventId) : getEvent(pending.eventId)
+  } catch (caught) {
+    return {
+      kind: 'failed',
+      eventId: pending.eventId,
+      message: `Payment (ref ${pending.txRef}) was confirmed, but the event details could not be loaded. Please contact support. ${caught instanceof Error ? caught.message : ''}`.trim(),
+    }
+  }
   const ticketType = event?.ticketTypes.find((candidate) => candidate.id === pending.ticketTypeId)
   if (!event || !ticketType) {
     return {

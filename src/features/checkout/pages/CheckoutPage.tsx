@@ -5,8 +5,7 @@ import { useParams, useSearch, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { calculateTotals, formatKwacha } from '../format'
 import { useCheckout } from '../hooks/useCheckout'
-import { getEvent } from '../../../lib/events'
-import { withDelay } from '../../../mocks/delay'
+import { fetchBackendEvent } from '../../../lib/backendEvents'
 import { useAuth } from '../../authentication'
 import type { CheckoutEvent, TicketType } from '../types'
 import { remainingSeats } from '../../../types/event'
@@ -40,11 +39,7 @@ export function CheckoutPage(): ReactNode {
 
   const { data: eventData, isLoading, isError } = useQuery({
     queryKey: ['checkout-event', eventId],
-    queryFn: () => {
-      const found = getEvent(eventId ?? '')
-      // drafts are private to the organizer, so they cannot be bought
-      return withDelay(found && found.status === 'Published' ? found : null)
-    },
+    queryFn: () => fetchBackendEvent(eventId ?? ''),
     enabled: !!eventId,
   })
 
@@ -100,7 +95,7 @@ export function CheckoutPage(): ReactNode {
     )
   }
 
-  if (isError || !eventData) {
+  if (isError || !eventData || eventData.status !== 'Published') {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 text-center sm:px-6">
         <h1 className="text-2xl font-bold">Event not found</h1>

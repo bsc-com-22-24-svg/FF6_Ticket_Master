@@ -1,8 +1,9 @@
 import React from 'react';
-import type { StaffItem } from '../Data/staff';
+import { Link } from '@tanstack/react-router';
+import type { ManagedUser } from '../../authentication/authStore';
 
 interface StaffTableProps {
-  staff: StaffItem[];
+  staff: ManagedUser[];
 }
 
 export const StaffTable: React.FC<StaffTableProps> = ({ staff }) => {
@@ -13,26 +14,29 @@ export const StaffTable: React.FC<StaffTableProps> = ({ staff }) => {
           <tr>
             <th>Name</th>
             <th>Email</th>
-            <th>Role</th>
-            <th>Department</th>
+            <th>Assigned events</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
+          {staff.length === 0 && (
+            <tr>
+              <td colSpan={5} className="py-8 text-center">Staff management is not available in the connected backend.</td>
+            </tr>
+          )}
           {staff.map((member) => (
             <tr key={member.id}>
               <td className="font-semibold">{member.name}</td>
               <td>{member.email}</td>
-              <td>{member.role}</td>
-              <td>{member.department}</td>
+              <td>{member.assignedEventIds.length === 0 ? 'None' : member.assignedEventIds.length}</td>
               <td>
-                <span className={`status-badge ${member.status === 'Active' ? 'published' : 'draft'}`}>
-                  {member.status}
+                <span className={`status-badge ${member.status === 'active' ? 'published' : 'draft'}`}>
+                  {member.status === 'active' ? 'Active' : 'Disabled'}
                 </span>
               </td>
               <td>
-                <button className="btn-action">⚙️ Manage</button>
+                <Link to="/organizer/staff" className="btn-action">Manage</Link>
               </td>
             </tr>
           ))}

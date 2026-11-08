@@ -56,7 +56,6 @@ export default function Header() {
           ))}
           {user ? (
             <div className="flex items-center gap-4 border-l border-slate-200 pl-5">
-              {!isAdmin && <Link to="/bookings" className="text-sm font-medium text-slate-600 hover:text-navy">Bookings</Link>}
               {user.role === 'customer' && <Link to="/tickets" className="text-sm font-medium text-slate-600 hover:text-navy">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" className="text-sm font-medium text-slate-600 hover:text-navy">Dashboard</Link>}
               {user.role === 'staff' && <Link to="/scan" className="text-sm font-medium text-slate-600 hover:text-navy">Scan</Link>}
@@ -97,7 +96,6 @@ export default function Header() {
           ))}
           {user ? (
             <div className="flex flex-col gap-2 pt-2">
-              {!isAdmin && <Link to="/bookings" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Bookings</Link>}
               {user.role === 'customer' && <Link to="/tickets" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">My Tickets</Link>}
               {user.role === 'organizer' && <Link to="/organizer/dashboard" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Dashboard</Link>}
               {user.role === 'staff' && <Link to="/scan" onClick={closeMenu} className="rounded-lg px-3 py-2 font-medium hover:bg-navy-50">Scan</Link>}

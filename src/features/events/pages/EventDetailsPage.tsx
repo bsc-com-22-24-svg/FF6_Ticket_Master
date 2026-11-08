@@ -57,9 +57,11 @@ export function EventDetailsPage() {
             <img src={event.image} alt={event.title} className="h-80 w-full object-cover sm:h-[420px]" />
             <div className="absolute inset-0 bg-gradient-to-t from-navy-dark/90 via-navy-dark/40 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-              <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-navy">
-                {event.category}
-              </span>
+              {event.category && (
+                <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-semibold text-navy">
+                  {event.category}
+                </span>
+              )}
               <h1 className="mt-3 text-3xl font-extrabold text-white sm:text-5xl">{event.title}</h1>
               <p className="mt-3 flex flex-wrap items-center gap-4 text-white/90 sm:text-lg">
                 <span className="flex items-center gap-2">
@@ -82,10 +84,10 @@ export function EventDetailsPage() {
               <h2 className="text-2xl font-bold">About this event</h2>
               <p className="mt-4 leading-relaxed text-slate-700">{event.description}</p>
               <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-6">
-                <div>
+                {event.organizer && <div>
                   <p className="text-sm text-slate-500">Organized by</p>
                   <p className="font-semibold text-navy-dark">{event.organizer}</p>
-                </div>
+                </div>}
                 <div className="text-right">
                   <p className="text-sm text-slate-500">Tickets from</p>
                   <p className="text-2xl font-extrabold text-navy">{formatMoney(from)}</p>

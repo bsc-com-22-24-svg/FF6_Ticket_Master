@@ -59,13 +59,8 @@ export function totalCapacity(ticketTypes: NewTicketType[]): number {
 }
 
 async function soldFor(eventId: string): Promise<number> {
-  try {
-    const summary = await api<SalesSummary>(`/events/${eventId}/sales-summary`)
-    return summary.totals.sold
-  } catch {
-    // The dashboard still works if one summary fails: that event just shows 0 sold.
-    return 0
-  }
+  const summary = await api<SalesSummary>(`/events/${eventId}/sales-summary`)
+  return summary.totals.sold
 }
 
 // Every event of the logged-in organizer, in all statuses, with tickets sold.

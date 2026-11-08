@@ -1,14 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { listTickets, type TicketValidationResult } from '../../../lib/tickets'
-import { USE_BACKEND } from '../../../lib/backend'
+import type { TicketValidationResult } from '../../../lib/tickets'
 import { useEvents } from '../../events/hooks/useEvents'
-import { listEvents } from '../../../lib/events'
 import { ScanResult } from '../components/ScanResult'
-import { SCAN_EVENT } from '../mockData'
-import { useAuth } from '../../authentication'
-import { staffEventIds } from '../../authentication/authStore'
 import { useQrScanner } from '../hooks/useQrScanner'
 import { validateTicket } from '../hooks/useTicketValidator'
 
@@ -19,12 +14,8 @@ export function ScannerPage(): ReactNode {
   const [checking, setChecking] = useState(false)
   const checkingRef = useRef(false)
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const { data: backendEvents = [], isLoading: loadingEvents } = useEvents()
-  // With the backend, the server authorises the scan. Without it, staff can only
-  // scan the events their organizer assigned to them in the browser.
-  const assigned = user ? staffEventIds(user.id) : []
-  const events = USE_BACKEND ? backendEvents : listEvents().filter((e) => assigned.includes(e.id))
+  const events = backendEvents
   const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? '')
   const selectedEvent = events.find((e) => e.id === selectedEventId) ?? events[0]
   const activeEventId = selectedEvent?.id ?? ''
@@ -80,11 +71,7 @@ export function ScannerPage(): ReactNode {
     checkCode(manualCode)
   }
 
-  const checkedIn = USE_BACKEND
-    ? history.filter((item) => item.status === 'valid').length
-    : listTickets().filter(
-        (ticket) => ticket.eventId === activeEventId && ticket.status === 'used',
-      ).length
+  const checkedIn = history.filter((item) => item.status === 'valid').length
 
   const scanning = status === 'scanning'
 
@@ -113,7 +100,7 @@ export function ScannerPage(): ReactNode {
       <div className="row">
         <div>
           <h1>Scan tickets</h1>
-          <p className="m">{SCAN_EVENT.gate}</p>
+          <p className="m">{selectedEvent.venue}</p>
           <label className="m" style={{ display: 'block', marginTop: 8 }}>
             Event gate
             <select
@@ -135,7 +122,7 @@ export function ScannerPage(): ReactNode {
           </label>
         </div>
         <div className="card stat" style={{ minWidth: 160 }}>
-          <span className="m">{USE_BACKEND ? 'Checked in this session' : `Checked in · ${selectedEvent.title}`}</span>
+          <span className="m">Checked in this session</span>
           <b>{checkedIn}</b>
         </div>
       </div>
@@ -175,7 +162,7 @@ export function ScannerPage(): ReactNode {
             <input
               className="in"
               style={{ margin: 0 }}
-              placeholder={USE_BACKEND ? 'Paste or scan the ticket QR token' : 'Enter ticket ID, e.g. TM-2026-K7QX4ZP9R2WM'}
+              placeholder="Paste or scan the ticket QR token"
               value={manualCode}
               onChange={(event) => setManualCode(event.target.value)}
             />
@@ -185,21 +172,10 @@ export function ScannerPage(): ReactNode {
           </form>
 
           <div className="alert info">
-            {USE_BACKEND ? (
-              <>
-                <b>Server-checked tickets</b>
-                <p className="m">The backend records each scan, so a ticket is accepted only once.</p>
-              </>
-            ) : (
-              <>
-                <b>Demo tickets for this event</b>
-                <p className="m">1. TM-2026-K7QX4ZP9R2WM — valid (accepts once)</p>
-                <p className="m">2. TM-2026-W9FJ2MXA4LEU — already used</p>
-                <p className="m">3. TM-2026-H3VN8DC5T6YB — wrong event</p>
-                <p className="m">4. TM-2026-K7QX4ZP9R2WM.AAAAAAAAAA — tampered (wrong security tag)</p>
-                <p className="m">Any other code — invalid</p>
-              </>
-            )}
+            <>
+              <b>Server-checked tickets</b>
+              <p className="m">The backend records each scan, so a ticket is accepted only once.</p>
+            </>
           </div>
         </div>
 

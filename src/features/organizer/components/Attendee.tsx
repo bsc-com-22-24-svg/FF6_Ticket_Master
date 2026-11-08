@@ -26,7 +26,7 @@ export const AttendeeTable: React.FC<AttendeeTableProps> = ({ attendees }) => {
             <th>Event</th>
             <th>Ticket Type</th>
             <th>Qty</th>
-            <th>Amount Paid</th>
+            <th>Amount</th>
             <th>Purchase Date</th>
             <th>Status</th>
           </tr>
@@ -35,7 +35,7 @@ export const AttendeeTable: React.FC<AttendeeTableProps> = ({ attendees }) => {
           {attendees.map((attendee) => (
             <tr key={attendee.id}>
               <td className="font-semibold">{attendee.name}</td>
-              <td>{attendee.email || 'No email on file'}</td>
+              <td>{attendee.email || 'Not provided by backend'}</td>
               <td>{attendee.event}</td>
               <td>{attendee.ticketType}</td>
               <td>{attendee.quantity.toLocaleString()}</td>

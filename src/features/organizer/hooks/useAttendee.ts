@@ -1,13 +1,31 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../authentication';
 import { listAccounts } from '../../authentication/authStore';
 import { isEventOwnedBy, listAllEvents } from '../../../lib/events';
 import { listBookings, listTickets } from '../../../lib/tickets';
+import { api, USE_BACKEND } from '../../../lib/backend';
+import { listMyEvents } from '../../../lib/backendOrganizer';
 import type { AttendeeFilters, AttendeeItem } from '../Data/Attendee';
 
 export interface AttendeeUser {
   id: string;
   name: string;
+}
+
+interface BackendEventTicket {
+  ticketNumber: string;
+  ticketTypeId: string;
+  customerId: string | null;
+  status: 'ISSUED' | 'USED' | 'CANCELLED' | 'REFUNDED';
+  issuedAt: string;
+  checkedInAt: string | null;
+}
+
+interface BackendTicketType {
+  ticketTypeId: string;
+  name: string;
+  price: number | string;
 }
 
 function formatPurchaseDate(value: string): string {
@@ -16,7 +34,7 @@ function formatPurchaseDate(value: string): string {
   return date.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-// One row per confirmed booking, joined with the buyer, tickets and owned event.
+// In demo mode, one row per confirmed booking joined with the buyer and tickets.
 export function buildAttendeePurchases(user: AttendeeUser | null): AttendeeItem[] {
   if (!user) return [];
 
@@ -57,6 +75,43 @@ export function buildAttendeePurchases(user: AttendeeUser | null): AttendeeItem[
     .sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime());
 }
 
+export async function fetchBackendAttendees(): Promise<AttendeeItem[]> {
+  const events = await listMyEvents();
+  const attendeesByEvent = await Promise.all(
+    events.map(async (event) => {
+      const [tickets, ticketTypes] = await Promise.all([
+        api<BackendEventTicket[]>(`/tickets/events/${encodeURIComponent(event.id)}`),
+        api<BackendTicketType[]>(`/events/${encodeURIComponent(event.id)}/ticket-types`),
+      ]);
+      const ticketTypeById = new Map(ticketTypes.map((ticketType) => [ticketType.ticketTypeId, ticketType]));
+
+      return tickets.flatMap((ticket) => {
+        if (!ticket.customerId || ticket.status === 'CANCELLED' || ticket.status === 'REFUNDED') return [];
+        const ticketType = ticketTypeById.get(ticket.ticketTypeId);
+        const purchasedAt = ticket.issuedAt;
+
+        return [{
+          id: ticket.ticketNumber,
+          name: `Customer #${ticket.customerId}`,
+          email: '',
+          event: event.name,
+          eventId: event.id,
+          ticketType: ticketType?.name ?? 'Unknown',
+          quantity: 1,
+          amount: Number(ticketType?.price ?? 0),
+          purchaseDate: formatPurchaseDate(purchasedAt),
+          purchasedAt,
+          status: ticket.status === 'USED' || ticket.checkedInAt ? 'Checked In' : 'Registered',
+        } satisfies AttendeeItem];
+      });
+    }),
+  );
+
+  return attendeesByEvent.flat().sort(
+    (a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime(),
+  );
+}
+
 export function filterAttendees(
   attendees: AttendeeItem[],
   filters: AttendeeFilters,
@@ -87,7 +142,20 @@ export const useAttendees = () => {
   const [eventId, setEventId] = useState('all');
   const [ticketType, setTicketType] = useState('all');
 
-  const allAttendees = useMemo(() => buildAttendeePurchases(user), [user]);
+  const backendAttendees = useQuery({
+    queryKey: ['organizer-attendees', user?.id],
+    queryFn: fetchBackendAttendees,
+    enabled: USE_BACKEND && !!user,
+    refetchInterval: USE_BACKEND ? 30_000 : false,
+  });
+  const localAttendees = useMemo(
+    () => (USE_BACKEND ? [] : buildAttendeePurchases(user)),
+    [user],
+  );
+  const allAttendees = useMemo(
+    () => (USE_BACKEND ? backendAttendees.data ?? [] : localAttendees),
+    [backendAttendees.data, localAttendees],
+  );
   const attendees = useMemo(
     () => filterAttendees(allAttendees, { search, eventId, ticketType }),
     [allAttendees, search, eventId, ticketType],
@@ -112,6 +180,8 @@ export const useAttendees = () => {
     attendees,
     totalAttendees: allAttendees.length,
     checkedInCount: allAttendees.filter((attendee) => attendee.status === 'Checked In').length,
+    loading: USE_BACKEND && backendAttendees.isLoading,
+    error: USE_BACKEND && backendAttendees.error instanceof Error ? backendAttendees.error.message : '',
     search,
     setSearch,
     eventId,

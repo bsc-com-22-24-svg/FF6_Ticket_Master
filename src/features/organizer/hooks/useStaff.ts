@@ -1,22 +1,14 @@
-import { useState } from 'react';
-import { mockStaff, type StaffItem } from '../Data/staff';
+import { useState } from 'react'
 
-export const useStaff = () => {
-  const [staff] = useState<StaffItem[]>(mockStaff);
-  const [search, setSearch] = useState('');
-
-  const filteredStaff = staff.filter(member => 
-    member.name.toLowerCase().includes(search.toLowerCase()) ||
-    member.email.toLowerCase().includes(search.toLowerCase()) ||
-    member.role.toLowerCase().includes(search.toLowerCase())
-  );
+export function useStaff() {
+  const [search, setSearch] = useState('')
 
   return {
-    staff: filteredStaff,
-    totalStaff: staff.length,
-    activeStaff: staff.filter(s => s.status === 'Active').length,
-    onLeaveStaff: staff.filter(s => s.status === 'On Leave').length,
+    staff: [],
+    totalStaff: 0,
+    activeStaff: 0,
+    disabledStaff: 0,
     search,
-    setSearch
-  };
-};
+    setSearch,
+  }
+}

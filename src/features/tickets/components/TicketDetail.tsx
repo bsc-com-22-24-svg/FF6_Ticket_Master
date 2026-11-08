@@ -42,19 +42,23 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
             alt=""
             style={{ width: 168, height: 168, objectFit: 'contain' }}
           />
-        ) : (
+        ) : ticket.status === 'valid' ? (
           <QRCodeCanvas
             ref={qrRef}
             value={ticketQrValue(ticket.id)}
             size={168}
             level="M"
           />
+        ) : (
+          <p className={styles.qrNote}>A QR code is unavailable for this ticket.</p>
         )}
         <p className={styles.qrId}>{ticket.id}</p>
         <p className={styles.qrNote}>
           {ticket.status === 'valid'
             ? 'Show this code at the entrance'
-            : 'This ticket has already been used'}
+            : ticket.status === 'used'
+              ? 'This ticket has already been used'
+              : `This ticket is ${ticket.status}`}
         </p>
       </div>
     </article>

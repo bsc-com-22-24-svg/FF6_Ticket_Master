@@ -1,4 +1,4 @@
-export type TicketStatus = 'valid' | 'used';
+export type TicketStatus = 'valid' | 'used' | 'cancelled' | 'refunded';
 
 export type Ticket = {
   id: string;

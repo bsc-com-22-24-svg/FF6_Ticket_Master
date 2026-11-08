@@ -28,9 +28,11 @@ export default function EventCard({ event }: EventCardProps) {
           loading="lazy"
           className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
         />
-        <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-navy">
-          {event.category}
-        </span>
+        {event.category && (
+          <span className="absolute left-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-navy">
+            {event.category}
+          </span>
+        )}
       </div>
       <div className="p-5">
         <h3 className="text-lg font-bold group-hover:text-navy">{event.title}</h3>

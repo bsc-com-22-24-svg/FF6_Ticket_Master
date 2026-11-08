@@ -24,8 +24,7 @@ export function TicketsTable({ tickets }: { tickets: Ticket[] }) {
         </thead>
         <tbody>
           {tickets.map((t, index) => (
-            /* fall back to the index so a ticket with a missing id cannot crash the list */
-            <tr key={t.id || `fallback-${index}`}>
+            <tr key={t.id || index}>
               <td>
                 {t.id ? (
                   <Link to="/tickets/$ticketId" params={{ ticketId: t.id }} className={styles.link}>

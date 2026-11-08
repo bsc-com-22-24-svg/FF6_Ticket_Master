@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { TicketRecord } from '../../lib/tickets'
 import { TicketInfoTable } from './components/TicketInfoTable'
 import { formatDateTime } from './ticketFormat'
-import { toTicketView } from './ticketMockData'
+import { toTicketView } from './ticketData'
 import type { Ticket } from './ticketTypes'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true

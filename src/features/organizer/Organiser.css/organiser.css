@@ -336,36 +336,11 @@
   gap: 24px;
 }
 
-.mock-chart-container {
+.sales-summary-container {
   background-color: white;
   border: 1px solid var(--border-element);
   border-radius: 12px;
   padding: 24px;
-}
-
-.chart-bars-mock {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  height: 200px;
-  margin-top: 24px;
-  border-bottom: 2px solid var(--border-element);
-}
-
-.mock-bar {
-  width: 30px;
-  background-color: var(--blue-600);
-  border-radius: 4px 4px 0 0;
-  position: relative;
-}
-
-.mock-bar span {
-  position: absolute;
-  bottom: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.75rem;
-  color: var(--slate-400);
 }
 
 /* Form Design Substructures */

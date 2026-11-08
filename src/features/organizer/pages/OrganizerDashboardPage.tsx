@@ -1,30 +1,34 @@
 import React, { useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import '../Organiser.css/organiser.css' ;
 
+import { useAuth } from '../../authentication';
 import { StatCard } from '../components/StatCard';
 import { SearchBar } from '../components/searchBar';
 import { EventTable } from '../components/EventTable';
-import { StaffTable } from '../components/staffTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
 import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
-import { useStaff } from '../hooks/useStaff';
 import { useAttendees } from '../hooks/useAttendee';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
+
+function initials(name: string | undefined): string {
+  return name?.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('') || 'OR';
+}
 
 export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
+  const { user } = useAuth();
   const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
-  const { staff, totalStaff, activeStaff, onLeaveStaff, search: stSearch, setSearch: setStSearch } = useStaff();
   const {
     attendees, totalAttendees, checkedInCount,
     search: atSearch, setSearch: setAtSearch,
     eventId: atEventId, setEventId: setAtEventId,
     ticketType: atTicketType, setTicketType: setAtTicketType,
-    eventOptions, ticketTypeOptions,
+    eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
 
   // Throws when the backend refuses, so the form can show the message and stay open.
@@ -46,9 +50,9 @@ export const OrganizerDashboardPage: React.FC = () => {
         </div>
 
         <div className="user-profile-badge">
-          <div className="avatar-placeholder">JD</div>
+          <div className="avatar-placeholder">{initials(user?.name)}</div>
           <div className="user-details">
-            <span className="user-name">John Doe</span>
+            <span className="user-name">{user?.name ?? 'Organizer'}</span>
             <span className="user-role">Organizer ▼</span>
           </div>
         </div>
@@ -110,18 +114,14 @@ export const OrganizerDashboardPage: React.FC = () => {
                 <div className="content-header">
                   <div>
                     <h2 className="view-title">My Staff Roster</h2>
-                    <p className="view-subtitle">Manage structural credentials for active deployable members.</p>
+                    <p className="view-subtitle">Manage your staff and the events they are allowed to scan.</p>
                   </div>
+                  <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
                 </div>
-                <div className="metrics-grid">
-                  <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
-                  <StatCard title="Active Staff" value={activeStaff} icon="🟢" color="#10b981" />
-                  <StatCard title="On Leave" value={onLeaveStaff} icon="🟠" color="#f59e0b" />
-                </div>
-                <div className="filter-toolbar">
-                  <SearchBar value={stSearch} onChange={setStSearch} placeholder="Search staff members by credential names or titles..." />
-                </div>
-                <StaffTable staff={staff} />
+                <p role="status" className="form-error-banner">
+                  Staff accounts and event assignments are not supported by the connected backend yet.
+                  No local staff records are shown or saved.
+                </p>
               </>
             )}
 
@@ -139,7 +139,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   <StatCard title="Attendance Rate" value={`${Math.round((checkedInCount / (totalAttendees || 1)) * 100)}%`} icon="📊" color="#a855f7" />
                 </div>
                 <div className="filter-toolbar">
-                  <SearchBar value={atSearch} onChange={setAtSearch} placeholder="Search by customer name, email, event or ticket..." />
+                  <SearchBar value={atSearch} onChange={setAtSearch} placeholder="Search by customer, email, event or ticket..." />
                   <select className="toolbar-dropdown" value={atEventId} onChange={(e) => setAtEventId(e.target.value)}>
                     <option value="all">All Events</option>
                     {eventOptions.map((event) => (
@@ -155,10 +155,14 @@ export const OrganizerDashboardPage: React.FC = () => {
                 </div>
                 <div className="split-view-layout">
                   <div className="split-table-side">
-                    <AttendeeTable attendees={attendees} />
+                    {attendeeLoading
+                      ? <p className="view-subtitle">Loading ticket purchases...</p>
+                      : attendeeError
+                        ? <div role="alert" className="form-error-banner">{attendeeError}</div>
+                        : <AttendeeTable attendees={attendees} />}
                   </div>
                   <div className="split-analytics-side">
-                    <SalesChart />
+                    <SalesChart events={events} />
                   </div>
                 </div>
               </>
