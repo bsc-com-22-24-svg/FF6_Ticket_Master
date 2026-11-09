@@ -4,6 +4,12 @@ import { getEvent } from '../../lib/events'
 import { savePendingPayment } from '../../lib/paychangu'
 import { completePayment } from './completePayment'
 
+vi.mock('../../lib/backend', () => ({
+  USE_BACKEND: false,
+  api: vi.fn(),
+  setToken: vi.fn(),
+}))
+
 const EVENT_ID = 'lake-of-stars'
 
 function pendingOrder(txRef: string, amount = 70500) {

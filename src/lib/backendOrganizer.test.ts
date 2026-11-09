@@ -104,7 +104,9 @@ describe('listMyEvents', () => {
           meta: { totalPages: 1 },
         }
       }
-      if (url.includes('/events/1/')) return { totals: { sold: 12 } }
+      if (url.includes('/sales-summary')) {
+        return { totals: { sold: url.includes('/events/1/') ? 12 : 0 } }
+      }
       return new Response('{}', { status: 500 })
     })
     const events = await listMyEvents()

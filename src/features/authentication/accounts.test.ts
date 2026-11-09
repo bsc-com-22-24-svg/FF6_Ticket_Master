@@ -1,9 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createAccount, createStaff, deleteAccount, getUser, listManagedUsers, listStaffOf,
   loginRequest, setAccountStatus, setStaffEvents, staffEventIds,
   type User,
 } from './authStore'
+
+vi.mock('../../lib/backend', () => ({
+  USE_BACKEND: false,
+  api: vi.fn(),
+  setToken: vi.fn(),
+}))
 
 const admin: User = { id: 'u-4', name: 'Platform Admin', email: 'admin@example.com', role: 'admin' }
 const organizer: User = { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', role: 'organizer' }

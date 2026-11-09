@@ -8,12 +8,18 @@ vi.mock('../../lib/backendTickets', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/backendTickets')>()
   return { ...actual, purchaseBackendTicket: vi.fn() }
 })
+vi.mock('../../lib/backendEvents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/backendEvents')>()
+  return { ...actual, fetchBackendEvent: vi.fn() }
+})
 
 import { purchaseBackendTicket } from '../../lib/backendTickets'
+import { fetchBackendEvent } from '../../lib/backendEvents'
 import { completePayment } from './completePayment'
 
 const EVENT_ID = 'lake-of-stars'
 const purchase = vi.mocked(purchaseBackendTicket)
+const fetchEvent = vi.mocked(fetchBackendEvent)
 
 function pendingOrder(txRef: string) {
   const event = getEvent(EVENT_ID)!
@@ -54,6 +60,7 @@ describe('completePayment with the backend', () => {
     window.localStorage.clear()
     vi.unstubAllGlobals()
     purchase.mockReset()
+    fetchEvent.mockResolvedValue(getEvent(EVENT_ID)!)
   })
 
   it('claims one backend ticket per seat and keeps the server QR image', async () => {

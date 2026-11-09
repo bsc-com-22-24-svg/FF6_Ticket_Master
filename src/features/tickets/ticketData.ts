@@ -5,11 +5,14 @@ import type { Ticket, TicketStatus } from './ticketTypes'
 
 interface BackendHistoryTicket {
   ticketNumber: string
-  eventId: string
-  ticketTypeId: string
   status: 'ISSUED' | 'USED' | 'CANCELLED' | 'REFUNDED'
   issuedAt: string
-  checkedInAt: string | null
+  event: {
+    eventId: string
+  }
+  ticketType: {
+    ticketTypeId: string
+  }
   qrCodeDataUrl?: string
 }
 
@@ -35,21 +38,22 @@ export async function fetchTickets(userId?: string, userName = ''): Promise<Tick
   if (!userId) return []
 
   const records = await api<BackendHistoryTicket[]>('/tickets/history')
-  const eventIds = [...new Set(records.map((ticket) => ticket.eventId))]
+  const eventIds = [...new Set(records.map((ticket) => ticket.event.eventId))]
   const events = await Promise.all(eventIds.map((id) => fetchBackendEvent(id)))
   const eventById = new Map(events.map((event) => [event.id, event]))
 
   return records.flatMap((record) => {
-    const event = eventById.get(record.eventId)
-    const ticketType = event?.ticketTypes.find((type) => type.id === record.ticketTypeId)
+    const event = eventById.get(record.event.eventId)
+    const ticketType = event?.ticketTypes.find((type) => type.id === record.ticketType.ticketTypeId)
     if (!event || !ticketType) return []
 
-    const status: TicketStatus = {
+    const statusByBackend: Record<BackendHistoryTicket['status'], TicketStatus> = {
       ISSUED: 'valid',
       USED: 'used',
       CANCELLED: 'cancelled',
       REFUNDED: 'refunded',
-    }[record.status]
+    }
+    const status = statusByBackend[record.status]
 
     return [{
       id: record.ticketNumber,
