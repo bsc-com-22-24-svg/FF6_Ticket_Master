@@ -1,59 +1,63 @@
-// Browser side of the PayChangu integration. It never sees the secret key: it calls our
-// own /api/paychangu/* routes (server/paychangu.ts), and remembers what the customer was
-// buying until PayChangu sends them back.
+import { api } from './backend'
 
 export interface PendingPayment {
   txRef: string
+  orderNumber: string
   eventId: string
   ticketTypeId: string
   quantity: number
   holder: string
   userId: string
-  amount: number // total in MWK, what we expect PayChangu to confirm
   createdAt: string
   status: 'pending' | 'completed'
   ticketIds?: string[]
 }
 
 export interface VerifiedPayment {
-  status: string // 'success' | 'pending' | 'failed' | ...
+  status: 'success' | 'pending' | 'failed'
   tx_ref: string
-  amount: number
-  currency: string
-  channel: string | null
-  reference: string | null
 }
 
-export interface InitiateInput {
-  amount: number
-  email: string
-  first_name: string
-  last_name: string
-  tx_ref: string
-  callback_url: string
-  return_url: string
-  title: string
-  description: string
+interface CreateOrderInput {
+  eventId: string
+  ticketTypeId: string
+  quantity: number
 }
 
 export const PENDING_PAYMENTS_KEY = 'tm.ticket-master.pending-payments'
 
-function readPending(): PendingPayment[] {
-  try {
-    const raw = window.localStorage.getItem(PENDING_PAYMENTS_KEY)
-    const parsed = raw ? (JSON.parse(raw) as PendingPayment[]) : []
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function findOrderNumber(value: unknown, depth = 0): string | undefined {
+  if (!isRecord(value) || depth > 3) return undefined
+
+  for (const key of ['orderNumber', 'order_number', 'number']) {
+    const candidate = value[key]
+    if ((typeof candidate === 'string' || typeof candidate === 'number') && String(candidate).trim()) {
+      return String(candidate).trim()
+    }
   }
+
+  for (const key of ['data', 'order', 'result']) {
+    const nested = findOrderNumber(value[key], depth + 1)
+    if (nested) return nested
+  }
+  return undefined
+}
+
+function readPending(): PendingPayment[] {
+  const raw = window.localStorage.getItem(PENDING_PAYMENTS_KEY)
+  if (!raw) return []
+
+  const parsed: unknown = JSON.parse(raw)
+  if (!Array.isArray(parsed)) throw new Error('Saved payment references are invalid. Clear them and try again.')
+  return parsed as PendingPayment[]
 }
 
 function writePending(items: PendingPayment[]): void {
-  try {
-    window.localStorage.setItem(PENDING_PAYMENTS_KEY, JSON.stringify(items.slice(0, 50)))
-  } catch {
-    // storage unavailable: the payment page will show a "could not find your order" message
-  }
+  window.localStorage.setItem(PENDING_PAYMENTS_KEY, JSON.stringify(items.slice(0, 50)))
 }
 
 export function savePendingPayment(payment: PendingPayment): void {
@@ -68,18 +72,12 @@ export function latestPendingPayment(): PendingPayment | undefined {
   return readPending().find((item) => item.status === 'pending')
 }
 
-export function removePendingPayment(txRef: string): void {
-  writePending(readPending().filter((item) => item.txRef !== txRef))
-}
-
 export function markPaymentCompleted(txRef: string, ticketIds: string[]): void {
   writePending(
     readPending().map((item) => (item.txRef === txRef ? { ...item, status: 'completed', ticketIds } : item)),
   )
 }
 
-// Used when a multi-ticket order is partially fulfilled. The payment stays pending
-// so a retry can claim only the tickets that are still missing.
 export function addPendingTickets(txRef: string, ticketIds: string[]): void {
   if (ticketIds.length === 0) return
   writePending(
@@ -91,42 +89,65 @@ export function addPendingTickets(txRef: string, ticketIds: string[]): void {
   )
 }
 
-export function makeTxRef(): string {
-  const random = Math.random().toString(36).slice(2, 10)
-  return `TM-${Date.now().toString(36)}-${random}`.toUpperCase()
-}
-
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response
-  try {
-    response = await fetch(path, init)
-  } catch {
-    throw new Error('Could not reach the payment service. Check your connection and try again.')
-  }
-  let body: unknown = null
-  try {
-    body = await response.json()
-  } catch {
-    body = null
-  }
-  if (!response.ok) {
-    const message =
-      body && typeof body === 'object' && 'error' in body && typeof (body as { error: unknown }).error === 'string'
-        ? (body as { error: string }).error
-        : 'Payment service error.'
-    throw new Error(message)
-  }
-  return body as T
-}
-
-export function initiatePayment(input: InitiateInput): Promise<{ checkout_url: string; tx_ref: string }> {
-  return api('/api/paychangu/initiate', {
+export async function createOrder(input: CreateOrderInput): Promise<{ orderNumber: string }> {
+  const result = await api<unknown>('/orders', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: {
+      eventId: input.eventId,
+      items: [{ ticketTypeId: input.ticketTypeId, quantity: input.quantity }],
+    },
   })
+
+  const orderNumber = findOrderNumber(result)
+  if (!orderNumber) {
+    throw new Error('The backend did not return an order number.')
+  }
+  return { orderNumber }
 }
 
-export function verifyPayment(txRef: string): Promise<VerifiedPayment> {
-  return api(`/api/paychangu/verify/${encodeURIComponent(txRef)}`)
+export async function initiatePayment(orderNumber: string): Promise<{ checkout_url: string; tx_ref: string }> {
+  const result = await api<unknown>(
+    `/payments/orders/${encodeURIComponent(orderNumber)}/checkout`,
+    { method: 'POST' },
+  )
+  const dataObj = isRecord(result) && isRecord(result.data) ? result.data : result;
+  const checkoutUrl = isRecord(dataObj) ? (dataObj.checkout_url || dataObj.checkoutUrl) : undefined;
+  const txRef = isRecord(dataObj) ? (dataObj.tx_ref || dataObj.txRef) : undefined;
+
+  if (typeof checkoutUrl !== 'string' || typeof txRef !== 'string' || !txRef.trim()) {
+    throw new Error('The backend did not return a PayChangu checkout URL and transaction reference.')
+  }
+  let url: URL
+  try {
+    url = new URL(checkoutUrl)
+  } catch {
+    throw new Error('The backend returned an invalid PayChangu checkout URL.')
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('The backend returned an unsupported PayChangu checkout URL.')
+  }
+  return { checkout_url: url.toString(), tx_ref: txRef }
+}
+
+export async function verifyPayment(txRef: string): Promise<VerifiedPayment> {
+  const result = await api<unknown>(`/payments/${encodeURIComponent(txRef)}/verify`)
+  if (!isRecord(result) || typeof result.status !== 'string') {
+    throw new Error('The backend returned an invalid payment verification response.')
+  }
+
+  const status = result.status.toLowerCase()
+  const mappedStatus =
+    ['success', 'successful', 'paid', 'completed'].includes(status)
+      ? 'success'
+      : ['pending', 'processing', 'initiated'].includes(status)
+        ? 'pending'
+        : 'failed'
+
+  const responseTxRef =
+    typeof result.tx_ref === 'string'
+      ? result.tx_ref
+      : typeof result.txRef === 'string'
+        ? result.txRef
+        : txRef
+  return { status: mappedStatus, tx_ref: responseTxRef }
 }
