@@ -1,14 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
-import { fetchBookings } from '../bookingMockData';
-import { useAuth } from '../../authentication';
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '../../authentication'
+import { fetchBookings } from '../bookingData'
 
 export function useBookings() {
-  const { user } = useAuth();
-  const userId = user?.id;
+  const { user } = useAuth()
   return useQuery({
-    // Keyed per user so switching accounts never shows the previous cache.
-    queryKey: ['bookings', userId],
-    queryFn: () => fetchBookings(userId),
-    enabled: !!userId,
-  });
+    queryKey: ['bookings', user?.id],
+    queryFn: fetchBookings,
+    enabled: !!user?.id,
+  })
 }

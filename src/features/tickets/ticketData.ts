@@ -13,6 +13,13 @@ interface BackendHistoryTicket {
   qrCodeDataUrl?: string
 }
 
+const TICKET_STATUS: Record<BackendHistoryTicket['status'], TicketStatus> = {
+  ISSUED: 'valid',
+  USED: 'used',
+  CANCELLED: 'cancelled',
+  REFUNDED: 'refunded',
+}
+
 export function toTicketView(record: TicketRecord): Ticket {
   return {
     id: record.id,
@@ -31,9 +38,8 @@ export function toTicketView(record: TicketRecord): Ticket {
   }
 }
 
-export async function fetchTickets(userId?: string, userName = ''): Promise<Ticket[]> {
+export async function fetchTicketRecords(userId?: string, userName = ''): Promise<TicketRecord[]> {
   if (!userId) return []
-
   const records = await api<BackendHistoryTicket[]>('/tickets/history')
   const eventIds = [...new Set(records.map((ticket) => ticket.eventId))]
   const events = await Promise.all(eventIds.map((id) => fetchBackendEvent(id)))
@@ -44,27 +50,26 @@ export async function fetchTickets(userId?: string, userName = ''): Promise<Tick
     const ticketType = event?.ticketTypes.find((type) => type.id === record.ticketTypeId)
     if (!event || !ticketType) return []
 
-    const status: TicketStatus = {
-      ISSUED: 'valid',
-      USED: 'used',
-      CANCELLED: 'cancelled',
-      REFUNDED: 'refunded',
-    }[record.status]
-
     return [{
       id: record.ticketNumber,
-      eventTitle: event.title,
-      venue: event.venue,
-      city: event.city,
+      userId,
+      eventId: event.id,
+      eventName: event.title,
       date: event.date,
       time: event.time,
+      venue: event.venue,
+      city: event.city,
       ticketType: ticketType.name,
-      seat: `${ticketType.name} Admission`,
       price: ticketType.price,
       holder: userName,
-      status,
-      purchasedAt: record.issuedAt,
+      status: TICKET_STATUS[record.status],
+      createdAt: record.issuedAt,
       qrCodeDataUrl: record.qrCodeDataUrl,
-    } satisfies Ticket]
+    } satisfies TicketRecord]
   })
+}
+
+export async function fetchTickets(userId?: string, userName = ''): Promise<Ticket[]> {
+  const records = await fetchTicketRecords(userId, userName)
+  return records.map(toTicketView)
 }
