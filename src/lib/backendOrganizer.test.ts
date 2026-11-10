@@ -60,9 +60,10 @@ describe('createOrganizerEvent', () => {
     expect(result.id).toBe('7')
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       'POST /be/events',
-      'POST /be/events/7/publish',
+      'PATCH /be/events/7',
       'POST /be/tickets/events/7/generate',
     ])
+    expect(calls[1].body).toEqual({ status: 'PUBLISHED' })
     expect(calls[0].body).toMatchObject({
       title: 'Sample Gig',
       capacity: 100,
@@ -104,7 +105,7 @@ describe('listMyEvents', () => {
           meta: { totalPages: 1 },
         }
       }
-      if (url.includes('/events/1/')) return { totals: { sold: 12 } }
+      if (url.includes('/sales-summary')) return { totals: { sold: url.includes('/events/1/') ? 12 : 0 } }
       return new Response('{}', { status: 500 })
     })
     const events = await listMyEvents()
@@ -117,9 +118,10 @@ describe('listMyEvents', () => {
 })
 
 describe('cancelOrganizerEvent', () => {
-  it('sends a DELETE for the event', async () => {
+  it('marks the event as cancelled with PATCH', async () => {
     const calls = stubBackend(() => ({}))
     await cancelOrganizerEvent('7')
-    expect(`${calls[0].method} ${calls[0].url}`).toBe('DELETE /be/events/7')
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
+    expect(calls[0].body).toEqual({ status: 'CANCELLED' })
   })
 })

@@ -89,7 +89,7 @@ export function ScannerPage(): ReactNode {
       <div>
         <h1>Scan tickets</h1>
         <div className="alert info" style={{ marginTop: 14 }}>
-          No events are assigned to you yet. Ask your organizer to assign you to an event.
+          No published events are available to scan yet. Ask the organizer to publish an event first.
         </div>
       </div>
     )

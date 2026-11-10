@@ -3,6 +3,7 @@ import {
   backendTicketToRecord,
   backendValidationToResult,
   extractQrToken,
+  purchaseBackendTicket,
   validateBackendTicket,
 } from './backendTickets'
 import type { Event, TicketType } from '../types/event'
@@ -27,6 +28,18 @@ describe('extractQrToken', () => {
     expect(extractQrToken(TOKEN)).toBe(TOKEN)
     expect(extractQrToken(`TICKET:${TOKEN}.AAAAAAAAAA`)).toBe(TOKEN)
     expect(extractQrToken('  ')).toBe('')
+  })
+})
+
+describe('purchaseBackendTicket', () => {
+  it('passes the PayChangu reference so the backend can verify payment', async () => {
+    const fetchMock = stubResponse({ ticketNumber: 'TKT-ABC123', qrCodeDataUrl: 'data:image/png;base64,abc', status: 'ISSUED' })
+
+    await purchaseBackendTicket('4', '7', 'TM-TEST-0001')
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(url).toBe('/be/tickets/purchase')
+    expect(JSON.parse(String(init.body))).toEqual({ eventId: '4', ticketTypeId: '7', txRef: 'TM-TEST-0001' })
   })
 })
 

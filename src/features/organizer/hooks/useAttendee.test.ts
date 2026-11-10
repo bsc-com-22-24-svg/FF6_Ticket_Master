@@ -46,12 +46,22 @@ describe('fetchBackendAttendees', () => {
         body = { totals: { sold: 2 } }
       } else if (url.endsWith('/tickets/events/42')) {
         body = [
-          { ticketNumber: 'TKT-1', ticketTypeId: 'vip', customerId: 'customer-7', status: 'ISSUED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
+          {
+            ticketNumber: 'TKT-1',
+            ticketTypeId: 'vip',
+            customerId: 'customer-7',
+            customerName: 'Ada Banda',
+            customerEmail: 'ada@example.com',
+            attendee: { userId: 'customer-7', fullName: 'Ada Banda', email: 'ada@example.com' },
+            ticketType: { ticketTypeId: 'vip', name: 'VIP', price: 25000 },
+            status: 'ISSUED',
+            issuedAt: '2026-11-08T10:00:00.000Z',
+            purchasedAt: '2026-11-08T10:05:00.000Z',
+            checkedInAt: null,
+          },
           { ticketNumber: 'TKT-2', ticketTypeId: 'vip', customerId: null, status: 'ISSUED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
           { ticketNumber: 'TKT-3', ticketTypeId: 'vip', customerId: 'customer-8', status: 'CANCELLED', issuedAt: '2026-11-08T10:00:00.000Z', checkedInAt: null },
         ]
-      } else if (url.endsWith('/events/42/ticket-types')) {
-        body = [{ ticketTypeId: 'vip', name: 'VIP', price: 25000 }]
       } else {
         throw new Error(`Unexpected request: ${url}`)
       }
@@ -65,7 +75,8 @@ describe('fetchBackendAttendees', () => {
     expect(attendees).toHaveLength(1)
     expect(attendees[0]).toMatchObject({
       id: 'TKT-1',
-      name: 'Customer #customer-7',
+      name: 'Ada Banda',
+      email: 'ada@example.com',
       event: 'Organizer Test Fest',
       eventId: '42',
       ticketType: 'VIP',

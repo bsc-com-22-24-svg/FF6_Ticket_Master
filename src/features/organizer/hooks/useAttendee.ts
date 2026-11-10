@@ -17,15 +17,14 @@ interface BackendEventTicket {
   ticketNumber: string;
   ticketTypeId: string;
   customerId: string | null;
+  customerName?: string | null;
+  customerEmail?: string | null;
+  attendee?: { userId: string; fullName: string; email: string } | null;
+  ticketType?: { ticketTypeId: string; name: string; price: number | string };
   status: 'ISSUED' | 'USED' | 'CANCELLED' | 'REFUNDED';
   issuedAt: string;
+  purchasedAt?: string | null;
   checkedInAt: string | null;
-}
-
-interface BackendTicketType {
-  ticketTypeId: string;
-  name: string;
-  price: number | string;
 }
 
 function formatPurchaseDate(value: string): string {
@@ -79,26 +78,21 @@ export async function fetchBackendAttendees(): Promise<AttendeeItem[]> {
   const events = await listMyEvents();
   const attendeesByEvent = await Promise.all(
     events.map(async (event) => {
-      const [tickets, ticketTypes] = await Promise.all([
-        api<BackendEventTicket[]>(`/tickets/events/${encodeURIComponent(event.id)}`),
-        api<BackendTicketType[]>(`/events/${encodeURIComponent(event.id)}/ticket-types`),
-      ]);
-      const ticketTypeById = new Map(ticketTypes.map((ticketType) => [ticketType.ticketTypeId, ticketType]));
+      const tickets = await api<BackendEventTicket[]>(`/tickets/events/${encodeURIComponent(event.id)}`);
 
       return tickets.flatMap((ticket) => {
         if (!ticket.customerId || ticket.status === 'CANCELLED' || ticket.status === 'REFUNDED') return [];
-        const ticketType = ticketTypeById.get(ticket.ticketTypeId);
-        const purchasedAt = ticket.issuedAt;
+        const purchasedAt = ticket.purchasedAt ?? ticket.issuedAt;
 
         return [{
           id: ticket.ticketNumber,
-          name: `Customer #${ticket.customerId}`,
-          email: '',
+          name: ticket.attendee?.fullName ?? ticket.customerName ?? `Customer #${ticket.customerId}`,
+          email: ticket.attendee?.email ?? ticket.customerEmail ?? '',
           event: event.name,
           eventId: event.id,
-          ticketType: ticketType?.name ?? 'Unknown',
+          ticketType: ticket.ticketType?.name ?? 'Unknown',
           quantity: 1,
-          amount: Number(ticketType?.price ?? 0),
+          amount: Number(ticket.ticketType?.price ?? 0),
           purchaseDate: formatPurchaseDate(purchasedAt),
           purchasedAt,
           status: ticket.status === 'USED' || ticket.checkedInAt ? 'Checked In' : 'Registered',

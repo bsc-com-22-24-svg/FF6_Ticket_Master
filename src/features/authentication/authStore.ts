@@ -124,7 +124,14 @@ const FROM_BACKEND: Record<BackendRole, Role> = {
 
 interface AuthResponse {
     accessToken: string;
-    user: { id: string; name: string; email: string; role: BackendRole };
+    tokenType?: string;
+    user?: { id: string; name: string; email: string; role: BackendRole };
+}
+
+interface JwtPayload {
+    sub: string;
+    email: string;
+    role: BackendRole;
 }
 
 async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
@@ -138,12 +145,32 @@ async function postAuth(path: string, body: unknown): Promise<AuthResponse> {
     }
 }
 
-function startBackendSession(result: AuthResponse): User {
+function decodeJwtPayload(token: string): JwtPayload | null {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    try {
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        return JSON.parse(atob(padded)) as JwtPayload;
+    } catch {
+        return null;
+    }
+}
+
+function startBackendSession(result: AuthResponse, fallbackName = ''): User {
+    const payload = decodeJwtPayload(result.accessToken);
+    const email = result.user?.email ?? payload?.email ?? '';
+    const id = result.user?.id ?? payload?.sub ?? '';
+    const backendRole = result.user?.role ?? payload?.role;
+    if (!id || !email || !backendRole) {
+        throw new Error('The server returned an invalid session.');
+    }
+
     const user: User = {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email,
-        role: FROM_BACKEND[result.user.role] ?? 'customer',
+        id: String(id),
+        name: result.user?.name?.trim() || fallbackName.trim() || email.split('@')[0],
+        email,
+        role: FROM_BACKEND[backendRole] ?? 'customer',
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(user));
     setToken(result.accessToken);
@@ -174,7 +201,15 @@ export async function loginRequest(email: string, password: string): Promise<Use
 
 export async function registerRequest(name:string,email:string,password:string,role: 'customer' | 'organizer' = 'customer'): Promise<User>{
     if (USE_BACKEND) {
-        return startBackendSession(await postAuth('/auth/register', { name: name.trim(), email: email.trim(), password, role: role === 'organizer' ? 'ORGANIZER' : 'ATTENDEE' }));
+        return startBackendSession(
+            await postAuth('/auth/register', {
+                name: name.trim(),
+                email: email.trim(),
+                password,
+                role: role === 'organizer' ? 'ORGANIZER' : 'ATTENDEE',
+            }),
+            name,
+        );
     }
     await wait();
     const cleanEmail = email.trim().toLowerCase();

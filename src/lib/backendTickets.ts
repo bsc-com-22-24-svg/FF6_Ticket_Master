@@ -39,10 +39,11 @@ export function extractQrToken(raw: string): string {
 export function purchaseBackendTicket(
   eventId: string,
   ticketTypeId: string,
+  txRef?: string,
 ): Promise<BackendPurchasedTicket> {
   return api<BackendPurchasedTicket>('/tickets/purchase', {
     method: 'POST',
-    body: { eventId, ticketTypeId },
+    body: { eventId, ticketTypeId, ...(txRef ? { txRef } : {}) },
   })
 }
 
