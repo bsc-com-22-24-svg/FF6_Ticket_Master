@@ -1,4 +1,4 @@
-// Application data always comes from the API; PayChangu keeps its own pending payment state.
+// Application and payment requests are served by the Docker backend.
 export const USE_BACKEND = true
 
 // The dev server forwards /be/* to the backend (see vite.config.ts), so the browser
