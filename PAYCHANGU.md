@@ -21,6 +21,24 @@ No ticket is issued until PayChangu confirms the money arrived.
 ## Testing
 Use test mode (`sec-test-` key). PayChangu's docs list test numbers, e.g. Airtel Money `990000000` and card `4242 4242 4242 4242`.
 
+## Local development: PayChangu removes the port
+PayChangu strips the port from `callback_url` and `return_url`. A redirect URL of
+`http://localhost:5173/checkout/return` becomes `http://localhost/checkout/return`,
+which does not reach the Vite dev server.
+
+Keep the app on port 5173 and run the return bridge in a second terminal:
+
+```bash
+sudo env "PATH=$PATH" npm run paychangu:bridge
+```
+
+The bridge listens on port 80 and redirects to `http://localhost:5173`, so PayChangu's
+portless redirect still lands on the checkout return page. Leave it running while testing.
+
+If you cannot bind port 80, expose the dev server through a tunnel (for example ngrok)
+and open the app through the tunnel URL instead. PayChangu will then redirect to the
+tunnel's portless HTTPS URL. No PayChangu dashboard changes are needed for either option.
+
 ## Limits of this project (say so in the report)
 - Orders, events and tickets still live in the browser (localStorage), so the server cannot check the price itself.
   A real system keeps events and orders in a database and computes the amount on the server.

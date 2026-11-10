@@ -210,6 +210,15 @@ Log out and log in again so the new role is included in the token. Staff can sca
 - Use a PayChangu test key that starts with `sec-test-`.
 - The backend re-verifies the payment reference before issuing tickets.
 - If the key is missing or invalid, ticket purchase fails even when the frontend payment step succeeds.
+- PayChangu removes the port from redirect URLs, so `http://localhost:5173/checkout/return` returns as `http://localhost/checkout/return`.
+
+To keep using `http://localhost:5173`, run the return bridge in a second terminal:
+
+```bash
+sudo env "PATH=$PATH" npm run paychangu:bridge
+```
+
+The bridge listens on port 80 and forwards to `http://localhost:5173`. Leave it running while testing payments. Alternatively, expose port 5173 with ngrok and open the app through the ngrok URL; no PayChangu dashboard change is required.
 
 ## Stopping and resuming
 
@@ -242,6 +251,7 @@ Your data stays in the `ticket-db-data` volume, so users, events, and tickets re
 | Rebuild the frontend | `npm run build` |
 | Run unit tests | `npm test` |
 | Run lint | `npm run lint` |
+| Redirect PayChangu's portless return URL to port 5173 | `sudo env "PATH=$PATH" npm run paychangu:bridge` |
 
 The unit tests use the in-browser mock and do not require Docker.
 
