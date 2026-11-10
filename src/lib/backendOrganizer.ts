@@ -1,4 +1,5 @@
-import { api } from './backend'
+import { API, api, getToken } from './backend'
+import { resolveEventImage } from './backendEvents'
 import type { EventItem } from '../features/organizer/Data/Events'
 
 // Organizer side of the backend: create, publish, cancel and list the organizer's own events.
@@ -19,6 +20,7 @@ export interface NewEventInput {
   endAt: string // ISO date-time
   ticketTypes: NewTicketType[]
   status: 'Published' | 'Draft'
+  imageUrl?: string // an uploaded image (/uploads/..), a bundled default, or nothing
 }
 
 interface BackendMyEvent {
@@ -27,6 +29,8 @@ interface BackendMyEvent {
   venue: string
   startAt: string
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+  publishedAt?: string | null
+  imageUrl?: string | null
 }
 
 interface MyEventsPage {
@@ -81,22 +85,71 @@ export async function listMyEvents(): Promise<EventItem[]> {
       name: event.title,
       date: formatEventDate(event.startAt),
       venue: event.venue,
-      ticketsSold: await soldFor(event.id),
+      ticketsSold: event.status === 'PUBLISHED' ? await soldFor(event.id) : 0,
       status: STATUS[event.status] ?? 'Draft',
+      ...(event.status === 'CANCELLED'
+        ? { restoreStatus: event.publishedAt ? 'Published' as const : 'Draft' as const }
+        : {}),
+      image: resolveEventImage(event.imageUrl, String(event.id)),
     })),
   )
+}
+
+export async function setOrganizerEventStatus(
+  eventId: string,
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED',
+): Promise<void> {
+  await api(`/events/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    body: { status },
+  })
 }
 
 // Publishing makes the event public. Tickets only exist after "generate", so both run together.
 // Generating again is safe: it only creates tickets that are still missing.
 export async function publishEvent(eventId: string): Promise<void> {
-  await api(`/events/${eventId}/publish`, { method: 'POST' })
+  await api(`/events/${encodeURIComponent(eventId)}/publish`, { method: 'POST' })
   try {
-    await api(`/tickets/events/${eventId}/generate`, { method: 'POST' })
+    await api(`/tickets/events/${encodeURIComponent(eventId)}/generate`, { method: 'POST' })
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error'
     throw new Error(`The event is published but its tickets could not be created (${reason}). Press Publish again to retry.`)
   }
+}
+
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+// Sends a picture to the backend and returns the path to save as the event's imageUrl.
+export async function uploadEventImage(file: File): Promise<string> {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Choose a JPG, PNG or WEBP image.')
+  if (file.size > MAX_IMAGE_BYTES) throw new Error('The image must be 5 MB or smaller.')
+
+  const form = new FormData()
+  form.append('file', file)
+  const token = getToken()
+
+  let response: Response
+  try {
+    response = await fetch(`${API}/events/images`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    })
+  } catch {
+    throw new Error('Cannot reach the server. Is the backend running?')
+  }
+
+  let data: { imageUrl?: string; message?: string | string[] } | null = null
+  try {
+    data = await response.json()
+  } catch {
+    data = null
+  }
+  if (!response.ok || !data?.imageUrl) {
+    const message = Array.isArray(data?.message) ? data.message.join('. ') : data?.message
+    throw new Error(response.status >= 500 ? 'The image could not be uploaded. Try again.' : message || 'The image could not be uploaded.')
+  }
+  return data.imageUrl
 }
 
 export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: string }> {
@@ -109,6 +162,7 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
       location: input.location.trim(),
       startAt: input.startAt,
       endAt: input.endAt,
+      ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
       capacity: totalCapacity(input.ticketTypes),
       ticketTypes: input.ticketTypes.map((type) => ({
         name: type.name.trim(),
@@ -124,5 +178,12 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
 }
 
 export async function cancelOrganizerEvent(eventId: string): Promise<void> {
-  await api(`/events/${eventId}`, { method: 'DELETE' })
+  await setOrganizerEventStatus(eventId, 'CANCELLED')
+}
+
+export async function restoreOrganizerEvent(
+  eventId: string,
+  status: 'DRAFT' | 'PUBLISHED',
+): Promise<void> {
+  await setOrganizerEventStatus(eventId, status)
 }

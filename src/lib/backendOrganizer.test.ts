@@ -5,6 +5,7 @@ import {
   formatEventDate,
   listMyEvents,
   publishEvent,
+  restoreOrganizerEvent,
   totalCapacity,
   type NewEventInput,
 } from './backendOrganizer'
@@ -99,7 +100,7 @@ describe('listMyEvents', () => {
           data: [
             { id: '1', title: 'One', venue: 'A', startAt: '2026-12-20T18:00:00.000Z', status: 'PUBLISHED' },
             { id: '2', title: 'Two', venue: 'B', startAt: '2026-12-21T18:00:00.000Z', status: 'DRAFT' },
-            { id: '3', title: 'Three', venue: 'C', startAt: '2026-12-22T18:00:00.000Z', status: 'CANCELLED' },
+            { id: '3', title: 'Three', venue: 'C', startAt: '2026-12-22T18:00:00.000Z', status: 'CANCELLED', publishedAt: '2026-11-01T10:00:00.000Z' },
           ],
           meta: { totalPages: 1 },
         }
@@ -113,13 +114,24 @@ describe('listMyEvents', () => {
       ['Two', 'Draft', 0],
       ['Three', 'Cancelled', 0],
     ])
+    expect(events[2].restoreStatus).toBe('Published')
   })
 })
 
 describe('cancelOrganizerEvent', () => {
-  it('sends a DELETE for the event', async () => {
+  it('marks the event cancelled using the documented PATCH endpoint', async () => {
     const calls = stubBackend(() => ({}))
     await cancelOrganizerEvent('7')
-    expect(`${calls[0].method} ${calls[0].url}`).toBe('DELETE /be/events/7')
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
+    expect(calls[0].body).toEqual({ status: 'CANCELLED' })
+  })
+})
+
+describe('restoreOrganizerEvent', () => {
+  it('restores a previously published event through the update endpoint', async () => {
+    const calls = stubBackend(() => ({}))
+    await restoreOrganizerEvent('7', 'PUBLISHED')
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
+    expect(calls[0].body).toEqual({ status: 'PUBLISHED' })
   })
 })
