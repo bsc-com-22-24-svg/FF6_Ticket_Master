@@ -1,14 +1,9 @@
-import { getEvent, incrementSold } from '../../lib/events'
-import {
-  issueBooking,
-  listTickets,
-  saveIssuedTickets,
-  type TicketRecord,
-} from '../../lib/tickets'
-import { remainingSeats } from '../../types/event'
-import { USE_BACKEND } from '../../lib/backend'
+import type { TicketRecord } from '../../lib/tickets'
+import type { StoredEvent } from '../../lib/events'
+import type { TicketType } from '../../types/event'
 import { backendTicketToRecord, purchaseBackendTicket } from '../../lib/backendTickets'
 import { fetchBackendEvent } from '../../lib/backendEvents'
+import { fetchTicketRecords } from '../tickets/ticketData'
 import {
   addPendingTickets,
   getPendingPayment,
@@ -26,37 +21,38 @@ export type CompletionResult =
       eventId: string
       payment: PendingPayment
     }
-  | { kind: 'pending' } // payment not confirmed yet (for example the phone prompt is still open)
+  | { kind: 'pending' }
   | { kind: 'failed'; message: string; eventId?: string }
-  | { kind: 'unknown' } // we have no record of this payment on this browser
+  | { kind: 'unknown' }
 
 const inFlight = new Map<string, Promise<CompletionResult>>()
 
-function ticketsFor(payment: PendingPayment): TicketRecord[] {
+async function ticketsFor(payment: PendingPayment): Promise<TicketRecord[]> {
   const ids = new Set(payment.ticketIds ?? [])
-  return listTickets().filter((ticket) => ids.has(ticket.id))
+  if (ids.size === 0) return []
+
+  const tickets = await fetchTicketRecords(payment.userId, payment.holder)
+  return tickets.filter((ticket) => ids.has(ticket.id))
 }
 
-// The backend owns ticket stock and the secret QR token. Claim each missing seat
-// separately so a partial failure can be retried without buying extra tickets.
 async function claimBackendTickets(
   pending: PendingPayment,
-  event: NonNullable<ReturnType<typeof getEvent>>,
-  ticketType: NonNullable<ReturnType<typeof getEvent>>['ticketTypes'][number],
+  event: StoredEvent,
+  ticketType: TicketType,
 ): Promise<CompletionResult> {
-  const missing = Math.max(0, pending.quantity - ticketsFor(pending).length)
+  const tickets = await ticketsFor(pending)
   let failure: string | null = null
 
-  for (let index = 0; index < missing; index += 1) {
+  for (let index = tickets.length; index < pending.quantity; index += 1) {
     try {
-      const purchased = await purchaseBackendTicket(event.id, ticketType.id)
+      const purchased = await purchaseBackendTicket(event.id, ticketType.id, pending.txRef)
       const ticket = backendTicketToRecord(purchased, {
         userId: pending.userId,
         event,
         ticketType,
         holder: pending.holder,
       })
-      saveIssuedTickets([ticket])
+      tickets.push(ticket)
       addPendingTickets(pending.txRef, [ticket.id])
     } catch (caught) {
       failure = caught instanceof Error ? caught.message : 'The ticket service could not issue the ticket.'
@@ -65,16 +61,18 @@ async function claimBackendTickets(
   }
 
   const updated = getPendingPayment(pending.txRef) ?? pending
-  const tickets = ticketsFor(updated)
 
   if (tickets.length >= pending.quantity) {
     markPaymentCompleted(pending.txRef, tickets.map((ticket) => ticket.id))
-    const done = getPendingPayment(pending.txRef) ?? {
-      ...pending,
-      status: 'completed' as const,
-      ticketIds: tickets.map((ticket) => ticket.id),
+    return {
+      kind: 'success',
+      tickets,
+      payment: getPendingPayment(pending.txRef) ?? {
+        ...updated,
+        status: 'completed',
+        ticketIds: tickets.map((ticket) => ticket.id),
+      },
     }
-    return { kind: 'success', tickets, payment: done }
   }
 
   const issued = tickets.length
@@ -93,14 +91,17 @@ async function run(txRef: string): Promise<CompletionResult> {
   const pending = getPendingPayment(txRef)
   if (!pending) return { kind: 'unknown' }
 
-  // refreshing the page must never issue tickets twice
   if (pending.status === 'completed') {
-    return { kind: 'success', tickets: ticketsFor(pending), payment: pending }
+    const tickets = await ticketsFor(pending)
+    if (tickets.length < pending.quantity) {
+      throw new Error('The backend has not returned all tickets recorded for this payment.')
+    }
+    return { kind: 'success', tickets, payment: pending }
   }
 
   const verified = await verifyPayment(txRef)
 
-  if (verified.status === 'pending' || verified.status === 'processing') return { kind: 'pending' }
+  if (verified.status === 'pending') return { kind: 'pending' }
   if (verified.status !== 'success') {
     return {
       kind: 'failed',
@@ -109,18 +110,17 @@ async function run(txRef: string): Promise<CompletionResult> {
     }
   }
 
-  // PayChangu says it succeeded: make sure it is OUR order and the full amount
-  if (verified.tx_ref !== pending.txRef || verified.currency !== 'MWK' || !(verified.amount >= pending.amount)) {
+  if (verified.tx_ref !== pending.txRef) {
     return {
       kind: 'failed',
       eventId: pending.eventId,
-      message: 'The confirmed payment does not match this order. No ticket was issued. Please contact support.',
+      message: 'The backend confirmed a different payment reference. No ticket was issued. Please contact support.',
     }
   }
 
-  let event: NonNullable<ReturnType<typeof getEvent>> | undefined
+  let event: StoredEvent
   try {
-    event = USE_BACKEND ? await fetchBackendEvent(pending.eventId) : getEvent(pending.eventId)
+    event = await fetchBackendEvent(pending.eventId)
   } catch (caught) {
     return {
       kind: 'failed',
@@ -128,8 +128,9 @@ async function run(txRef: string): Promise<CompletionResult> {
       message: `Payment (ref ${pending.txRef}) was confirmed, but the event details could not be loaded. Please contact support. ${caught instanceof Error ? caught.message : ''}`.trim(),
     }
   }
-  const ticketType = event?.ticketTypes.find((candidate) => candidate.id === pending.ticketTypeId)
-  if (!event || !ticketType) {
+
+  const ticketType = event.ticketTypes.find((candidate) => candidate.id === pending.ticketTypeId)
+  if (!ticketType) {
     return {
       kind: 'failed',
       eventId: pending.eventId,
@@ -137,33 +138,9 @@ async function run(txRef: string): Promise<CompletionResult> {
     }
   }
 
-  if (USE_BACKEND) {
-    return claimBackendTickets(pending, event, ticketType)
-  }
-
-  if (remainingSeats(ticketType) < pending.quantity) {
-    return {
-      kind: 'failed',
-      eventId: pending.eventId,
-      message: `Your payment (ref ${pending.txRef}) went through, but these tickets are no longer available. Please contact support for a refund.`,
-    }
-  }
-
-  const { tickets } = issueBooking({
-    event,
-    ticketType,
-    quantity: pending.quantity,
-    holder: pending.holder,
-    userId: pending.userId,
-  })
-  incrementSold(event.id, ticketType.id, pending.quantity)
-  markPaymentCompleted(pending.txRef, tickets.map((ticket) => ticket.id))
-
-  const done = getPendingPayment(pending.txRef) ?? { ...pending, status: 'completed' as const }
-  return { kind: 'success', tickets, payment: done }
+  return claimBackendTickets(pending, event, ticketType)
 }
 
-// Safe to call many times (React StrictMode, refresh, retry): concurrent calls share one run.
 export function completePayment(txRef: string): Promise<CompletionResult> {
   const existing = inFlight.get(txRef)
   if (existing) return existing
