@@ -1,108 +1,112 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  createAccount, createStaff, deleteAccount, getUser, listManagedUsers, listStaffOf,
-  loginRequest, setAccountStatus, setStaffEvents, staffEventIds,
-  type User,
-} from './authStore'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { api, setToken } from '../../lib/backend'
 
-const admin: User = { id: 'u-4', name: 'Platform Admin', email: 'admin@example.com', role: 'admin' }
-const organizer: User = { id: 'u-2', name: 'Nyasa Events', email: 'organizer@example.com', role: 'organizer' }
+vi.mock('../../lib/backend', () => ({
+  api: vi.fn(),
+  setToken: vi.fn(),
+}))
 
-beforeEach(() => localStorage.clear())
+import { loginRequest, logoutRequest, registerRequest } from './authStore'
 
-describe('managed account defaults', () => {
-  it('fills missing metadata on older saved accounts', () => {
-    localStorage.setItem(
-      'tm_accounts',
-      JSON.stringify([{ id: 'u-1', name: 'Chimwemwe Banda', email: 'customer@example.com', password: 'password123', role: 'customer' }]),
-    )
+const apiMock = vi.mocked(api)
 
-    const customer = listManagedUsers().find((account) => account.id === 'u-1')
+function jwtWithClaims(claims: Record<string, unknown>): string {
+  const payload = btoa(JSON.stringify(claims)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+  return `header.${payload}.signature`
+}
 
-    expect(customer).toMatchObject({
-      status: 'active',
-      createdAt: expect.any(String),
-      assignedEventIds: [],
+describe('backend authentication', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    apiMock.mockReset()
+    vi.mocked(setToken).mockReset()
+  })
+
+  it('creates a session from the backend login response', async () => {
+    apiMock.mockResolvedValue({
+      accessToken: 'backend-token',
+      user: { id: '42', name: 'Customer One', email: 'customer@example.com', role: 'ATTENDEE' },
+    })
+
+    await expect(loginRequest(' customer@example.com ', 'secret123')).resolves.toEqual({
+      id: '42',
+      name: 'Customer One',
+      email: 'customer@example.com',
+      role: 'customer',
+    })
+    expect(apiMock).toHaveBeenCalledWith('/auth/login', {
+      method: 'POST',
+      body: { email: 'customer@example.com', password: 'secret123' },
+    })
+    expect(setToken).toHaveBeenCalledWith('backend-token')
+  })
+
+  it('sends registration to the backend with the requested role', async () => {
+    apiMock.mockResolvedValue({
+      accessToken: 'organizer-token',
+      user: { id: '43', name: 'Organizer One', email: 'organizer@example.com', role: 'ORGANIZER' },
+    })
+
+    await expect(registerRequest(' Organizer One ', ' organizer@example.com ', 'secret123', 'organizer'))
+      .resolves.toMatchObject({ id: '43', role: 'organizer' })
+    expect(apiMock).toHaveBeenCalledWith('/auth/register', {
+      method: 'POST',
+      body: {
+        name: 'Organizer One',
+        email: 'organizer@example.com',
+        password: 'secret123',
+        role: 'ORGANIZER',
+      },
     })
   })
-})
 
-describe('disabled accounts', () => {
-  it('cannot log in', async () => {
-    setAccountStatus(admin, 'u-1', 'disabled')
-    await expect(loginRequest('customer@example.com', 'password123')).rejects.toThrow('disabled')
+  it('accepts a flat user and snake-case token in the backend registration response', async () => {
+    apiMock.mockResolvedValue({
+      access_token: 'organizer-token',
+      id: 44,
+      name: 'Organizer Two',
+      email: 'organizer2@example.com',
+      role: 'ORGANIZER',
+    })
+
+    await expect(registerRequest('Organizer Two', 'organizer2@example.com', 'secret123', 'organizer'))
+      .resolves.toEqual({
+        id: '44',
+        name: 'Organizer Two',
+        email: 'organizer2@example.com',
+        role: 'organizer',
+      })
+    expect(setToken).toHaveBeenCalledWith('organizer-token')
   })
 
-  it('lose an open session on the next check', async () => {
-    await loginRequest('customer@example.com', 'password123')
-    expect(getUser()?.id).toBe('u-1')
-    setAccountStatus(admin, 'u-1', 'disabled')
-    expect(getUser()).toBeNull()
+  it('builds the session from identity claims when auth returns only a JWT and token type', async () => {
+    apiMock.mockResolvedValue({
+      accessToken: jwtWithClaims({ sub: '9', email: 'admin@example.com', role: 'ADMIN' }),
+      tokenType: 'Bearer',
+    })
+
+    await expect(loginRequest('admin@example.com', 'secret123')).resolves.toEqual({
+      id: '9',
+      name: 'admin@example.com',
+      email: 'admin@example.com',
+      role: 'admin',
+    })
+    expect(setToken).toHaveBeenCalledWith(expect.stringContaining('.'))
   })
 
-  it('can log in again once enabled', async () => {
-    setAccountStatus(admin, 'u-1', 'disabled')
-    setAccountStatus(admin, 'u-1', 'active')
-    await expect(loginRequest('customer@example.com', 'password123')).resolves.toMatchObject({ id: 'u-1' })
-  })
-})
+  it('shows a clear error when neither the response nor token has account claims', async () => {
+    apiMock.mockResolvedValue({ accessToken: 'opaque-token', tokenType: 'Bearer' })
 
-describe('admin rules', () => {
-  it('only an admin can create accounts', () => {
-    expect(() => createAccount(organizer, { name: 'X', email: 'x@example.com', password: 'password123', role: 'customer' })).toThrow('not allowed')
+    await expect(registerRequest('Customer One', 'customer@example.com', 'secret123'))
+      .rejects.toThrow('The backend did not return the account details required to start a session.')
+    expect(localStorage.getItem('tm_user')).toBeNull()
+    expect(setToken).not.toHaveBeenCalled()
   })
 
-  it('needs the admin password to create another admin', () => {
-    const input = { name: 'Second Admin', email: 'admin2@example.com', password: 'password123', role: 'admin' as const }
-    expect(() => createAccount(admin, input)).toThrow('password')
-    expect(createAccount(admin, { ...input, actorPassword: 'password123' }).role).toBe('admin')
-  })
-
-  it('rejects duplicate emails and short passwords', () => {
-    expect(() => createAccount(admin, { name: 'X', email: 'customer@example.com', password: 'password123', role: 'customer' })).toThrow('already exists')
-    expect(() => createAccount(admin, { name: 'X', email: 'new@example.com', password: 'short', role: 'customer' })).toThrow('8 characters')
-  })
-
-  it('protects the last active administrator and the admin themselves', () => {
-    expect(() => setAccountStatus(admin, 'u-4', 'disabled')).toThrow()
-    expect(() => deleteAccount(admin, 'u-4')).toThrow()
-  })
-
-  it('deleting an organizer removes their staff too', () => {
-    deleteAccount(admin, 'u-2')
-    expect(listManagedUsers().some((u) => u.id === 'u-2' || u.id === 'u-3')).toBe(false)
-  })
-})
-
-describe('organizer staff', () => {
-  it('links new staff to the organizer who created them', () => {
-    const staff = createStaff(organizer, { name: 'Gate Two', email: 'gate2@example.com', password: 'password123' })
-    expect(staff.role).toBe('staff')
-    expect(staff.organizerId).toBe('u-2')
-    expect(listStaffOf('u-2').map((s) => s.id)).toContain(staff.id)
-    expect(listStaffOf('another-organizer')).toEqual([])
-  })
-
-  it('cannot touch another organizer or a non-staff account', () => {
-    const other = createAccount(admin, { name: 'Other Org', email: 'other@example.com', password: 'password123', role: 'organizer' })
-    const otherOrganizer: User = { id: other.id, name: other.name, email: other.email, role: 'organizer' }
-    expect(() => setAccountStatus(otherOrganizer, 'u-3', 'disabled')).toThrow('own staff')
-    expect(() => deleteAccount(otherOrganizer, 'u-3')).toThrow('own staff')
-    expect(() => setAccountStatus(organizer, 'u-1', 'disabled')).toThrow('own staff')
-  })
-
-  it('assigns only the organizer\'s own events', () => {
-    setStaffEvents(organizer, 'u-3', ['lake-of-stars'])
-    expect(staffEventIds('u-3')).toEqual(['lake-of-stars'])
-    expect(() => setStaffEvents(organizer, 'u-3', ['game-on'])).toThrow('own events')
-  })
-
-  it('disabling the staff member or their organizer removes scanning access', () => {
-    expect(staffEventIds('u-3')).toEqual(['lake-of-stars'])
-    setAccountStatus(organizer, 'u-3', 'disabled')
-    expect(staffEventIds('u-3')).toEqual([])
-    setAccountStatus(organizer, 'u-3', 'active')
-    setAccountStatus(admin, 'u-2', 'disabled')
-    expect(staffEventIds('u-3')).toEqual([])
+  it('clears only the saved backend session on logout', () => {
+    localStorage.setItem('tm_user', JSON.stringify({ id: '42' }))
+    logoutRequest()
+    expect(localStorage.getItem('tm_user')).toBeNull()
+    expect(setToken).toHaveBeenCalledWith(null)
   })
 })
