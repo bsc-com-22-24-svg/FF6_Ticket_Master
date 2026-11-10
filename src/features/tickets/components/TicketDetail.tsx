@@ -1,15 +1,11 @@
-import { useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
 import type { Ticket } from '../ticketTypes';
 import { formatDate } from '../ticketFormat';
 import { downloadTicketImage, ticketFromView } from '../ticketImage';
-import { ticketQrValue } from '../../../lib/tickets';
 import styles from './TicketDetail.module.css';
 
 // The ticket itself: status, event, QR code and the download button.
 // The full details (venue, price, purchase time...) are in TicketInfoTable.
 export function TicketDetail({ ticket }: { ticket: Ticket }) {
-  const qrRef = useRef<HTMLCanvasElement>(null);
   const statusClass = ticket.status === 'valid' ? styles.valid : styles.used;
 
   return (
@@ -27,7 +23,8 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
         <button
           type="button"
           className={styles.download}
-          onClick={() => void downloadTicketImage(ticketFromView(ticket), qrRef.current, ticket.qrCodeDataUrl)}
+          disabled={!ticket.qrCodeDataUrl}
+          onClick={() => void downloadTicketImage(ticketFromView(ticket), null, ticket.qrCodeDataUrl)}
         >
           Download ticket
         </button>
@@ -41,13 +38,6 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
             height={168}
             alt=""
             style={{ width: 168, height: 168, objectFit: 'contain' }}
-          />
-        ) : ticket.status === 'valid' ? (
-          <QRCodeCanvas
-            ref={qrRef}
-            value={ticketQrValue(ticket.id)}
-            size={168}
-            level="M"
           />
         ) : (
           <p className={styles.qrNote}>A QR code is unavailable for this ticket.</p>

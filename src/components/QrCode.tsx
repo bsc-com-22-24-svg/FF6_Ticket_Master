@@ -1,23 +1,15 @@
-import { QRCodeCanvas } from 'qrcode.react'
-import { useMemo, type Ref } from 'react'
-import { ticketQrValue } from '../lib/tickets'
-
 interface QrCodeProps {
   value: string
   size?: number
-  canvasRef?: Ref<HTMLCanvasElement>
   dataUrl?: string
 }
 
-export function QrCode({ value, size = 170, canvasRef, dataUrl }: QrCodeProps) {
-  // the code holds the ticket id plus its security tag
-  const qrValue = useMemo(() => ticketQrValue(value), [value])
-
+export function QrCode({ value, size = 170, dataUrl }: QrCodeProps) {
   return (
     <div
-      className="qr"
-      role="img"
-      aria-label={`QR code for ${value}`}
+      className="qr flex items-center justify-center"
+      role={dataUrl ? 'img' : undefined}
+      aria-label={dataUrl ? `QR code for ${value}` : undefined}
       style={{ width: size + 18 }}
     >
       {dataUrl ? (
@@ -29,12 +21,7 @@ export function QrCode({ value, size = 170, canvasRef, dataUrl }: QrCodeProps) {
           style={{ width: size, height: size, objectFit: 'contain' }}
         />
       ) : (
-        <QRCodeCanvas
-          ref={canvasRef}
-          value={qrValue}
-          size={size}
-          level="M"
-        />
+        <p className="px-2 text-center text-xs text-slate-500">The backend did not provide a QR code.</p>
       )}
     </div>
   )
