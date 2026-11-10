@@ -207,6 +207,8 @@ Suggested flow:
 
 To test scanning, create a staff account from the organizer account and assign it to the event. Backend 1.3 requires both the staff account and the assignment; promoting a normal account to `CHECK_IN_STAFF` is not enough. Unassigned scans return `NOT_ASSIGNED`.
 
+The organizer **Staff Roster** tab and **Create or manage staff** page now use the backend 1.3 organizer-staff endpoints. The page keeps a warning banner because backend 1.2 does not support these routes. Use the UI to create staff, assign events, enable/disable staff, and remove staff. The equivalent API calls are shown below for reference.
+
 ```bash
 # Use the organizer's bearer token.
 curl -X POST http://localhost:3000/organizers/me/staff \
@@ -221,7 +223,7 @@ curl -X PUT http://localhost:3000/organizers/me/staff/STAFF_ID/events \
   -d '{"eventIds":["EVENT_ID"]}'
 ```
 
-Log in as the staff account. The frontend staff-management screen is still unavailable, so use the backend endpoints until it is wired. Admin screens remain unavailable in this frontend.
+Log in as the staff account to use the scanner. Admin screens remain unavailable in this frontend.
 
 ### PayChangu test payments
 

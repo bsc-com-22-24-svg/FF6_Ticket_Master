@@ -8,10 +8,12 @@ import { SearchBar } from '../components/searchBar';
 import { EventTable } from '../components/EventTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
+import { StaffTable } from '../components/staffTable';
 import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
 import { useAttendees } from '../hooks/useAttendee';
+import { useStaff } from '../hooks/useStaff';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 function initials(name: string | undefined): string {
@@ -30,6 +32,15 @@ export const OrganizerDashboardPage: React.FC = () => {
     ticketType: atTicketType, setTicketType: setAtTicketType,
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
+  const {
+    staff,
+    totalStaff,
+    activeStaff,
+    disabledStaff,
+    loading: staffLoading,
+    error: staffError,
+    unsupported: staffUnsupported,
+  } = useStaff();
 
   // Throws when the backend refuses, so the form can show the message and stay open.
   const handleEventFormSubmission = async (newEvent: NewEventInput) => {
@@ -118,10 +129,27 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </div>
                   <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
                 </div>
-                <p role="status" className="form-error-banner">
-                  Staff accounts and event assignments are not supported by the connected backend yet.
-                  No local staff records are shown or saved.
+                <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" style={{ marginBottom: 20 }}>
+                  Staff management uses the organizer-staff endpoints added in backend 1.3.
+                  If you are connected to backend 1.2, this section is not supported and the staff list will fail.
+                  Staff must be assigned to an event before they can scan.
                 </p>
+                <div className="metrics-grid">
+                  <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
+                  <StatCard title="Active" value={activeStaff} icon="✅" color="#10b981" />
+                  <StatCard title="Disabled" value={disabledStaff} icon="⛔" color="#64748b" />
+                </div>
+                {staffUnsupported && (
+                  <p role="alert" className="form-error-banner">
+                    The connected backend does not expose /organizers/me/staff. Start backend 1.3 and try again.
+                  </p>
+                )}
+                {staffError && !staffUnsupported && (
+                  <p role="alert" className="form-error-banner">{staffError}</p>
+                )}
+                {staffLoading
+                  ? <p className="view-subtitle">Loading your staff...</p>
+                  : <StaffTable staff={staff} />}
               </>
             )}
 
