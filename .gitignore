@@ -27,3 +27,11 @@ all-code.txt
 *.pdf
 my_full_code.txt
 *.rej
+*.bak.*
+FullProjectCode.txt
+AllMyReactCode.txt
+*.patch
+*.bak.*
+FullProjectCode.txt
+AllMyReactCode.txt
+*.patch
