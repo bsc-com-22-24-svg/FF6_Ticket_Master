@@ -6,6 +6,7 @@ import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage, TicketDetailPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventPage, StaffManagementPage } from '../features/organizer';
+import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage';
 import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import { BackendUnavailablePage } from '../components/BackendUnavailablePage';
@@ -51,7 +52,7 @@ const routeTree = rootRoute.addChildren([
   page('/organizer/events/new', CreateEventPage, requireAuth('organizer')),
   page('/organizer/events/$eventId/edit', CreateEventPage, requireAuth('organizer')),
   page('/organizer/staff', StaffManagementPage, requireAuth('organizer')),
-  page('/admin', () => <BackendUnavailablePage title="Admin panel unavailable" feature="Admin management" />, requireAuth('admin')),
+  page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),
   notFoundRoute,
 ]);
