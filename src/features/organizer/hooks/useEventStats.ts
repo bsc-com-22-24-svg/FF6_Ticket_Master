@@ -5,6 +5,7 @@ import {
   createOrganizerEvent,
   listMyEvents,
   publishEvent,
+  restoreOrganizerEvent,
   type NewEventInput,
 } from '../../../lib/backendOrganizer';
 
@@ -24,6 +25,11 @@ export const useEvents = () => {
   const create = useMutation({ mutationFn: createOrganizerEvent, onSuccess: refresh });
   const publish = useMutation({ mutationFn: publishEvent, onSuccess: refresh });
   const cancel = useMutation({ mutationFn: cancelOrganizerEvent, onSuccess: refresh });
+  const restore = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'DRAFT' | 'PUBLISHED' }) =>
+      restoreOrganizerEvent(id, status),
+    onSuccess: refresh,
+  });
 
   const addEvent = async (newEvent: NewEventInput): Promise<void> => {
     await create.mutateAsync(newEvent);
@@ -35,6 +41,10 @@ export const useEvents = () => {
 
   const cancelExisting = async (id: string): Promise<void> => {
     await cancel.mutateAsync(id);
+  };
+
+  const restoreExisting = async (id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> => {
+    await restore.mutateAsync({ id, status });
   };
 
   const filteredEvents = events.filter(item => {
@@ -58,6 +68,7 @@ export const useEvents = () => {
     addEvent,
     publishEvent: publishExisting,
     cancelEvent: cancelExisting,
+    restoreEvent: restoreExisting,
     loading: remote.isLoading,
     loadError: remote.error instanceof Error ? remote.error.message : '',
   };
