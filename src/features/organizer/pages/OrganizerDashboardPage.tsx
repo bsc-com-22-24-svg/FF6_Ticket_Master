@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { CalendarDays, Plus, Ticket, Users } from 'lucide-react';
 import '../Organiser.css/organiser.css' ;
 
 import { useAuth } from '../../authentication';
@@ -22,7 +23,7 @@ export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
-  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, restoreEvent, loading: evLoading, loadError: evError } = useEvents();
   const {
     attendees, totalAttendees, checkedInCount,
     search: atSearch, setSearch: setAtSearch,
@@ -42,10 +43,10 @@ export const OrganizerDashboardPage: React.FC = () => {
       {/* Sidebar Architecture Layout */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo">FF6</div>
+          <div className="brand-logo">Tic-EM</div>
           <div className="brand-info">
-            <span className="panel-title">FF6 Ticket</span>
-            <span className="panel-subtitle">Organizer Panel</span>
+            <span className="panel-title">Organizer</span>
+            <span className="panel-subtitle">Dashboard</span>
           </div>
         </div>
 
@@ -59,16 +60,16 @@ export const OrganizerDashboardPage: React.FC = () => {
 
         <nav className="sidebar-nav">
           <button className={`nav-link-btn ${currentTab === 'events' ? 'active' : ''}`} onClick={() => setCurrentTab('events')}>
-            <span className="nav-icon">📅</span> My Events
+            <CalendarDays size={18} aria-hidden="true" /> My Events
           </button>
           <button className={`nav-link-btn ${currentTab === 'create' ? 'active' : ''}`} onClick={() => setCurrentTab('create')}>
-            <span className="nav-icon">➕</span> Create Event
+            <Plus size={18} aria-hidden="true" /> Create Event
           </button>
           <button className={`nav-link-btn ${currentTab === 'staff' ? 'active' : ''}`} onClick={() => setCurrentTab('staff')}>
-            <span className="nav-icon">👥</span> Staff Roster
+            <Users size={18} aria-hidden="true" /> Staff Roster
           </button>
           <button className={`nav-link-btn ${currentTab === 'attendees' ? 'active' : ''}`} onClick={() => setCurrentTab('attendees')}>
-            <span className="nav-icon">🎟️</span> Attendees
+            <Ticket size={18} aria-hidden="true" /> Attendees
           </button>
         </nav>
       </aside>
@@ -105,7 +106,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </select>
                 </div>
                 {evError && <div className="form-error-banner">{evError}</div>}
-                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
+                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} onRestore={restoreEvent} />}
               </>
             )}
 
