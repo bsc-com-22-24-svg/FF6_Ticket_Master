@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
-import { heroSlides } from '../../../mocks/heroSlides'
+import { useEvents } from '../../events'
 import SearchBar from './SearchBar'
 import type { Filters } from '../filters'
 import { useAutoplay } from '../hooks/useAutoplay'
@@ -13,7 +13,13 @@ interface HeroSliderProps {
 
 export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSliderProps) {
   const [current, setCurrent] = useState(0)
-  const total = heroSlides.length
+  const { data: events = [] } = useEvents()
+  const total = Math.max(events.length, 1)
+  const event = events[current % total]
+
+  useEffect(() => {
+    if (current >= total) setCurrent(0)
+  }, [current, total])
 
   const goTo = useCallback(
     (index: number) => setCurrent((index + total) % total),
@@ -31,11 +37,11 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
   return (
     <section className="relative min-h-screen bg-navy-dark" {...handlers}>
       <div className="absolute inset-0 overflow-hidden">
-        {heroSlides.map((slide, i) => (
+        {events.map((item, i) => (
           <img
-            key={slide.image}
-            src={slide.image}
-            alt={slide.title}
+            key={item.id}
+            src={item.image}
+            alt=""
             aria-hidden={i !== current}
             className={`absolute inset-0 h-full w-full object-cover transition-all duration-1500 motion-reduce:transition-none ${
               i === current ? 'scale-105 opacity-100' : 'scale-100 opacity-0'
@@ -48,10 +54,10 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
       <div className="relative z-20 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 pb-20 pt-28 text-center">
         <div key={current} className="fade-up">
           <h1 className="text-4xl font-extrabold text-white sm:text-5xl lg:text-7xl">
-            {heroSlides[current].title}
+            {event?.title ?? 'Discover events near you'}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/85 sm:text-xl">
-            {heroSlides[current].text}
+            {event?.description || 'Browse upcoming events and find your next experience.'}
           </p>
         </div>
         <div className="mt-10 w-full">
@@ -59,32 +65,38 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
         </div>
       </div>
 
-      <button aria-label="Previous slide" onClick={() => goTo(current - 1)} className={`${arrowStyle} left-4`}>
-        <ChevronLeft />
-      </button>
-      <button aria-label="Next slide" onClick={() => goTo(current + 1)} className={`${arrowStyle} right-4`}>
-        <ChevronRight />
-      </button>
-
-      <div className="absolute bottom-6 left-0 right-0 z-10 flex items-center justify-center gap-2">
-        {!reducedMotion && (
-          <button
-            aria-label={paused ? 'Resume hero slideshow' : 'Pause hero slideshow'}
-            onClick={togglePause}
-            className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/40"
-          >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
+      {events.length > 1 && (
+        <>
+          <button aria-label="Previous slide" onClick={() => goTo(current - 1)} className={`${arrowStyle} left-4`}>
+            <ChevronLeft />
           </button>
-        )}
-        {heroSlides.map((_, i) => (
-          <button
-            key={i}
-            aria-label={`Slide ${i + 1}`}
-            onClick={() => setCurrent(i)}
-            className={`h-2 rounded-full transition-all ${i === current ? 'w-8 bg-white' : 'w-2 bg-white/50'}`}
-          />
-        ))}
-      </div>
+          <button aria-label="Next slide" onClick={() => goTo(current + 1)} className={`${arrowStyle} right-4`}>
+            <ChevronRight />
+          </button>
+        </>
+      )}
+
+      {events.length > 1 && (
+        <div className="absolute bottom-6 left-0 right-0 z-10 flex items-center justify-center gap-2">
+          {!reducedMotion && (
+            <button
+              aria-label={paused ? 'Resume hero slideshow' : 'Pause hero slideshow'}
+              onClick={togglePause}
+              className="mr-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/40"
+            >
+              {paused ? <Play size={14} /> : <Pause size={14} />}
+            </button>
+          )}
+          {events.map((item, i) => (
+            <button
+              key={item.id}
+              aria-label={`Event ${i + 1}`}
+              onClick={() => setCurrent(i)}
+              className={`h-2 rounded-full transition-all ${i === current ? 'w-8 bg-white' : 'w-2 bg-white/50'}`}
+            />
+          ))}
+        </div>
+      )}
     </section>
   )
 }
