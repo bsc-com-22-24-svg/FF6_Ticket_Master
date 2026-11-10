@@ -103,7 +103,12 @@ EOF
 | `JWT_SECRET` | Signs login tokens | Random string, 32+ characters |
 | `JWT_EXPIRES_IN` | Login token lifetime | `15m` |
 | `PAYCHANGU_SECRET_KEY` | Verifies PayChangu payments | Your test key |
+| `PAYCHANGU_WEBHOOK_SECRET` | Verifies PayChangu webhook signatures for backend order payments | Optional; your webhook secret |
+| `PAYCHANGU_CALLBACK_URL` | Backend callback URL for backend order payments | Optional; `http://localhost:3000/payments/paychangu/callback` |
+| `PAYCHANGU_RETURN_URL` | Return URL for backend order payments | Optional; `http://localhost:5173/checkout/return` |
 | `FRONTEND_ORIGIN` | Allowed browser origin | `http://localhost:5173` |
+
+The `PAYCHANGU_WEBHOOK_SECRET`, `PAYCHANGU_CALLBACK_URL`, and `PAYCHANGU_RETURN_URL` variables are only needed if you use the backend order/payment endpoints. The current frontend uses the Vite PayChangu bridge described below.
 
 ## 4. Start the backend
 
@@ -118,9 +123,14 @@ Start the backend:
 ```bash
 docker run -d --name ticket-backend-app --network ticket-network \
   --env-file /tmp/ticket-backend.env \
+  --workdir /tmp \
+  --entrypoint node \
   -p 3000:3000 \
-  alicekayla/ticket-backend:1.2
+  alicekayla/ticket-backend:1.3 \
+  /app/dist/main
 ```
+
+Backend 1.3 writes `swagger.json` into its working directory. The image runs as the `node` user, which cannot write to `/app`, so the container exits with `EACCES` if started with the default entrypoint. The `--workdir /tmp --entrypoint node /app/dist/main` override keeps the app unprivileged and gives it a writable directory. Event images uploaded through the backend are also written under `/tmp` and are lost when the container is removed.
 
 Follow the logs:
 
@@ -148,7 +158,7 @@ If the container exits, inspect the logs before recreating it:
 docker logs ticket-backend-app
 ```
 
-Common causes are a short `JWT_SECRET`, wrong database credentials, or a missing schema.
+Common causes are a short `JWT_SECRET`, wrong database credentials, a missing schema, or backend 1.3 failing to write `/app/swagger.json`.
 
 ## 5. Configure the frontend
 
@@ -193,16 +203,25 @@ Suggested flow:
 4. Open **My Tickets** and check the QR code.
 5. Register an organizer account, create an event, and publish it.
 6. Check the organizer dashboard for attendees and sales.
-7. Use the scanner with a staff account and a ticket from the event.
+7. Use the scanner with a staff account that is assigned to the event.
 
-To test scanning, register a normal account, then promote it to check-in staff:
+To test scanning, create a staff account from the organizer account and assign it to the event. Backend 1.3 requires both the staff account and the assignment; promoting a normal account to `CHECK_IN_STAFF` is not enough. Unassigned scans return `NOT_ASSIGNED`.
 
 ```bash
-docker exec -i ticket-db psql -U postgres -d ticket_master \
-  -c "UPDATE users SET role = 'CHECK_IN_STAFF' WHERE email = 'staff@example.com';"
+# Use the organizer's bearer token.
+curl -X POST http://localhost:3000/organizers/me/staff \
+  -H "Authorization: Bearer $ORGANIZER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Gate Staff","email":"staff@example.com","password":"password123"}'
+
+# Use the returned staffId and the event id.
+curl -X PUT http://localhost:3000/organizers/me/staff/STAFF_ID/events \
+  -H "Authorization: Bearer $ORGANIZER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"eventIds":["EVENT_ID"]}'
 ```
 
-Log out and log in again so the new role is included in the token. Staff can scan any published event. Admin screens remain unavailable in this frontend.
+Log in as the staff account. The frontend staff-management screen is still unavailable, so use the backend endpoints until it is wired. Admin screens remain unavailable in this frontend.
 
 ### PayChangu test payments
 
@@ -279,6 +298,10 @@ docker logs ticket-backend-app
 ```
 
 Check `JWT_SECRET` length, database host and password, and whether the schema was imported.
+
+### Backend exits with `EACCES` for `/app/swagger.json`
+
+Backend 1.3 writes `swagger.json` to the current working directory. Start it with the `--workdir /tmp --entrypoint node /app/dist/main` override shown above, or run it with `--user root` if you accept the extra privileges.
 
 ### `ECONNREFUSED` or database connection errors
 

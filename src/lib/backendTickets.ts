@@ -135,6 +135,12 @@ export function backendValidationToResult(
         title: 'Invalid ticket',
         message: 'This QR code is not a ticket issued for this platform.',
       }
+    case 'NOT_ASSIGNED':
+      return {
+        status: 'invalid',
+        title: 'Not assigned',
+        message: `You are not assigned to ${details?.eventTitle ?? 'this event'}. Ask the organizer to assign you before scanning.`,
+      }
     default:
       return {
         status: 'invalid',

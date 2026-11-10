@@ -1,9 +1,10 @@
--- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.2
+-- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.3
 -- Run against a new, empty database:
 --   docker exec -i ticket-db psql -U postgres -d ticket_master < event_ticket_booking_schema.sql
 --
 -- The backend uses synchronize=false and migrationsRun=false. This file combines the
--- legacy event/ticket schema with the tracked TypeORM migrations for orders and payments.
+-- legacy event/ticket schema with the tracked TypeORM migrations for orders, payments
+-- and organizer staff.
 
 BEGIN;
 
@@ -136,11 +137,39 @@ CREATE TABLE ticket_validations (
   CONSTRAINT fk_ticket_validations_staff
     FOREIGN KEY (checked_by) REFERENCES users(user_id) ON DELETE SET NULL,
   CONSTRAINT fk_ticket_validations_event
-    FOREIGN KEY (attempted_event_id) REFERENCES events(event_id) ON DELETE SET NULL
+    FOREIGN KEY (attempted_event_id) REFERENCES events(event_id) ON DELETE SET NULL,
+  CONSTRAINT ticket_validations_result_reason_check CHECK (
+    (result = 'ACCEPTED' AND reason IS NULL)
+    OR (result = 'REJECTED' AND reason IN (
+      'NOT_FOUND', 'ALREADY_USED', 'CANCELLED', 'WRONG_EVENT',
+      'EVENT_CANCELLED', 'NOT_ASSIGNED'
+    ))
+  )
 );
 
 CREATE INDEX idx_ticket_validations_ticket ON ticket_validations(ticket_id);
 CREATE INDEX idx_ticket_validations_staff ON ticket_validations(checked_by, validated_at DESC);
+
+CREATE TABLE organizer_staff (
+  staff_id BIGINT PRIMARY KEY
+    REFERENCES users(user_id) ON DELETE CASCADE,
+  organizer_id BIGINT NOT NULL
+    REFERENCES users(user_id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_organizer_staff_organizer ON organizer_staff(organizer_id);
+
+CREATE TABLE staff_event_assignments (
+  staff_id BIGINT NOT NULL
+    REFERENCES organizer_staff(staff_id) ON DELETE CASCADE,
+  event_id BIGINT NOT NULL
+    REFERENCES events(event_id) ON DELETE CASCADE,
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (staff_id, event_id)
+);
+
+CREATE INDEX idx_staff_assignments_event ON staff_event_assignments(event_id);
 
 CREATE TABLE orders (
   order_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

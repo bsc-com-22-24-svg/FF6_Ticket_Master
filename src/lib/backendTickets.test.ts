@@ -93,6 +93,20 @@ describe('backendValidationToResult', () => {
     expect(backendValidationToResult({ ...base, reason: 'CANCELLED' }).title).toBe('Cancelled ticket')
     expect(backendValidationToResult({ ...base, reason: 'EVENT_CANCELLED' }).title).toBe('Event cancelled')
   })
+
+  it('explains when a staff account is not assigned to the event', () => {
+    const result = backendValidationToResult({
+      accepted: false,
+      reason: 'NOT_ASSIGNED',
+      ticketId: null,
+      eventId: null,
+      validatedAt: null,
+      details: null,
+    })
+    expect(result.status).toBe('invalid')
+    expect(result.title).toBe('Not assigned')
+    expect(result.message).toContain('Ask the organizer')
+  })
 })
 
 describe('backendTicketToRecord', () => {
