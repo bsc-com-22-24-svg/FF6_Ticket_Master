@@ -7,7 +7,7 @@
 
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  min-height: 100vh;
+  min-height: calc(100svh - 4rem);
   background: #f6f8fc;
   color: var(--navy);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
@@ -357,10 +357,15 @@
 @media (max-width: 860px) {
   .page {
     grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: 1fr auto;
+  }
+
+  .formSide {
+    grid-row: 1;
   }
 
   .brand {
+    grid-row: 2;
     gap: 34px;
     padding: 28px 26px;
   }
