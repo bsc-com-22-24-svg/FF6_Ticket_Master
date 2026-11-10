@@ -81,3 +81,5 @@ export async function fetchBackendEvent(eventId: string): Promise<StoredEvent> {
   const ticketTypes = await api<BackendTicketType[]>(`/events/${encodeURIComponent(eventId)}/ticket-types`)
   return toStoredEvent(event, ticketTypes)
 }
+
+export { DEFAULT_EVENT_IMAGES, resolveEventImage } from './eventImage'
