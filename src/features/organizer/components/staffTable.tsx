@@ -1,9 +1,16 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
-import type { ManagedUser } from '../../authentication/authStore';
+
+interface StaffMember {
+  id: string
+  name: string
+  email: string
+  assignedEventIds: string[]
+  status: 'active' | 'disabled'
+}
 
 interface StaffTableProps {
-  staff: ManagedUser[];
+  staff: StaffMember[];
 }
 
 export const StaffTable: React.FC<StaffTableProps> = ({ staff }) => {
