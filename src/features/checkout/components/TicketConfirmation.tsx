@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { QrCode } from '../../../components/QrCode'
 import type { TicketRecord } from '../../../lib/tickets'
@@ -45,8 +45,6 @@ export function TicketConfirmation({ tickets, onBuyAgain }: TicketConfirmationPr
 }
 
 function TicketPass({ ticket }: { ticket: TicketRecord }): ReactNode {
-  const qrRef = useRef<HTMLCanvasElement>(null)
-
   return (
     <article className="card ticket-pass">
       <div className="ticket-pass-info">
@@ -66,13 +64,14 @@ function TicketPass({ ticket }: { ticket: TicketRecord }): ReactNode {
           type="button"
           className="btn"
           style={{ marginTop: 8 }}
-          onClick={() => void downloadTicketImage(ticketFromRecord(ticket), qrRef.current, ticket.qrCodeDataUrl)}
+          disabled={!ticket.qrCodeDataUrl}
+          onClick={() => void downloadTicketImage(ticketFromRecord(ticket), null, ticket.qrCodeDataUrl)}
         >
           Download ticket PNG
         </button>
       </div>
       <div className="ticket-pass-qr">
-        <QrCode value={ticket.id} canvasRef={qrRef} dataUrl={ticket.qrCodeDataUrl} />
+        <QrCode value={ticket.id} dataUrl={ticket.qrCodeDataUrl} />
         <p className="m" style={{ marginTop: 8 }}>Scan at the entrance</p>
       </div>
     </article>

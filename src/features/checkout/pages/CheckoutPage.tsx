@@ -78,12 +78,11 @@ export function CheckoutPage(): ReactNode {
     setClientError(null)
     // goes to PayChangu; tickets are issued on the return page once the payment is confirmed
     checkout.mutate({
+      userId: user.id,
       event: checkoutEvent,
       ticketType,
       quantity,
       holder,
-      email: user.email,
-      userId: user.id,
     })
   }
 

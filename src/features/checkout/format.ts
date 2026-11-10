@@ -1,4 +1,4 @@
-import { SERVICE_FEE } from './mockData'
+import { SERVICE_FEE } from './config'
 
 export interface OrderTotals {
   subtotal: number

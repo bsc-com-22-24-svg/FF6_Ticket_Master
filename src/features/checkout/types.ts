@@ -24,8 +24,6 @@ export interface CheckoutInput {
   ticketType: TicketType
   quantity: number
   holder: string
-  email: string // receipt email for PayChangu
-  ownerEmail?: string
 }
 
 export interface CheckoutResult {
