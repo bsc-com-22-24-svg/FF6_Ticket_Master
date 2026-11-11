@@ -5,7 +5,7 @@ import { EventsPage, EventDetailsPage } from '../features/events';
 import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage, TicketDetailPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
-import { OrganizerDashboardPage, CreateEventPage, StaffManagementPage } from '../features/organizer';
+import { OrganizerDashboardPage, CreateEventRoute, StaffManagementPage } from '../features/organizer';
 import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import { BackendUnavailablePage } from '../components/BackendUnavailablePage';
@@ -48,8 +48,8 @@ const routeTree = rootRoute.addChildren([
   page('/bookings', BookingHistoryPage, requireAuth('customer')),
   page('/organizer/kyc', () => <BackendUnavailablePage title="Organizer verification unavailable" feature="Organizer verification" backTo="/organizer/dashboard" />, requireAuth('organizer')),
   page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
-  page('/organizer/events/new', CreateEventPage, requireAuth('organizer')),
-  page('/organizer/events/$eventId/edit', CreateEventPage, requireAuth('organizer')),
+  page('/organizer/events/new', CreateEventRoute, requireAuth('organizer')),
+  page('/organizer/events/$eventId/edit', () => <BackendUnavailablePage title="Event editing unavailable" feature="Event editing" backTo="/organizer/dashboard" />, requireAuth('organizer')),
   page('/organizer/staff', StaffManagementPage, requireAuth('organizer')),
   page('/admin', () => <BackendUnavailablePage title="Admin panel unavailable" feature="Admin management" />, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),

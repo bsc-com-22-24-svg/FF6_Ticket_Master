@@ -4,6 +4,10 @@ import { listTickets } from '../../lib/tickets'
 import { getPendingPayment, savePendingPayment } from '../../lib/paychangu'
 
 vi.mock('../../lib/backend', () => ({ USE_BACKEND: true, api: vi.fn() }))
+vi.mock('../../lib/backendEvents', async () => {
+  const { getEvent } = await import('../../lib/events')
+  return { fetchBackendEvent: vi.fn(async (eventId: string) => getEvent(eventId)) }
+})
 vi.mock('../../lib/backendTickets', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/backendTickets')>()
   return { ...actual, purchaseBackendTicket: vi.fn() }
@@ -70,6 +74,7 @@ describe('completePayment with the backend', () => {
     expect(result.tickets.map((ticket) => ticket.id).sort()).toEqual(['TKT-ONE', 'TKT-TWO'])
     expect(result.tickets.every((ticket) => ticket.qrCodeDataUrl?.includes(ticket.id))).toBe(true)
     expect(purchase).toHaveBeenCalledTimes(2)
+    expect(purchase).toHaveBeenCalledWith(EVENT_ID, getEvent(EVENT_ID)!.ticketTypes[0].id, 'TM-BACKEND-0001')
     expect(getPendingPayment('TM-BACKEND-0001')?.status).toBe('completed')
   })
 

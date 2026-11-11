@@ -49,7 +49,7 @@ async function claimBackendTickets(
 
   for (let index = 0; index < missing; index += 1) {
     try {
-      const purchased = await purchaseBackendTicket(event.id, ticketType.id)
+      const purchased = await purchaseBackendTicket(event.id, ticketType.id, pending.txRef)
       const ticket = backendTicketToRecord(purchased, {
         userId: pending.userId,
         event,

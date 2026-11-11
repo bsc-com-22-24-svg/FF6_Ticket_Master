@@ -6,7 +6,13 @@ Event management app built with Vite + React + TypeScript, using Tanstack Query 
 
 https://github.com/bsc-com-22-24-svg/FF6_Ticket_Master
 
-## Getting started
+## Running the app
+
+The app uses the NestJS backend and PostgreSQL by default. See
+[RUNNING_THE_APP.md](RUNNING_THE_APP.md) for the full local setup, including
+Docker commands, the database schema, and PayChangu configuration.
+
+Install and run the frontend:
 
 ```bash
 git clone https://github.com/bsc-com-22-24-svg/FF6_Ticket_Master.git
@@ -23,11 +29,11 @@ npm run lint      # oxlint
 npm test          # vitest unit tests
 ```
 
-## Demo
+### Frontend-only mock mode
 
-The app runs fully on mock data — no backend is required. Events, tickets and
-bookings are stored in the browser's `localStorage`, so anything you do (buy a
-ticket, scan it, create an event) sticks around until you reset it.
+Set `VITE_USE_BACKEND=false` in `.env.local` to use the old in-browser mock.
+Events, tickets and bookings are then stored in `localStorage`, so anything you
+do (buy a ticket, scan it, create an event) sticks around until you reset it.
 
 Use the **one-tap demo accounts** on the login screen, or sign in manually:
 

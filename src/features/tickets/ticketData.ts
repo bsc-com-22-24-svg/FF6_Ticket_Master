@@ -1,5 +1,4 @@
 import { api } from '../../lib/backend'
-import { fetchBackendEvent } from '../../lib/backendEvents'
 import type { TicketRecord } from '../../lib/tickets'
 import type { Ticket, TicketStatus } from './ticketTypes'
 
@@ -9,8 +8,33 @@ interface BackendHistoryTicket {
   ticketTypeId: string
   status: 'ISSUED' | 'USED' | 'CANCELLED' | 'REFUNDED'
   issuedAt: string
+  purchasedAt: string | null
   checkedInAt: string | null
+  event: {
+    title: string
+    category: string | null
+    startAt: string
+    endAt: string
+  }
+  venue: {
+    name: string
+    address: string | null
+    city: string | null
+    country: string | null
+    location: string | null
+  }
+  ticketType: {
+    name: string
+    price: number | string
+  }
   qrCodeDataUrl?: string
+}
+
+const TICKET_STATUS: Record<BackendHistoryTicket['status'], TicketStatus> = {
+  ISSUED: 'valid',
+  USED: 'used',
+  CANCELLED: 'cancelled',
+  REFUNDED: 'refunded',
 }
 
 export function toTicketView(record: TicketRecord): Ticket {
@@ -34,37 +58,26 @@ export function toTicketView(record: TicketRecord): Ticket {
 export async function fetchTickets(userId?: string, userName = ''): Promise<Ticket[]> {
   if (!userId) return []
 
-  const records = await api<BackendHistoryTicket[]>('/tickets/history')
-  const eventIds = [...new Set(records.map((ticket) => ticket.eventId))]
-  const events = await Promise.all(eventIds.map((id) => fetchBackendEvent(id)))
-  const eventById = new Map(events.map((event) => [event.id, event]))
+  const records = await api<BackendHistoryTicket[]>('/tickets/mine')
 
-  return records.flatMap((record) => {
-    const event = eventById.get(record.eventId)
-    const ticketType = event?.ticketTypes.find((type) => type.id === record.ticketTypeId)
-    if (!event || !ticketType) return []
+  return records.map((record) => {
+    const start = new Date(record.event.startAt)
+    const status = TICKET_STATUS[record.status]
 
-    const status: TicketStatus = {
-      ISSUED: 'valid',
-      USED: 'used',
-      CANCELLED: 'cancelled',
-      REFUNDED: 'refunded',
-    }[record.status]
-
-    return [{
+    return {
       id: record.ticketNumber,
-      eventTitle: event.title,
-      venue: event.venue,
-      city: event.city,
-      date: event.date,
-      time: event.time,
-      ticketType: ticketType.name,
-      seat: `${ticketType.name} Admission`,
-      price: ticketType.price,
+      eventTitle: record.event.title,
+      venue: record.venue.name,
+      city: record.venue.city ?? record.venue.location ?? '',
+      date: start.toLocaleDateString('en-CA'),
+      time: start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      ticketType: record.ticketType.name,
+      seat: `${record.ticketType.name} Admission`,
+      price: Number(record.ticketType.price),
       holder: userName,
       status,
-      purchasedAt: record.issuedAt,
+      purchasedAt: record.purchasedAt ?? record.issuedAt,
       qrCodeDataUrl: record.qrCodeDataUrl,
-    } satisfies Ticket]
+    } satisfies Ticket
   })
 }
