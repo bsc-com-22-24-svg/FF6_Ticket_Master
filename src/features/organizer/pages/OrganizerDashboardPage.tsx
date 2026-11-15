@@ -10,6 +10,7 @@ import { EventTable } from '../components/EventTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
 import { CreateEventPage } from './CreateEventPage';
+import { StaffRoster } from '../components/StaffRoster';
 
 import { useEvents } from '../hooks/useEventStats';
 import { useAttendees } from '../hooks/useAttendee';
@@ -119,10 +120,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </div>
                   <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
                 </div>
-                <p role="status" className="form-error-banner">
-                  Staff accounts and event assignments are not supported by the connected backend yet.
-                  No local staff records are shown or saved.
-                </p>
+                <StaffRoster />
               </>
             )}
 
