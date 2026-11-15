@@ -1,5 +1,5 @@
 import type { TicketRecord } from '../../lib/tickets'
-import type { StoredEvent } from '../../lib/events'
+import type { StoredEvent } from '../../types/event'
 import type { TicketType } from '../../types/event'
 import { backendTicketToRecord, purchaseBackendTicket } from '../../lib/backendTickets'
 import { fetchBackendEvent } from '../../lib/backendEvents'
