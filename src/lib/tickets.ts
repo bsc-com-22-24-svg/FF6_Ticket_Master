@@ -1,21 +1,25 @@
-export type TicketStatus = 'valid' | 'used' | 'cancelled' | 'refunded'
+// Shapes used by the ticket screens. Tickets, their QR codes and check-in state all
+// belong to the backend; nothing here is stored in the browser.
+
+export type { TicketStatus } from '../features/tickets/ticketTypes'
+import type { TicketStatus } from '../features/tickets/ticketTypes'
 
 export interface TicketRecord {
   id: string
   userId: string
   eventId: string
   eventName: string
-  date: string
-  time: string
+  date: string // ISO date, e.g. 2026-11-14
+  time: string // 24h, e.g. 18:00
   venue: string
   city: string
   ticketType: string
-  price: number
+  price: number // in MK
   holder: string
   status: TicketStatus
-  createdAt: string
+  createdAt: string // ISO timestamp the ticket was issued
   checkedInAt?: string
-  qrCodeDataUrl?: string
+  qrCodeDataUrl?: string // QR image issued by the backend
 }
 
 export type TicketValidationStatus = 'valid' | 'invalid' | 'used' | 'wrong_event'
@@ -25,16 +29,4 @@ export interface TicketValidationResult {
   title: string
   message: string
   ticket?: TicketRecord
-  tampered?: boolean
-}
-
-export function parseTicketCode(raw: string): { id: string; tag: string | null } {
-  const cleaned = raw.trim().toUpperCase().replace(/^TICKET:/, '')
-  const dot = cleaned.lastIndexOf('.')
-  if (dot === -1) return { id: cleaned, tag: null }
-  return { id: cleaned.slice(0, dot), tag: cleaned.slice(dot + 1) }
-}
-
-export function normalizeTicketCode(raw: string): string {
-  return parseTicketCode(raw).id
 }

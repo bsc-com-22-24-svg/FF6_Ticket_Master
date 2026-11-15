@@ -1,5 +1,3 @@
-// Application and payment requests are served by the Docker backend.
-export const USE_BACKEND = true
 
 // The dev server forwards /be/* to the backend (see vite.config.ts), so the browser
 // never calls port 3000 directly and there is no CORS problem.
@@ -56,6 +54,14 @@ export async function api<T>(path: string, options: { method?: string; body?: un
     data = await response.json()
   } catch {
     data = null
+  }
+  if (response.status === 401 && token && !path.startsWith('/auth/')) {
+    // the saved login has expired: clear it and ask the user to sign in again
+    setToken(null)
+    try { localStorage.removeItem('tm_user') } catch { /* storage unavailable */ }
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login')
+    }
   }
   if (!response.ok) {
     const error = new Error(messageFrom(response.status, data)) as Error & { status: number }
