@@ -4,14 +4,10 @@ interface QrCodeProps {
   dataUrl?: string
 }
 
+// The QR image is issued by the backend, which keeps the secret behind it.
 export function QrCode({ value, size = 170, dataUrl }: QrCodeProps) {
   return (
-    <div
-      className="qr flex items-center justify-center"
-      role={dataUrl ? 'img' : undefined}
-      aria-label={dataUrl ? `QR code for ${value}` : undefined}
-      style={{ width: size + 18 }}
-    >
+    <div className="qr" role="img" aria-label={`QR code for ${value}`} style={{ width: size + 18 }}>
       {dataUrl ? (
         <img
           src={dataUrl}
@@ -21,7 +17,7 @@ export function QrCode({ value, size = 170, dataUrl }: QrCodeProps) {
           style={{ width: size, height: size, objectFit: 'contain' }}
         />
       ) : (
-        <p className="px-2 text-center text-xs text-slate-500">The backend did not provide a QR code.</p>
+        <p style={{ fontSize: 12, textAlign: 'center' }}>QR code unavailable</p>
       )}
     </div>
   )

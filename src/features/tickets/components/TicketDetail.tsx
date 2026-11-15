@@ -23,7 +23,6 @@ export function TicketDetail({ ticket }: { ticket: Ticket }) {
         <button
           type="button"
           className={styles.download}
-          disabled={!ticket.qrCodeDataUrl}
           onClick={() => void downloadTicketImage(ticketFromView(ticket), null, ticket.qrCodeDataUrl)}
         >
           Download ticket
