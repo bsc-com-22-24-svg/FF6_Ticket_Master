@@ -1,117 +1,89 @@
 import { api } from './backend'
+import type { AccountStatus, Role } from '../features/authentication/authStore'
 
-export type ManagedRole = 'customer' | 'organizer' | 'staff' | 'admin'
-
-export interface BackendManagedUser {
-  id: string
-  name: string
-  email: string
-  role: ManagedRole
-  createdAt?: string
-  status?: 'active' | 'disabled'
-}
+// Admin user management and organizer staff, served by the backend.
 
 type BackendRole = 'ATTENDEE' | 'ORGANIZER' | 'CHECK_IN_STAFF' | 'ADMIN'
 
-const ROLE_FROM_BACKEND: Record<BackendRole, ManagedRole> = {
+const FROM_BACKEND: Record<BackendRole, Role> = {
   ATTENDEE: 'customer',
   ORGANIZER: 'organizer',
   CHECK_IN_STAFF: 'staff',
   ADMIN: 'admin',
 }
 
-const ROLE_TO_BACKEND: Record<ManagedRole, BackendRole> = {
+const TO_BACKEND: Record<Role, BackendRole> = {
   customer: 'ATTENDEE',
   organizer: 'ORGANIZER',
   staff: 'CHECK_IN_STAFF',
   admin: 'ADMIN',
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  role: Role
+  status: AccountStatus
+  createdAt: string
 }
 
-function mapUser(value: unknown): BackendManagedUser {
-  if (!isRecord(value)) throw new Error('The backend returned an invalid user record.')
-  const { id, name, email, role, createdAt, created_at } = value
-  if (
-    (typeof id !== 'string' && typeof id !== 'number') ||
-    typeof name !== 'string' ||
-    typeof email !== 'string' ||
-    typeof role !== 'string'
-  ) {
-    throw new Error('The backend returned a user missing its ID, name, email, or role.')
-  }
-  if (!Object.prototype.hasOwnProperty.call(ROLE_FROM_BACKEND, role)) {
-    throw new Error(`The backend returned an unsupported user role: ${role}`)
-  }
+interface BackendUser {
+  id: string
+  name: string
+  email: string
+  role: BackendRole
+  isActive: boolean
+  createdAt: string
+}
+
+interface UsersPage {
+  data: BackendUser[]
+  totalPages: number
+}
+
+function toAdminUser(user: BackendUser): AdminUser {
   return {
-    id: String(id),
-    name,
-    email,
-    role: ROLE_FROM_BACKEND[role as BackendRole],
-    createdAt: typeof createdAt === 'string' ? createdAt : typeof created_at === 'string' ? created_at : undefined,
-    status: value.isActive === true || value.status === 'ACTIVE'
-      ? 'active'
-      : value.isActive === false || value.status === 'DISABLED'
-        ? 'disabled'
-        : undefined,
+    id: String(user.id),
+    name: user.name,
+    email: user.email,
+    role: FROM_BACKEND[user.role] ?? 'customer',
+    status: user.isActive ? 'active' : 'disabled',
+    createdAt: user.createdAt,
   }
 }
 
-export async function fetchManagedUsers(): Promise<BackendManagedUser[]> {
-  const users: unknown[] = []
+// ---------- admin ----------
+
+export async function listUsers(): Promise<AdminUser[]> {
+  const users: AdminUser[] = []
   let page = 1
-  let totalPages: number | undefined
-
+  let totalPages = 1
   do {
-    const result: unknown = await api<unknown>(`/users?page=${page}&limit=100`)
-    const list = Array.isArray(result)
-      ? result
-      : isRecord(result) && Array.isArray(result.data)
-        ? result.data
-        : isRecord(result) && Array.isArray(result.items)
-          ? result.items
-          : isRecord(result) && Array.isArray(result.users)
-            ? result.users
-            : null
-    if (!list) {
-      throw new Error('The backend returned an invalid user list.')
-    }
-    users.push(...list)
-
-    const meta = isRecord(result) && isRecord(result.meta) ? result.meta : null
-    const pagination = isRecord(result) && isRecord(result.pagination) ? result.pagination : null
-    const reportedPages = meta?.totalPages ?? pagination?.totalPages ??
-      (isRecord(result) ? result.totalPages : undefined)
-    if (reportedPages !== undefined) {
-      if (typeof reportedPages !== 'number' || !Number.isInteger(reportedPages) || reportedPages < 0) {
-        throw new Error('The backend returned invalid user pagination details.')
-      }
-      totalPages = reportedPages
-    } else if (list.length < 100) {
-      totalPages = page
-    }
-
-    if (list.length === 0) break
+    const result = await api<UsersPage>(`/users?page=${page}&limit=100`)
+    users.push(...result.data.map(toAdminUser))
+    totalPages = result.totalPages
     page += 1
-  } while (totalPages === undefined || page <= totalPages)
-
-  return users.map(mapUser)
+  } while (page <= totalPages && page <= 50)
+  return users
 }
 
-export function updateManagedUserRole(userId: string, role: ManagedRole): Promise<void> {
-  return api<void>(`/users/${encodeURIComponent(userId)}/role`, {
-    method: 'PATCH',
-    body: { role: ROLE_TO_BACKEND[role] },
-  })
+export function setUserActive(userId: string, isActive: boolean): Promise<unknown> {
+  return api(`/users/${encodeURIComponent(userId)}/active`, { method: 'PATCH', body: { isActive } })
 }
 
-export function createManagedUser(input: {
+// The backend deactivates the account and keeps the tickets and orders of that user.
+export function deleteUser(userId: string): Promise<unknown> {
+  return api(`/users/${encodeURIComponent(userId)}`, { method: 'DELETE' })
+}
+
+export function createUser(input: {
   name: string
   email: string
   password: string
-  role: ManagedRole
+  role: Role
+  organizerId?: string
+  actorPassword?: string
 }): Promise<unknown> {
   return api('/users', {
     method: 'POST',
@@ -119,14 +91,126 @@ export function createManagedUser(input: {
       name: input.name.trim(),
       email: input.email.trim(),
       password: input.password,
-      role: ROLE_TO_BACKEND[input.role],
+      role: TO_BACKEND[input.role],
+      ...(input.organizerId ? { organizerId: input.organizerId } : {}),
+      ...(input.actorPassword ? { actorPassword: input.actorPassword } : {}),
     },
   })
 }
 
-export function setManagedUserActive(userId: string, isActive: boolean): Promise<void> {
-  return api<void>(`/users/${encodeURIComponent(userId)}/status`, {
-    method: 'PATCH',
-    body: { isActive },
+export interface OrganizerKycView {
+  businessName: string
+  phoneNumber: string
+  status: string
+}
+
+export async function fetchOrganizerKyc(userId: string): Promise<OrganizerKycView | null> {
+  try {
+    return await api<OrganizerKycView | null>(`/organizers/${encodeURIComponent(userId)}/kyc`)
+  } catch {
+    return null
+  }
+}
+
+// ---------- organizer staff ----------
+
+export interface StaffMember {
+  id: string
+  name: string
+  email: string
+  isActive: boolean
+  createdAt: string
+  assignedEventIds: string[]
+}
+
+interface RawStaffMember {
+  id: string | number
+  name: string
+  email: string
+  isActive?: boolean
+  active?: boolean
+  status?: string
+  createdAt?: string
+  created_at?: string
+  assignedEventIds?: unknown
+  eventIds?: unknown
+  assignedEvents?: unknown
+  events?: unknown
+}
+
+function normalizeIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (typeof item === 'string' || typeof item === 'number') return String(item)
+      if (item && typeof item === 'object' && 'id' in item) {
+        const id = (item as { id: unknown }).id
+        if (typeof id === 'string' || typeof id === 'number') return String(id)
+      }
+      return null
+    })
+    .filter((id): id is string => id !== null)
+}
+
+function toStaffMember(raw: RawStaffMember): StaffMember {
+  const ids = raw.assignedEventIds ?? raw.eventIds ?? raw.assignedEvents ?? raw.events
+  const active =
+    typeof raw.isActive === 'boolean'
+      ? raw.isActive
+      : typeof raw.active === 'boolean'
+        ? raw.active
+        : raw.status !== 'DISABLED' && raw.status !== 'INACTIVE'
+  return {
+    id: String(raw.id),
+    name: raw.name,
+    email: raw.email,
+    isActive: active,
+    createdAt: raw.createdAt ?? raw.created_at ?? new Date().toISOString(),
+    assignedEventIds: normalizeIds(ids),
+  }
+}
+
+export async function listMyStaff(): Promise<StaffMember[]> {
+  const result = await api<unknown>('/organizers/me/staff')
+  let list: unknown[] = []
+  if (Array.isArray(result)) {
+    list = result
+  } else if (result && typeof result === 'object') {
+    const maybe = (result as { data?: unknown }).data
+    if (Array.isArray(maybe)) list = maybe
+    else if (Array.isArray((result as { staff?: unknown }).staff)) list = (result as { staff: unknown[] }).staff
+  }
+  return list
+    .filter((item): item is RawStaffMember => !!item && typeof item === 'object')
+    .map(toStaffMember)
+}
+
+export function createMyStaff(input: { name: string; email: string; password: string }): Promise<unknown> {
+  return api('/organizers/me/staff', {
+    method: 'POST',
+    body: { name: input.name.trim(), email: input.email.trim(), password: input.password },
   })
+}
+
+export function assignStaffEvents(staffId: string, eventIds: string[]): Promise<unknown> {
+  return api(`/organizers/me/staff/${encodeURIComponent(staffId)}/events`, { method: 'PUT', body: { eventIds } })
+}
+
+export function setStaffActive(staffId: string, isActive: boolean): Promise<unknown> {
+  return api(`/organizers/me/staff/${encodeURIComponent(staffId)}/active`, { method: 'PATCH', body: { isActive } })
+}
+
+export function removeStaff(staffId: string): Promise<unknown> {
+  return api(`/organizers/me/staff/${encodeURIComponent(staffId)}`, { method: 'DELETE' })
+}
+
+// Events a staff member may scan (the signed-in staff account).
+export interface AssignedEvent {
+  id: string
+  title: string
+  venue: string
+}
+
+export function listMyAssignedEvents(): Promise<AssignedEvent[]> {
+  return api<AssignedEvent[]>('/staff/me/events')
 }
