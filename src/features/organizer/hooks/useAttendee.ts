@@ -9,13 +9,8 @@ interface BackendEventTicket {
   ticketNumber: string;
   ticketTypeId: string;
   customerId: string | null;
-  customerName?: string | null;
-  customerEmail?: string | null;
-  attendee?: { userId?: string; fullName?: string; email?: string } | null;
   status: 'ISSUED' | 'USED' | 'CANCELLED' | 'REFUNDED';
   issuedAt: string;
-  purchasedAt?: string | null;
-  purchaseDate?: string | null;
   checkedInAt: string | null;
 }
 
@@ -23,16 +18,6 @@ interface BackendTicketType {
   ticketTypeId: string;
   name: string;
   price: number | string;
-}
-
-const EMPTY_ATTENDEES: AttendeeItem[] = [];
-
-function attendeeErrorMessage(error: unknown): string {
-  if (!(error instanceof Error)) return '';
-  if ('status' in error && error.status === 401) {
-    return 'Your session has expired or is no longer authorized. Log out and sign in again. If this continues, confirm your organizer account has access.';
-  }
-  return error.message;
 }
 
 function formatPurchaseDate(value: string): string {
@@ -54,12 +39,12 @@ export async function fetchBackendAttendees(): Promise<AttendeeItem[]> {
       return tickets.flatMap((ticket) => {
         if (!ticket.customerId || ticket.status === 'CANCELLED' || ticket.status === 'REFUNDED') return [];
         const ticketType = ticketTypeById.get(ticket.ticketTypeId);
-        const purchasedAt = ticket.purchasedAt ?? ticket.purchaseDate ?? ticket.issuedAt;
+        const purchasedAt = ticket.issuedAt;
 
         return [{
           id: ticket.ticketNumber,
-          name: ticket.customerName ?? ticket.attendee?.fullName ?? `Customer #${ticket.customerId}`,
-          email: ticket.customerEmail ?? ticket.attendee?.email ?? '',
+          name: `Customer #${ticket.customerId}`,
+          email: '',
           event: event.name,
           eventId: event.id,
           ticketType: ticketType?.name ?? 'Unknown',
@@ -112,9 +97,9 @@ export const useAttendees = () => {
     queryKey: ['organizer-attendees', user?.id],
     queryFn: fetchBackendAttendees,
     enabled: !!user,
-    refetchInterval: user ? 30_000 : false,
-  })
-  const allAttendees = backendAttendees.data ?? EMPTY_ATTENDEES
+    refetchInterval: 30_000,
+  });
+  const allAttendees = useMemo(() => backendAttendees.data ?? [], [backendAttendees.data]);
   const attendees = useMemo(
     () => filterAttendees(allAttendees, { search, eventId, ticketType }),
     [allAttendees, search, eventId, ticketType],
@@ -140,7 +125,7 @@ export const useAttendees = () => {
     totalAttendees: allAttendees.length,
     checkedInCount: allAttendees.filter((attendee) => attendee.status === 'Checked In').length,
     loading: backendAttendees.isLoading,
-    error: attendeeErrorMessage(backendAttendees.error),
+    error: backendAttendees.error instanceof Error ? backendAttendees.error.message : '',
     search,
     setSearch,
     eventId,
