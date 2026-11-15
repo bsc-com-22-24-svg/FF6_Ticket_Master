@@ -131,11 +131,15 @@ export async function initiatePayment(orderNumber: string): Promise<{ checkout_u
 
 export async function verifyPayment(txRef: string): Promise<VerifiedPayment> {
   const result = await api<unknown>(`/payments/${encodeURIComponent(txRef)}/verify`)
-  if (!isRecord(result) || typeof result.status !== 'string') {
+  // The backend reports the payment as paymentStatus; older responses used status.
+  const rawStatus = isRecord(result)
+    ? (typeof result.paymentStatus === 'string' ? result.paymentStatus : result.status)
+    : undefined
+  if (!isRecord(result) || typeof rawStatus !== 'string') {
     throw new Error('The backend returned an invalid payment verification response.')
   }
 
-  const status = result.status.toLowerCase()
+  const status = rawStatus.toLowerCase()
   const mappedStatus =
     ['success', 'successful', 'paid', 'completed'].includes(status)
       ? 'success'
