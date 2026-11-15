@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { CalendarDays, Plus, Ticket, Users } from 'lucide-react';
 import '../Organiser.css/organiser.css' ;
 
 import { useAuth } from '../../authentication';
@@ -9,11 +8,12 @@ import { SearchBar } from '../components/searchBar';
 import { EventTable } from '../components/EventTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
+import { StaffTable } from '../components/staffTable';
 import { CreateEventPage } from './CreateEventPage';
-import { StaffRoster } from '../components/StaffRoster';
 
 import { useEvents } from '../hooks/useEventStats';
 import { useAttendees } from '../hooks/useAttendee';
+import { useStaff } from '../hooks/useStaff';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 function initials(name: string | undefined): string {
@@ -24,7 +24,7 @@ export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
-  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, restoreEvent, loading: evLoading, loadError: evError } = useEvents();
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
   const {
     attendees, totalAttendees, checkedInCount,
     search: atSearch, setSearch: setAtSearch,
@@ -32,6 +32,15 @@ export const OrganizerDashboardPage: React.FC = () => {
     ticketType: atTicketType, setTicketType: setAtTicketType,
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
+  const {
+    staff,
+    totalStaff,
+    activeStaff,
+    disabledStaff,
+    loading: staffLoading,
+    error: staffError,
+    unsupported: staffUnsupported,
+  } = useStaff();
 
   // Throws when the backend refuses, so the form can show the message and stay open.
   const handleEventFormSubmission = async (newEvent: NewEventInput) => {
@@ -44,10 +53,10 @@ export const OrganizerDashboardPage: React.FC = () => {
       {/* Sidebar Architecture Layout */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo">Tic-EM</div>
+          <div className="brand-logo">FF6</div>
           <div className="brand-info">
-            <span className="panel-title">Organizer</span>
-            <span className="panel-subtitle">Dashboard</span>
+            <span className="panel-title">FF6 Ticket</span>
+            <span className="panel-subtitle">Organizer Panel</span>
           </div>
         </div>
 
@@ -61,16 +70,16 @@ export const OrganizerDashboardPage: React.FC = () => {
 
         <nav className="sidebar-nav">
           <button className={`nav-link-btn ${currentTab === 'events' ? 'active' : ''}`} onClick={() => setCurrentTab('events')}>
-            <CalendarDays size={18} aria-hidden="true" /> My Events
+            <span className="nav-icon">📅</span> My Events
           </button>
           <button className={`nav-link-btn ${currentTab === 'create' ? 'active' : ''}`} onClick={() => setCurrentTab('create')}>
-            <Plus size={18} aria-hidden="true" /> Create Event
+            <span className="nav-icon">➕</span> Create Event
           </button>
           <button className={`nav-link-btn ${currentTab === 'staff' ? 'active' : ''}`} onClick={() => setCurrentTab('staff')}>
-            <Users size={18} aria-hidden="true" /> Staff Roster
+            <span className="nav-icon">👥</span> Staff Roster
           </button>
           <button className={`nav-link-btn ${currentTab === 'attendees' ? 'active' : ''}`} onClick={() => setCurrentTab('attendees')}>
-            <Ticket size={18} aria-hidden="true" /> Attendees
+            <span className="nav-icon">🎟️</span> Attendees
           </button>
         </nav>
       </aside>
@@ -107,7 +116,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </select>
                 </div>
                 {evError && <div className="form-error-banner">{evError}</div>}
-                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} onRestore={restoreEvent} />}
+                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
               </>
             )}
 
@@ -120,7 +129,27 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </div>
                   <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
                 </div>
-                <StaffRoster />
+                <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" style={{ marginBottom: 20 }}>
+                  Staff management uses the organizer-staff endpoints added in backend 1.3.
+                  If you are connected to backend 1.2, this section is not supported and the staff list will fail.
+                  Staff must be assigned to an event before they can scan.
+                </p>
+                <div className="metrics-grid">
+                  <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
+                  <StatCard title="Active" value={activeStaff} icon="✅" color="#10b981" />
+                  <StatCard title="Disabled" value={disabledStaff} icon="⛔" color="#64748b" />
+                </div>
+                {staffUnsupported && (
+                  <p role="alert" className="form-error-banner">
+                    The connected backend does not expose /organizers/me/staff. Start backend 1.3 and try again.
+                  </p>
+                )}
+                {staffError && !staffUnsupported && (
+                  <p role="alert" className="form-error-banner">{staffError}</p>
+                )}
+                {staffLoading
+                  ? <p className="view-subtitle">Loading your staff...</p>
+                  : <StaffTable staff={staff} />}
               </>
             )}
 

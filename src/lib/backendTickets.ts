@@ -39,11 +39,11 @@ export function extractQrToken(raw: string): string {
 export function purchaseBackendTicket(
   eventId: string,
   ticketTypeId: string,
-  txRef: string,
+  txRef?: string,
 ): Promise<BackendPurchasedTicket> {
   return api<BackendPurchasedTicket>('/tickets/purchase', {
     method: 'POST',
-    body: { eventId, ticketTypeId, txRef },
+    body: { eventId, ticketTypeId, ...(txRef ? { txRef } : {}) },
   })
 }
 
@@ -134,6 +134,12 @@ export function backendValidationToResult(
         status: 'invalid',
         title: 'Invalid ticket',
         message: 'This QR code is not a ticket issued for this platform.',
+      }
+    case 'NOT_ASSIGNED':
+      return {
+        status: 'invalid',
+        title: 'Not assigned',
+        message: `You are not assigned to ${details?.eventTitle ?? 'this event'}. Ask the organizer to assign you before scanning.`,
       }
     default:
       return {

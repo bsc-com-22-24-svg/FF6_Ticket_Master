@@ -1,5 +1,7 @@
 import React from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { EventForm } from '../components/EventForm';
+import { useEvents } from '../hooks/useEventStats';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 interface CreateEventPageProps {
@@ -22,3 +24,22 @@ export const CreateEventPage: React.FC<CreateEventPageProps> = ({ onEventCreated
     </div>
   );
 };
+
+export function CreateEventRoute() {
+  const navigate = useNavigate();
+  const { addEvent } = useEvents();
+
+  const goToDashboard = () => {
+    void navigate({ to: '/organizer/dashboard' });
+  };
+
+  return (
+    <CreateEventPage
+      onEventCreated={async (event) => {
+        await addEvent(event);
+        goToDashboard();
+      }}
+      onCancel={goToDashboard}
+    />
+  );
+}

@@ -5,7 +5,6 @@ import {
   formatEventDate,
   listMyEvents,
   publishEvent,
-  restoreOrganizerEvent,
   totalCapacity,
   type NewEventInput,
 } from './backendOrganizer'
@@ -61,9 +60,10 @@ describe('createOrganizerEvent', () => {
     expect(result.id).toBe('7')
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       'POST /be/events',
-      'POST /be/events/7/publish',
+      'PATCH /be/events/7',
       'POST /be/tickets/events/7/generate',
     ])
+    expect(calls[1].body).toEqual({ status: 'PUBLISHED' })
     expect(calls[0].body).toMatchObject({
       title: 'Sample Gig',
       capacity: 100,
@@ -100,12 +100,12 @@ describe('listMyEvents', () => {
           data: [
             { id: '1', title: 'One', venue: 'A', startAt: '2026-12-20T18:00:00.000Z', status: 'PUBLISHED' },
             { id: '2', title: 'Two', venue: 'B', startAt: '2026-12-21T18:00:00.000Z', status: 'DRAFT' },
-            { id: '3', title: 'Three', venue: 'C', startAt: '2026-12-22T18:00:00.000Z', status: 'CANCELLED', publishedAt: '2026-11-01T10:00:00.000Z' },
+            { id: '3', title: 'Three', venue: 'C', startAt: '2026-12-22T18:00:00.000Z', status: 'CANCELLED' },
           ],
           meta: { totalPages: 1 },
         }
       }
-      if (url.includes('/events/1/')) return { totals: { sold: 12 } }
+      if (url.includes('/sales-summary')) return { totals: { sold: url.includes('/events/1/') ? 12 : 0 } }
       return new Response('{}', { status: 500 })
     })
     const events = await listMyEvents()
@@ -114,24 +114,14 @@ describe('listMyEvents', () => {
       ['Two', 'Draft', 0],
       ['Three', 'Cancelled', 0],
     ])
-    expect(events[2].restoreStatus).toBe('Published')
   })
 })
 
 describe('cancelOrganizerEvent', () => {
-  it('marks the event cancelled using the documented PATCH endpoint', async () => {
+  it('marks the event as cancelled with PATCH', async () => {
     const calls = stubBackend(() => ({}))
     await cancelOrganizerEvent('7')
     expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
     expect(calls[0].body).toEqual({ status: 'CANCELLED' })
-  })
-})
-
-describe('restoreOrganizerEvent', () => {
-  it('restores a previously published event through the update endpoint', async () => {
-    const calls = stubBackend(() => ({}))
-    await restoreOrganizerEvent('7', 'PUBLISHED')
-    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
-    expect(calls[0].body).toEqual({ status: 'PUBLISHED' })
   })
 })

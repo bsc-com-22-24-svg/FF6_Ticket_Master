@@ -6,7 +6,13 @@ Event management app built with Vite + React + TypeScript, using Tanstack Query 
 
 https://github.com/bsc-com-22-24-svg/FF6_Ticket_Master
 
-## Getting started
+## Running the app
+
+The app uses the NestJS backend and PostgreSQL by default. See
+[RUNNING_THE_APP.md](RUNNING_THE_APP.md) for the full local setup, including
+Docker commands, the database schema, and PayChangu configuration.
+
+Install and run the frontend:
 
 ```bash
 git clone https://github.com/bsc-com-22-24-svg/FF6_Ticket_Master.git
@@ -23,20 +29,29 @@ npm run lint      # oxlint
 npm test          # vitest unit tests
 ```
 
-## Backend
+### Frontend-only mock mode
 
-The frontend uses the backend Docker API for authentication, events, orders,
-payments, tickets, validation, and supported administration actions. It does
-not seed demo accounts, events, bookings, or tickets.
+Set `VITE_USE_BACKEND=false` in `.env.local` to use the old in-browser mock.
+Events, tickets and bookings are then stored in `localStorage`, so anything you
+do (buy a ticket, scan it, create an event) sticks around until you reset it.
 
-1. Start the backend Docker service.
-2. Copy `.env.example` to `.env` and set `BACKEND_URL` to the backend address
-   (default: `http://localhost:3000`).
-3. Run `npm run dev`. The Vite server forwards `/be/*` requests to that backend.
+Use the **one-tap demo accounts** on the login screen, or sign in manually:
 
-PayChangu credentials and callback/return URL configuration belong on the
-backend; they must not be added to this frontend's environment.
-Some dashboard features remain unavailable until the backend exposes their API.
+| Role       | Email                  | Password      |
+| ---------- | ---------------------- | ------------- |
+| Customer   | customer@example.com   | password123   |
+| Organizer  | organizer@example.com  | password123   |
+| Staff      | staff@example.com      | password123   |
+
+Suggested walkthrough:
+
+1. **Browse** — open *Discover* (`/events`), filter by category/city/price, open an event.
+2. **Buy** — pick a ticket type, hit *Get tickets*, sign in as **Customer**, pay (any 16-digit card that does **not** end in `00`, or a 9–12 digit mobile number).
+3. **View** — your ticket with its QR code is under *My Tickets*.
+4. **Manage** — sign in as **Organizer**, open the dashboard, and *Create event*. Publish it and it appears on the public site; ticket sales update the remaining-seat counts.
+5. **Scan** — sign in as **Staff** (`/scan`), choose the event gate, and paste a ticket code. The organizer dashboard's *Checked in* count increases.
+
+To start over, use **Reset demo data** on the organizer dashboard.
 
 ## Team
 

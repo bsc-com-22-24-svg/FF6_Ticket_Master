@@ -1,217 +1,405 @@
-import { useState, useEffect, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Link } from '@tanstack/react-router'
-import { api } from '../../../lib/backend'
-import { createMyStaff } from '../../../lib/backendUsers'
-import { useAllEvents } from '../../events/hooks/useEvents'
-import { ConfirmDialog } from '../../../components/ConfirmDialog'
-import { useToast } from '../../toast'
+import { Modal } from '../../../components/ui/Modal'
+import { StatCard } from '../components/StatCard'
+import { useEvents } from '../hooks/useEventStats'
+import { useStaff } from '../hooks/useStaff'
+import type { StaffMember } from '../../../lib/backendStaff'
 
-const field = 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy'
 const emptyForm = { name: '', email: '', password: '' }
 
-interface SafeStaffMember {
-  id: string
-  name: string
-  email: string
-  assignedEventIds: string[]
-  isActive: boolean
+const field =
+  'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy'
+const primaryButton =
+  'rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-dark disabled:cursor-not-allowed disabled:opacity-60'
+const secondaryButton =
+  'rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60'
+function messageFor(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback
 }
 
 export function StaffManagementPage() {
-  const { showToast } = useToast()
-  const { data: events = [] } = useAllEvents()
+  const { events, loadError: eventsError } = useEvents()
+  const {
+    staff,
+    totalStaff,
+    activeStaff,
+    disabledStaff,
+    search,
+    setSearch,
+    loading,
+    error,
+    unsupported,
+    saving,
+    createStaff,
+    assignEvents,
+    setActive,
+    removeStaff,
+  } = useStaff()
 
-  const [staff, setStaff] = useState<SafeStaffMember[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
-
+  const [creating, setCreating] = useState(false)
   const [form, setForm] = useState(emptyForm)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [saving, setSaving] = useState(false)
-  const [removing, setRemoving] = useState<SafeStaffMember | null>(null)
+  const [formError, setFormError] = useState('')
+  const [editing, setEditing] = useState<StaffMember | null>(null)
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
+  const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [busyId, setBusyId] = useState('')
 
-  async function loadStaff() {
-    setIsLoading(true)
-    setLoadError(null)
-    try {
-      const result = await api<any>('/organizers/me/staff')
-      const list = Array.isArray(result) ? result : (result?.data || result?.staff || [])
-      
-      const cleaned = list.map((raw: any) => {
-        // 1. Grab the staffId, fallback to id
-        const rawId = raw.staffId ?? raw.id ?? raw.userId
-        const safeId = rawId !== undefined && rawId !== null ? String(rawId) : ''
-
-        // 2. Extract the event IDs from the array of objects: [{ eventId: "4", title: "..." }]
-        let ids: string[] = []
-        if (Array.isArray(raw.events)) {
-          ids = raw.events.map((e: any) => String(e.eventId ?? e.id ?? e))
-        } else if (Array.isArray(raw.assignedEventIds)) {
-          ids = raw.assignedEventIds.map(String)
-        }
-
-        return {
-          id: safeId,
-          name: raw.name ?? 'Unknown',
-          email: raw.email ?? '',
-          assignedEventIds: ids, // Now contains ["4"]
-          isActive: raw.isActive ?? raw.active ?? true
-        }
-      })
-
-      // We filter out any staff where the ID came back as empty/undefined
-      const validStaff = cleaned.filter((s: SafeStaffMember) => s.id !== '')
-      setStaff(validStaff)
-      
-                  if (validStaff.length > 0 && validStaff[0].assignedEventIds.length > 0) {
-      }
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Could not load staff.')
-    } finally {
-      setIsLoading(false)
-    }
+  function openCreate() {
+    setForm(emptyForm)
+    setFormError('')
+    setCreating(true)
   }
 
-  useEffect(() => {
-    void loadStaff()
-  }, [])
-
-  async function run(action: () => Promise<unknown>, success: string) {
-    try {
-      await action()
-      await loadStaff()
-      showToast(success, 'success')
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')
-    }
-  }
-
-  async function create(e: FormEvent) {
+  async function submitCreate(e: FormEvent) {
     e.preventDefault()
-    setFormError(null)
-    if (!form.name.trim()) return setFormError('Enter the staff member’s name.')
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return setFormError('Enter a valid email address.')
-    if (form.password.length < 8) return setFormError('The password needs at least 8 characters.')
-    setSaving(true)
+    setFormError('')
+    if (form.name.trim().length < 2) {
+      setFormError('Enter the staff member’s full name.')
+      return
+    }
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+      setFormError('Enter a valid email address.')
+      return
+    }
+    if (form.password.length < 10) {
+      setFormError('The temporary password must be at least 10 characters.')
+      return
+    }
+
     try {
-      await createMyStaff(form)
+      await createStaff(form)
+      setCreating(false)
       setForm(emptyForm)
-      await loadStaff()
-      showToast('Staff account created', 'success')
+      setNotice('Staff account created. Assign at least one event before they can scan tickets.')
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Could not create the account.')
-    } finally {
-      setSaving(false)
+      setFormError(messageFor(err, 'Could not create the staff account.'))
     }
   }
 
-  function toggleEvent(member: SafeStaffMember, eventId: string) {
-    const current = member.assignedEventIds
-    const stringIds = current.includes(eventId)
-      ? current.filter((id) => id !== eventId)
-      : [...current, eventId]
-    
-    const numericIds = stringIds.map(Number).filter(id => !isNaN(id) && id > 0)
-
-    
-    void run(() => api(`/organizers/me/staff/${encodeURIComponent(member.id)}/events`, { 
-      method: 'PUT', 
-      body: { eventIds: numericIds } 
-    }), 'Assignments saved')
+  function openAssign(member: StaffMember) {
+    setEditing(member)
+    setSelectedEventIds(member.events.map((event) => event.eventId))
+    setActionError('')
   }
 
-  function toggleActive(member: SafeStaffMember) {
-    void run(() => api(`/organizers/me/staff/${encodeURIComponent(member.id)}/active`, { method: 'PATCH', body: { isActive: !member.isActive } }), member.isActive ? 'Staff disabled' : 'Staff enabled')
+  function toggleEvent(eventId: string) {
+    setSelectedEventIds((current) =>
+      current.includes(eventId)
+        ? current.filter((id) => id !== eventId)
+        : [...current, eventId],
+    )
   }
 
-  function remove(member: SafeStaffMember) {
-    void run(() => api(`/organizers/me/staff/${encodeURIComponent(member.id)}`, { method: 'DELETE' }), 'Staff removed')
+  async function saveAssignments() {
+    if (!editing) return
+    setBusyId(editing.staffId)
+    setActionError('')
+    try {
+      await assignEvents(editing.staffId, selectedEventIds)
+      setEditing(null)
+      setNotice('Event assignments updated.')
+    } catch (err) {
+      setActionError(messageFor(err, 'Could not update the event assignments.'))
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function toggleActive(member: StaffMember) {
+    setBusyId(member.staffId)
+    setActionError('')
+    try {
+      await setActive(member.staffId, !member.isActive)
+      setNotice(member.isActive ? 'Staff account disabled.' : 'Staff account enabled.')
+    } catch (err) {
+      setActionError(messageFor(err, 'Could not change the staff account status.'))
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function deleteMember(member: StaffMember) {
+    if (!window.confirm(`Remove ${member.name}? Their login will stop working and their event assignments will be deleted.`)) {
+      return
+    }
+    setBusyId(member.staffId)
+    setActionError('')
+    try {
+      await removeStaff(member.staffId)
+      setNotice('Staff member removed.')
+    } catch (err) {
+      setActionError(messageFor(err, 'Could not remove the staff member.'))
+    } finally {
+      setBusyId('')
+    }
   }
 
   return (
-    <main className="mx-auto min-h-[60vh] max-w-4xl px-4 py-20 sm:px-6">
-      <Link to="/organizer/dashboard" className="text-sm font-semibold text-slate-600 hover:text-navy">
-        ← Organizer dashboard
-      </Link>
-      <h1 className="mt-4 text-3xl font-extrabold text-navy-dark">Staff</h1>
-      <p className="mt-2 text-sm text-slate-600">
-        Staff scan tickets at the door. They can only scan the events you assign to them.
-      </p>
+    <main className="min-h-screen bg-slate-50 pb-16 pt-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <Link to="/organizer/dashboard" className="text-sm font-semibold text-slate-600 hover:text-navy">
+          ← Organizer dashboard
+        </Link>
 
-      <form onSubmit={create} className="mt-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm" noValidate>
-        <h2 className="text-lg font-bold text-navy-dark">Add a staff member</h2>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <label className="block text-sm font-medium">Name
-            <input className={field} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </label>
-          <label className="block text-sm font-medium">Email
-            <input type="email" className={field} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </label>
-          <label className="block text-sm font-medium">Temporary password
-            <input type="password" className={field} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="At least 8 characters" />
-          </label>
+        <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-navy-dark">Staff Roster</h1>
+            <p className="mt-2 text-slate-600">
+              Create check-in staff, assign them to your events, and control whether they can scan.
+            </p>
+          </div>
+          <button type="button" onClick={openCreate} className={primaryButton}>
+            + Create staff
+          </button>
         </div>
-        {formError && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{formError}</p>}
-        <button type="submit" disabled={saving} className="mt-4 rounded-full bg-navy px-5 py-2 text-sm font-semibold text-white hover:bg-navy-dark disabled:opacity-60">
-          {saving ? 'Creating…' : 'Create staff account'}
-        </button>
-      </form>
 
-      <section className="mt-6 space-y-4" aria-label="Your staff">
-        {isLoading && <p className="text-sm text-slate-500">Loading staff…</p>}
-        {loadError && <p role="alert" className="text-sm text-red-600">{loadError}</p>}
-        {!isLoading && !loadError && staff.length === 0 && (
-          <p className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600">You have no staff yet.</p>
+        <div
+          role="status"
+          className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <strong>Backend support:</strong> Staff management uses the organizer-staff endpoints
+          added in backend 1.3. If you are connected to backend 1.2, this section is not supported
+          and the staff list will fail. Staff must be assigned to an event before they can scan.
+        </div>
+
+        {notice && (
+          <div role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            {notice}
+          </div>
         )}
-        
-        {staff.map((member) => (
-          <article key={member.id} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="font-bold text-navy-dark">{member.name}</h3>
-                <p className="text-xs text-slate-500">{member.email}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${member.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-700'}`}>
-                  {member.isActive ? 'Active' : 'Disabled'}
-                </span>
-                <button onClick={() => toggleActive(member)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold hover:bg-slate-50">
-                  {member.isActive ? 'Disable' : 'Enable'}
-                </button>
-                <button onClick={() => setRemoving(member)} className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">
-                  Remove
-                </button>
-              </div>
-            </div>
-            <fieldset className="mt-4" disabled={!member.isActive}>
-              <legend className="text-xs font-semibold uppercase text-slate-500">Events they can scan</legend>
-              {events.length === 0 && <p className="mt-2 text-sm text-slate-500">Create an event first.</p>}
-              <div className="mt-2 flex flex-wrap gap-2">
-                {events.map((event) => (
-                  <label key={event.id} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={(member.assignedEventIds ?? []).includes(String(event.id))}
-                      onChange={() => toggleEvent(member, String(event.id))}
-                    />
-                    {event.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          </article>
-        ))}
-      </section>
 
-      <ConfirmDialog
-        open={!!removing}
-        onClose={() => setRemoving(null)}
-        onConfirm={() => { if (removing) remove(removing) }}
-        title={removing ? `Remove ${removing.name}?` : 'Remove staff?'}
-        description="Their login is switched off and they can no longer scan tickets."
-        confirmLabel="Remove"
-        variant="danger"
-      />
+        {unsupported && (
+          <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            The connected backend does not expose `/organizers/me/staff`. Start backend 1.3 and
+            try again.
+          </div>
+        )}
+
+        {error && !unsupported && (
+          <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {error}
+          </div>
+        )}
+
+        {eventsError && (
+          <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            Could not load your events: {eventsError}
+          </div>
+        )}
+
+        <div className="metrics-grid mt-6">
+          <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
+          <StatCard title="Active" value={activeStaff} icon="✅" color="#10b981" />
+          <StatCard title="Disabled" value={disabledStaff} icon="⛔" color="#64748b" />
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-bold text-navy-dark">Staff accounts</h2>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name, email or event"
+              aria-label="Search staff"
+              className="w-full max-w-sm rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy"
+            />
+          </div>
+
+          {actionError && (
+            <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {actionError}
+            </div>
+          )}
+
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading staff...</p>
+          ) : staff.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+              {search ? 'No staff match your search.' : 'No staff accounts yet. Create one to get started.'}
+            </p>
+          ) : (
+            <div className="table-responsive">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Assigned events</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staff.map((member) => (
+                    <tr key={member.staffId}>
+                      <td className="font-semibold">{member.name}</td>
+                      <td>{member.email}</td>
+                      <td>
+                        {member.events.length === 0 ? (
+                          <span className="text-amber-700">None — cannot scan yet</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {member.events.map((event) => (
+                              <span
+                                key={event.eventId}
+                                className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700"
+                              >
+                                {event.title}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <span className={`status-badge ${member.isActive ? 'published' : 'draft'}`}>
+                          {member.isActive ? 'Active' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openAssign(member)}
+                            className="btn-action"
+                            disabled={busyId === member.staffId}
+                          >
+                            Assign events
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void toggleActive(member)}
+                            className="btn-action"
+                            disabled={busyId === member.staffId}
+                          >
+                            {member.isActive ? 'Disable' : 'Enable'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteMember(member)}
+                            className="btn-action text-red-700"
+                            disabled={busyId === member.staffId}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Modal isOpen={creating} onClose={() => setCreating(false)} title="Create staff account">
+        <form onSubmit={(e) => void submitCreate(e)} className="space-y-3">
+          {formError && (
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {formError}
+            </p>
+          )}
+          <label className="block text-sm font-medium">
+            Full name
+            <input
+              className={field}
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              autoComplete="name"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Email
+            <input
+              type="email"
+              className={field}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              autoComplete="email"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            Temporary password
+            <input
+              type="password"
+              className={field}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              autoComplete="new-password"
+              placeholder="At least 10 characters"
+            />
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={() => setCreating(false)} className={secondaryButton}>
+              Cancel
+            </button>
+            <button type="submit" className={primaryButton} disabled={saving}>
+              {saving ? 'Creating...' : 'Create staff'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!editing}
+        onClose={() => setEditing(null)}
+        title={editing ? `Assign events to ${editing.name}` : 'Assign events'}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Select every event this staff member may scan. Sending an empty selection removes all
+            their assignments.
+          </p>
+
+          {actionError && (
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {actionError}
+            </p>
+          )}
+
+          {events.length === 0 ? (
+            <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">
+              You have no events yet. Create an event first.
+            </p>
+          ) : (
+            <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl border border-slate-200 p-3">
+              {events.map((event) => (
+                <label key={event.id} className="flex cursor-pointer items-start gap-3 rounded-lg p-2 hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={selectedEventIds.includes(event.id)}
+                    onChange={() => toggleEvent(event.id)}
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-slate-800">{event.name}</span>
+                    <span className="block text-xs text-slate-500">
+                      {event.date} · {event.venue} · {event.status}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setEditing(null)} className={secondaryButton}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveAssignments()}
+              className={primaryButton}
+              disabled={!!busyId}
+            >
+              {busyId ? 'Saving...' : 'Save assignments'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </main>
   )
 }
