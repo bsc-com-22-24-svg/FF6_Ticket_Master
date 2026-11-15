@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-
-interface DetectedBarcode {
-  rawValue: string
-}
-
-interface BarcodeDetectorLike {
-  detect: (source: CanvasImageSource) => Promise<DetectedBarcode[]>
-}
-
-interface BarcodeDetectorConstructor {
-  new (options?: { formats?: string[] }): BarcodeDetectorLike
-}
+import type { Result } from '@zxing/library'
 
 export type QrScannerStatus =
   | 'idle'
@@ -20,20 +9,17 @@ export type QrScannerStatus =
   | 'denied'
   | 'error'
 
-const SCAN_INTERVAL_MS = 400
 const REPEAT_COOLDOWN_MS = 2500
-
-function getBarcodeDetectorConstructor(): BarcodeDetectorConstructor | undefined {
-  return (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector
-}
 
 export function useQrScanner(onDetected: (code: string) => void) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const detectorRef = useRef<BarcodeDetectorLike | null>(null)
-  const timerRef = useRef<number | null>(null)
+  const containerIdRef = useRef(`qr-reader-${Math.random().toString(36).slice(2, 10)}`)
+  const html5ScannerRef = useRef<any>(null)
+  const zxingControlsRef = useRef<{ stop: () => void } | null>(null)
+  const nativeTimerRef = useRef<number | null>(null)
   const lastCodeRef = useRef<{ code: string; at: number }>({ code: '', at: 0 })
   const onDetectedRef = useRef(onDetected)
+  const activeRef = useRef(false)
 
   const [status, setStatus] = useState<QrScannerStatus>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -42,87 +28,174 @@ export function useQrScanner(onDetected: (code: string) => void) {
     onDetectedRef.current = onDetected
   }, [onDetected])
 
+  const report = useCallback((raw: string) => {
+    const code = raw.trim()
+    const now = Date.now()
+    if (
+      activeRef.current &&
+      code &&
+      (code !== lastCodeRef.current.code || now - lastCodeRef.current.at >= REPEAT_COOLDOWN_MS)
+    ) {
+      lastCodeRef.current = { code, at: now }
+      stop()
+      onDetectedRef.current(code)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const stop = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current)
-      timerRef.current = null
+    activeRef.current = false
+
+    if (nativeTimerRef.current !== null) {
+      window.clearInterval(nativeTimerRef.current)
+      nativeTimerRef.current = null
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
+
+    if (html5ScannerRef.current) {
+      try {
+        const maybePromise = html5ScannerRef.current.stop()
+        if (maybePromise?.catch) maybePromise.catch(() => {})
+      } catch {
+        // ignore
+      }
+      html5ScannerRef.current = null
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
+
+    zxingControlsRef.current?.stop()
+    zxingControlsRef.current = null
+
+    const video = videoRef.current
+    if (video?.srcObject instanceof MediaStream) {
+      video.srcObject.getTracks().forEach((track) => track.stop())
+      video.srcObject = null
     }
-    detectorRef.current = null
+
     setStatus('idle')
   }, [])
 
   const start = useCallback(async () => {
+    if (activeRef.current) return
+    activeRef.current = true
+    setStatus('starting')
     setError(null)
 
-    const Detector = getBarcodeDetectorConstructor()
-    if (!Detector) {
+    if (!window.isSecureContext) {
+      activeRef.current = false
       setStatus('unsupported')
-      setError('QR scanning is not supported in this browser. Enter the ticket ID manually below.')
+      setError('Camera access requires HTTPS. Open this site via https:// and allow camera access.')
       return
     }
     if (!navigator.mediaDevices?.getUserMedia) {
+      activeRef.current = false
       setStatus('unsupported')
-      setError('Camera access is not available here. Enter the ticket ID manually below.')
+      setError('This browser does not support camera access. Enter the ticket ID manually below.')
       return
     }
 
-    setStatus('starting')
+    // ---- 1. Try html5-qrcode (works on all browsers via canvas/WASM decoding) ----
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      })
-      streamRef.current = stream
+      const { Html5Qrcode } = await import('html5-qrcode')
+      const containerId = containerIdRef.current
+      const container = document.getElementById(containerId)
+      if (!container) throw new Error('Scanner container not ready')
 
-      const video = videoRef.current
-      if (!video) {
-        stop()
-        return
+      const scanner = new Html5Qrcode(containerId, { verbose: false })
+      html5ScannerRef.current = scanner
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+        (decoded: string) => report(decoded),
+        () => {
+          /* per-frame misses are normal — ignore */
+        },
+      )
+
+      // html5-qrcode injects its own <video> inside the container; keep our ref in sync
+      const injected = container.querySelector('video') as HTMLVideoElement | null
+      if (injected && videoRef.current && videoRef.current !== injected) {
+        // Use the injected video for cleanup purposes
+        videoRef.current = injected
       }
-      video.srcObject = stream
-      await video.play()
-
-      detectorRef.current = new Detector({ formats: ['qr_code'] })
       setStatus('scanning')
+      return
+    } catch (html5Error) {
+      // Fall through to native BarcodeDetector
+      console.warn('[scanner] html5-qrcode failed, trying native BarcodeDetector', html5Error)
+    }
 
-      timerRef.current = window.setInterval(async () => {
-        const currentVideo = videoRef.current
-        const detector = detectorRef.current
-        if (!currentVideo || !detector || currentVideo.readyState < 2) return
-        try {
-          const codes = await detector.detect(currentVideo)
-          const value = codes[0]?.rawValue?.trim()
-          if (!value) return
-          const now = Date.now()
-          if (value === lastCodeRef.current.code && now - lastCodeRef.current.at < REPEAT_COOLDOWN_MS) {
-            return
+    // ---- 2. Native BarcodeDetector (Chrome / Edge / Android — fast) ----
+    const Detector = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector
+    if (Detector) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        })
+        const video = videoRef.current
+        if (!video) throw new Error('Video element missing')
+        video.srcObject = stream
+        await video.play()
+        const detector = new Detector({ formats: ['qr_code'] })
+        setStatus('scanning')
+        nativeTimerRef.current = window.setInterval(async () => {
+          if (!activeRef.current) return
+          if (video.readyState < 2) return
+          try {
+            const codes = await detector.detect(video)
+            if (codes[0]?.rawValue) report(codes[0].rawValue)
+          } catch {
+            /* transient */
           }
-          lastCodeRef.current = { code: value, at: now }
-          onDetectedRef.current(value)
-        } catch {
-          // Ignore transient decoding errors and keep scanning.
-        }
-      }, SCAN_INTERVAL_MS)
+        }, 180)
+        return
+      } catch (nativeError) {
+        console.warn('[scanner] native BarcodeDetector failed, trying ZXing', nativeError)
+      }
+    }
+
+    // ---- 3. @zxing/browser (WASM — universal fallback) ----
+    try {
+      const { BrowserQRCodeReader } = await import('@zxing/browser')
+      const reader = new BrowserQRCodeReader(undefined, {
+        delayBetweenScanAttempts: 250,
+        delayBetweenScanSuccess: 250,
+      })
+      const video = videoRef.current
+      if (!video) throw new Error('Video element missing')
+      const controls = await reader.decodeFromConstraints(
+        {
+          audio: false,
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        },
+        video,
+        (result: Result | undefined, decodeError: Error | null | undefined) => {
+          if (result) {
+            report(result.getText())
+          } else if (
+            decodeError &&
+            !['NotFoundException', 'ChecksumException', 'FormatException'].includes(decodeError.name)
+          ) {
+            setStatus('error')
+            setError('The camera could not decode frames. Try restarting, or enter the ticket ID manually.')
+          }
+        },
+      )
+      zxingControlsRef.current = controls as unknown as { stop: () => void }
+      setStatus('scanning')
     } catch (caught) {
-      stop()
+      activeRef.current = false
       const denied = caught instanceof DOMException && caught.name === 'NotAllowedError'
       setStatus(denied ? 'denied' : 'error')
       setError(
         denied
-          ? 'Camera permission was denied. Enter the ticket ID manually below.'
+          ? 'Camera permission was denied. Allow camera access in your browser settings, then try again.'
           : 'Could not start the camera. Enter the ticket ID manually below.',
       )
     }
-  }, [stop])
+  }, [report, stop])
 
   useEffect(() => stop, [stop])
 
-  return { videoRef, status, error, start, stop }
+  return { videoRef, containerId: containerIdRef.current, status, error, start, stop }
 }
