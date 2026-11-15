@@ -42,6 +42,17 @@ interface SalesSummary {
   totals: { sold: number }
 }
 
+
+function cleanId(value: unknown): string {
+  // If your backend uses UUIDs, comment out this line and return String(value)
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric) || numeric <= 0) {
+    console.warn('[event] backend returned a non-numeric id:', value);
+    return "";
+  }
+  return String(numeric);
+}
+
 const STATUS: Record<BackendMyEvent['status'], EventItem['status']> = {
   DRAFT: 'Draft',
   PUBLISHED: 'Published',
@@ -63,8 +74,17 @@ export function totalCapacity(ticketTypes: NewTicketType[]): number {
 }
 
 async function soldFor(eventId: string): Promise<number> {
-  const summary = await api<SalesSummary>(`/events/${eventId}/sales-summary`)
-  return summary.totals.sold
+  if (!eventId) {
+    console.warn('[soldFor] called with an empty or undefined eventId');
+    return 0;
+  }
+  try {
+    const summary = await api<SalesSummary>(`/events/${eventId}/sales-summary`)
+    return summary.totals.sold ?? 0
+  } catch (error) {
+    console.error('[soldFor] failed for event', eventId, error)
+    return 0
+  }
 }
 
 // Every event of the logged-in organizer, in all statuses, with tickets sold.
@@ -81,7 +101,7 @@ export async function listMyEvents(): Promise<EventItem[]> {
 
   return Promise.all(
     events.map(async (event) => ({
-      id: String(event.id),
+      id: cleanId(event.id),
       name: event.title,
       date: formatEventDate(event.startAt),
       venue: event.venue,
@@ -108,7 +128,13 @@ export async function setOrganizerEventStatus(
 // Publishing makes the event public. Tickets only exist after "generate", so both run together.
 // Generating again is safe: it only creates tickets that are still missing.
 export async function publishEvent(eventId: string): Promise<void> {
-  await api(`/events/${encodeURIComponent(eventId)}/publish`, { method: 'POST' })
+  try {
+    await api(`/events/${encodeURIComponent(eventId)}/publish`, { method: 'POST' })
+  } catch (error) {
+    // this backend build does not have a publish route: PATCH the status instead
+    if ((error as { status?: number }).status !== 404) throw error
+    await setOrganizerEventStatus(eventId, 'PUBLISHED')
+  }
   try {
     await api(`/tickets/events/${encodeURIComponent(eventId)}/generate`, { method: 'POST' })
   } catch (error) {
@@ -178,6 +204,7 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
 }
 
 export async function cancelOrganizerEvent(eventId: string): Promise<void> {
+  // OpenAPI: PATCH /events/:id accepts { status: "CANCELLED" }
   await setOrganizerEventStatus(eventId, 'CANCELLED')
 }
 
@@ -185,5 +212,6 @@ export async function restoreOrganizerEvent(
   eventId: string,
   status: 'DRAFT' | 'PUBLISHED',
 ): Promise<void> {
+  // OpenAPI: PATCH /events/:id accepts { status: "DRAFT"|"PUBLISHED" }
   await setOrganizerEventStatus(eventId, status)
 }
