@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { totalCapacity, type NewEventInput } from '../../../lib/backendOrganizer';
+import { totalCapacity, uploadEventImage, type NewEventInput } from '../../../lib/backendOrganizer';
+import { DEFAULT_EVENT_IMAGES, resolveEventImage } from '../../../lib/backendEvents';
 
 interface EventFormProps {
   onSubmit: (event: NewEventInput) => Promise<void> | void;
@@ -27,6 +28,8 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
   const [status, setStatus] = useState<'Published' | 'Draft'>('Draft');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [imageUrl, setImageUrl] = useState(''); // '' = let the app pick a default
+  const [uploading, setUploading] = useState(false);
 
   const updateRow = (index: number, patch: Partial<TicketRow>) =>
     setRows(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -39,6 +42,21 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
   const capacity = totalCapacity(ticketTypes.filter((type) => Number.isFinite(type.quantity)));
   const startAt = startDate && startTime ? `${startDate}T${startTime}` : '';
   const endAt = endDate && endTime ? `${endDate}T${endTime}` : '';
+
+  const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError('');
+    setUploading(true);
+    try {
+      setImageUrl(await uploadEventImage(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The image could not be uploaded.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +93,7 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
         endAt: endDateTime.toISOString(),
         ticketTypes,
         status,
+        ...(imageUrl ? { imageUrl } : {}),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not save the event. Try again.');
@@ -90,6 +109,41 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
       <div className="form-group">
         <label>Event Title</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Afrobeat Showcase 2026" />
+      </div>
+
+      <div className="form-group">
+        <label>Event image</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          {imageUrl && (
+            <img
+              src={resolveEventImage(imageUrl, '0')}
+              alt="Selected event"
+              style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #1e3a8a' }}
+            />
+          )}
+          {DEFAULT_EVENT_IMAGES.map((src) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setImageUrl(src)}
+              aria-label="Use this default image"
+              aria-pressed={imageUrl === src}
+              style={{ padding: 0, border: imageUrl === src ? '2px solid #1e3a8a' : '2px solid transparent', borderRadius: 8, background: 'none', cursor: 'pointer' }}
+            >
+              <img src={src} alt="" style={{ width: 72, height: 48, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
+            </button>
+          ))}
+        </div>
+        <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageFile} disabled={uploading} />
+          {uploading && <span>Uploading…</span>}
+          {imageUrl && !uploading && (
+            <button type="button" onClick={() => setImageUrl('')} style={{ background: 'none', border: 'none', color: '#475569', textDecoration: 'underline', cursor: 'pointer' }}>
+              Remove image
+            </button>
+          )}
+        </div>
+        <small>Upload your own (JPG, PNG or WEBP, up to 5 MB) or pick a default. If you choose nothing, a default is used.</small>
       </div>
 
       <div className="form-group">
@@ -154,8 +208,10 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
 
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onCancel} disabled={saving}>Cancel</button>
-        <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : 'Create Event'}</button>
+        <button type="submit" className="btn-primary" disabled={saving || uploading}>{saving ? 'Saving...' : 'Create Event'}</button>
       </div>
     </form>
   );
 };
+
+

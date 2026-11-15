@@ -43,3 +43,9 @@ export function isUpcomingEvent(event: Event): boolean {
   const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
   return event.date >= today
 }
+
+export type EventStatus = 'Draft' | 'Pending' | 'Published' | 'Cancelled'
+
+export interface StoredEvent extends Event {
+  status: EventStatus
+}

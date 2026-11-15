@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
-import { heroSlides } from '../../../mocks/heroSlides'
+import { useEvents } from '../../events/hooks/useEvents'
 import SearchBar from './SearchBar'
 import type { Filters } from '../filters'
 import { useAutoplay } from '../hooks/useAutoplay'
@@ -13,6 +13,19 @@ interface HeroSliderProps {
 
 export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSliderProps) {
   const [current, setCurrent] = useState(0)
+  // The slides are the next published events from the backend. With none, one welcome slide is shown.
+  const { data: events = [] } = useEvents()
+  const heroSlides = events.length > 0
+    ? events
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .slice(0, 5)
+        .map((event) => ({
+          image: event.image,
+          title: event.title,
+          text: [event.venue, event.date].filter(Boolean).join(' · '),
+        }))
+    : [{ image: '/images/hero/hero-1.png', title: 'Ticket Master', text: 'Discover events happening near you' }]
   const total = heroSlides.length
 
   const goTo = useCallback(
@@ -33,7 +46,7 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
       <div className="absolute inset-0 overflow-hidden">
         {heroSlides.map((slide, i) => (
           <img
-            key={slide.image}
+            key={`slide-${i}`}
             src={slide.image}
             alt={slide.title}
             aria-hidden={i !== current}
@@ -48,10 +61,10 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
       <div className="relative z-20 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 pb-20 pt-28 text-center">
         <div key={current} className="fade-up">
           <h1 className="text-4xl font-extrabold text-white sm:text-5xl lg:text-7xl">
-            {heroSlides[current].title}
+            {heroSlides[current % total].title}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/85 sm:text-xl">
-            {heroSlides[current].text}
+            {heroSlides[current % total].text}
           </p>
         </div>
         <div className="mt-10 w-full">

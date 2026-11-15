@@ -18,7 +18,7 @@ export const AttendeeTable: React.FC<AttendeeTableProps> = ({ attendees }) => {
 
   return (
     <div className="table-responsive">
-      <table className="dashboard-table">
+      <table className="dashboard-table attendee-table">
         <thead>
           <tr>
             <th>Customer</th>

@@ -5,4 +5,6 @@ export interface EventItem {
   venue: string;
   ticketsSold: number;
   status: 'Published' | 'Draft' | 'Cancelled';
+  restoreStatus?: 'Published' | 'Draft';
+  image?: string;
 }

@@ -1,3 +1,5 @@
+import { api } from './backend';
+
 export type KYCStatus = 'Unverified' | 'Pending' | 'Verified' | 'Rejected';
 
 export interface OrganizerKYC {
@@ -48,4 +50,49 @@ export function listAllKYC(): OrganizerKYC[] {
   const raw = window.localStorage.getItem(KYC_KEY);
   if (!raw) return [];
   try { return JSON.parse(raw) as OrganizerKYC[]; } catch { return []; }
+}
+
+interface BackendKyc {
+  businessName: string;
+  phoneNumber: string;
+  nationalId: string;
+  status: string;
+  submittedAt?: string;
+}
+
+function toKyc(userId: string, remote: BackendKyc): OrganizerKYC {
+  return {
+    userId,
+    businessName: remote.businessName,
+    phoneNumber: remote.phoneNumber,
+    nationalId: remote.nationalId,
+    status: remote.status as KYCStatus,
+    submittedAt: remote.submittedAt,
+  };
+}
+
+// The backend keeps the organizer's details. This copies them into the browser, so the
+// route guards (which read getKYC) work without waiting for the network.
+export async function syncKyc(userId: string): Promise<OrganizerKYC | null> {
+  const remote = await api<BackendKyc | null>('/organizers/me/kyc');
+  if (!remote) {
+    if (hasStorage()) {
+      const kept = listAllKYC().filter((k) => k.userId !== userId);
+      window.localStorage.setItem(KYC_KEY, JSON.stringify(kept));
+    }
+    return null;
+  }
+  const kyc = toKyc(userId, remote);
+  saveKYC(kyc);
+  return kyc;
+}
+
+export async function submitKyc(
+  userId: string,
+  input: { businessName: string; phoneNumber: string; nationalId: string },
+): Promise<OrganizerKYC> {
+  const remote = await api<BackendKyc>('/organizers/me/kyc', { method: 'PUT', body: input });
+  const kyc = toKyc(userId, remote);
+  saveKYC(kyc);
+  return kyc;
 }

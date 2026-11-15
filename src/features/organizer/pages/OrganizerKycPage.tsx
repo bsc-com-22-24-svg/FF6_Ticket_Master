@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../../authentication'
-import { getKYC, saveKYC } from '../../../lib/verification'
+import { getKYC, submitKyc } from '../../../lib/verification'
 
 // Shown to an organizer the first time they log in. The details are saved and accepted
 // immediately: there is no admin review step.
@@ -14,24 +14,30 @@ export function OrganizerKycPage() {
   const [phoneNumber, setPhoneNumber] = useState(existing?.phoneNumber ?? '')
   const [nationalId, setNationalId] = useState(existing?.nationalId ?? '')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
   if (!user) return null
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!user) return
+    if (!user || saving) return
     if (!businessName.trim()) return setError('Enter your business or organization name.')
     if (!/^[+\d][\d\s-]{6,}$/.test(phoneNumber.trim())) return setError('Enter a valid phone number, for example +265 999 000 000.')
     if (nationalId.trim().length < 5) return setError('Enter your national ID number.')
-    saveKYC({
-      userId: user.id,
-      businessName: businessName.trim(),
-      phoneNumber: phoneNumber.trim(),
-      nationalId: nationalId.trim(),
-      status: 'Verified',
-      submittedAt: new Date().toISOString(),
-    })
-    void navigate({ to: '/organizer/dashboard' })
+    setError('')
+    setSaving(true)
+    try {
+      await submitKyc(user.id, {
+        businessName: businessName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        nationalId: nationalId.trim(),
+      })
+      void navigate({ to: '/organizer/dashboard' })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not save your details. Try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const field = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 focus:border-navy focus:outline-none focus:ring-2 focus:ring-navy/20'
@@ -61,10 +67,12 @@ export function OrganizerKycPage() {
           <input className={field} value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="Your national ID" />
         </label>
 
-        <button type="submit" className="mt-6 w-full rounded-lg bg-navy px-4 py-3 font-semibold text-white hover:bg-navy-dark">
-          Save and continue
+        <button type="submit" disabled={saving} className="mt-6 w-full rounded-lg bg-navy px-4 py-3 font-semibold text-white hover:bg-navy-dark disabled:opacity-60">
+          {saving ? 'Saving…' : 'Save and continue'}
         </button>
       </form>
     </div>
   )
 }
+
+

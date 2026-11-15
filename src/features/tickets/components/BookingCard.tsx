@@ -10,8 +10,7 @@ function formatDate(iso: string) {
 }
 
 export function BookingCard({ booking }: { booking: Booking }) {
-  const statusClass =
-    booking.status === 'confirmed' ? styles.confirmed : styles.cancelled;
+  const statusClass = styles[booking.status]
 
   return (
     <article className={styles.card}>
@@ -23,13 +22,11 @@ export function BookingCard({ booking }: { booking: Booking }) {
         <p className={styles.meta}>
           {booking.id} · {booking.quantity} ticket{booking.quantity > 1 ? 's' : ''}
         </p>
-        <p className={styles.meta}>
-          Subtotal MK {booking.subtotal.toLocaleString()} · Service fee MK{' '}
-          {booking.serviceFee.toLocaleString()}
-        </p>
       </div>
       <div className={styles.side}>
-        <strong className={styles.total}>MK {booking.total.toLocaleString()}</strong>
+        <strong className={styles.total}>
+          {booking.total === undefined ? 'Total unavailable' : `MK ${booking.total.toLocaleString()}`}
+        </strong>
         <span className={`${styles.badge} ${statusClass}`}>{booking.status}</span>
       </div>
     </article>

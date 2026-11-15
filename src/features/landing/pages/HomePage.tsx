@@ -4,7 +4,6 @@ import HeroSlider from '../components/HeroSlider'
 import About from '../components/About'
 import EventsSection from '../components/EventsSection'
 import Organizers from '../components/Organizers'
-import Testimonials from '../components/Testimonials'
 import Contact from '../components/Contact'
 
 export default function HomePage() {
@@ -28,7 +27,6 @@ export default function HomePage() {
       <About />
       <EventsSection filters={filters} />
       <Organizers />
-      <Testimonials />
       <Contact />
     </>
   )

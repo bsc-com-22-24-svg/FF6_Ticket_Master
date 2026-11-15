@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../../lib/backend', () => ({ USE_BACKEND: true, api: vi.fn() }))
+vi.mock('../../../lib/backend', () => ({ api: vi.fn() }))
 vi.mock('../../../lib/backendTickets', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/backendTickets')>()
   return { ...actual, validateBackendTicket: vi.fn() }

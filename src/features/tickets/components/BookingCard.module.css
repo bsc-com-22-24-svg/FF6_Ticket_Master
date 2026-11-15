@@ -56,6 +56,16 @@
   color: #b91c1c;
 }
 
+.pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 @media (max-width: 480px) {
   .card {
     flex-direction: column;

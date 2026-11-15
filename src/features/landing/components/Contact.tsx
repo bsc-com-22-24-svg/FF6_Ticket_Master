@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
 import { Mail, MapPin, Phone, Check } from 'lucide-react'
 import Reveal from '../../../components/Reveal'
+import { api } from '../../../lib/backend'
 
 const details = [
   { icon: MapPin, text: 'Lilongwe, Central Region, Malawi' },
@@ -9,10 +10,44 @@ const details = [
 ]
 
 const inputStyle = 'w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-navy'
+const emptyForm = { name: '', email: '', subject: '', message: '', website: '' }
 
-// Contact section. The form only shows a thank you message (there is no backend yet)
+// Contact section. The message is saved by the backend (POST /contact).
 export default function Contact() {
   const [sent, setSent] = useState(false)
+  const [form, setForm] = useState(emptyForm)
+  const [error, setError] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+
+  const set = (key: keyof typeof emptyForm) => (e: { target: { value: string } }) =>
+    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (form.name.trim().length < 2) return setError('Enter your name.')
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return setError('Enter a valid email address.')
+    if (form.message.trim().length < 5) return setError('Write a message of at least 5 characters.')
+    setSending(true)
+    try {
+      const subject = form.subject.trim()
+      await api('/contact', {
+        method: 'POST',
+        body: {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          message: subject ? `${subject}\n\n${form.message.trim()}` : form.message.trim(),
+          website: form.website,
+        },
+      })
+      setForm(emptyForm)
+      setSent(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send your message.')
+    } finally {
+      setSending(false)
+    }
+  }
 
   return (
     <section id="contact" className="py-20">
@@ -40,15 +75,26 @@ export default function Contact() {
               <button onClick={() => setSent(false)} className="mt-6 font-semibold text-navy">Send another message</button>
             </div>
           ) : (
-            <div className="space-y-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl sm:p-8">
+            <form onSubmit={submit} noValidate className="space-y-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl sm:p-8">
               <div className="grid gap-4 sm:grid-cols-2">
-                <input placeholder="Your name" className={inputStyle} />
-                <input type="email" placeholder="Email address" className={inputStyle} />
+                <input placeholder="Your name" aria-label="Your name" value={form.name} onChange={set('name')} className={inputStyle} />
+                <input type="email" placeholder="Email address" aria-label="Email address" value={form.email} onChange={set('email')} className={inputStyle} />
               </div>
-              <input placeholder="Subject" className={inputStyle} />
-              <textarea rows={5} placeholder="Your message" className={inputStyle} />
-              <button onClick={() => setSent(true)} className="w-full rounded-xl bg-navy py-3 font-semibold text-white hover:bg-navy-dark">Send message</button>
-            </div>
+              <input placeholder="Subject" aria-label="Subject" value={form.subject} onChange={set('subject')} className={inputStyle} />
+              <textarea rows={5} placeholder="Your message" aria-label="Your message" value={form.message} onChange={set('message')} className={inputStyle} />
+              <input
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={form.website}
+                onChange={set('website')}
+                style={{ position: 'absolute', left: '-9999px', height: 0, width: 0, opacity: 0 }}
+              />
+              {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+              <button type="submit" disabled={sending} className="w-full rounded-xl bg-navy py-3 font-semibold text-white hover:bg-navy-dark disabled:opacity-60">
+                {sending ? 'Sending...' : 'Send message'}
+              </button>
+            </form>
           )}
         </Reveal>
       </div>

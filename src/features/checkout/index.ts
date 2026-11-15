@@ -3,7 +3,7 @@ export { CheckoutPage } from './pages/CheckoutPage';
 export { PaymentReturnPage } from './pages/PaymentReturnPage';
 export { useCheckout, CheckoutError } from './hooks/useCheckout'
 export { calculateTotals, formatKwacha } from './format'
-export { CHECKOUT_EVENT, CHECKOUT_TICKET_TYPES, SERVICE_FEE } from './mockData'
+export { SERVICE_FEE } from './config'
 export type {
   CheckoutEvent,
   CheckoutInput,
