@@ -61,19 +61,27 @@ export function totalCapacity(ticketTypes: NewTicketType[]): number {
 
 export async function uploadEventImage(file: File): Promise<string> {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    throw new Error('The image must be a JPG, PNG or WEBP file')
+    throw new Error('Please choose a JPG, PNG or WEBP file.')
   }
-  const body = new FormData()
-  body.append('file', file)
+
+  const form = new FormData()
+  form.append('file', file)
   const headers: Record<string, string> = {}
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
-  const response = await fetch(`${API}/events/upload-image`, { method: 'POST', headers, body })
-  let result: { imageUrl?: unknown; message?: unknown } = {}
-  try { result = await response.json() } catch { /* use fallback below */ }
-  if (!response.ok) throw new Error(typeof result.message === 'string' ? result.message : `Image upload failed (${response.status})`)
-  if (typeof result.imageUrl !== 'string') throw new Error('The backend did not return the uploaded image URL')
-  return result.imageUrl
+
+  const response = await fetch(`${API}/events/upload-image`, { method: 'POST', headers, body: form })
+  let data: { imageUrl?: unknown; message?: unknown } = {}
+  try {
+    data = await response.json()
+  } catch {
+    // Report a useful fallback if the server returns a non-JSON response.
+  }
+  if (!response.ok) {
+    throw new Error(typeof data.message === 'string' ? data.message : `Image upload failed (${response.status}).`)
+  }
+  if (typeof data.imageUrl !== 'string') throw new Error('The backend did not return the uploaded image URL.')
+  return data.imageUrl
 }
 
 export function restoreOrganizerEvent(id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> {

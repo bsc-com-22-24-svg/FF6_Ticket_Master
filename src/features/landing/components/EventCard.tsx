@@ -1,9 +1,25 @@
 import { Link } from '@tanstack/react-router'
 import { Calendar, MapPin } from 'lucide-react'
-import { fromPrice, type Event } from '../../../types/event'
+import { remainingSeats, type Event, type TicketType } from '../../../types/event'
 
 interface EventCardProps {
   event: Event
+}
+
+const MAX_SHOWN = 3
+
+function money(amount: number): string {
+  return amount === 0 ? 'Free' : `MK ${amount.toLocaleString()}`
+}
+
+// The price line: one price, or "From X" when the ticket types differ, so nobody is surprised.
+function priceSummary(types: TicketType[]): { label: string; value: string } {
+  if (types.length === 0) return { label: '', value: 'Tickets soon' }
+  const prices = types.map((type) => type.price)
+  const low = Math.min(...prices)
+  const high = Math.max(...prices)
+  if (low === high) return { label: '', value: money(low) }
+  return { label: 'From', value: money(low) }
 }
 
 export default function EventCard({ event }: EventCardProps) {
@@ -12,8 +28,10 @@ export default function EventCard({ event }: EventCardProps) {
     month: 'short',
     year: 'numeric',
   })
-  const from = fromPrice(event)
-  const price = from === 0 ? 'Free' : `MK ${from.toLocaleString()}`
+  const types = [...event.ticketTypes].sort((a, b) => a.price - b.price)
+  const shown = types.slice(0, MAX_SHOWN)
+  const hidden = types.length - shown.length
+  const summary = priceSummary(types)
 
   return (
     <Link
@@ -42,8 +60,31 @@ export default function EventCard({ event }: EventCardProps) {
         <p className="mt-1 flex items-center gap-2 text-sm">
           <MapPin size={15} /> {event.venue}, {event.city}
         </p>
+
+        {shown.length > 0 && (
+          <ul className="mt-4 space-y-1.5 border-t pt-4" aria-label="Ticket types">
+            {shown.map((type) => {
+              const soldOut = remainingSeats(type) === 0
+              return (
+                <li key={type.id} className="flex items-center justify-between gap-3 text-sm">
+                  <span className={soldOut ? 'text-slate-400 line-through' : 'font-medium text-slate-700'}>
+                    {type.name}
+                  </span>
+                  <span className={soldOut ? 'text-xs font-semibold text-red-600' : 'font-semibold text-navy'}>
+                    {soldOut ? 'Sold out' : money(type.price)}
+                  </span>
+                </li>
+              )
+            })}
+            {hidden > 0 && <li className="text-xs font-semibold text-slate-500">+{hidden} more ticket {hidden === 1 ? 'type' : 'types'}</li>}
+          </ul>
+        )}
+
         <div className="mt-4 flex items-center justify-between border-t pt-4">
-          <span className="text-lg font-extrabold text-navy">{price}</span>
+          <span className="text-lg font-extrabold text-navy">
+            {summary.label && <span className="mr-1 text-xs font-semibold uppercase text-slate-500">{summary.label}</span>}
+            {summary.value}
+          </span>
           <span className="text-sm font-semibold text-navy">View event →</span>
         </div>
       </div>

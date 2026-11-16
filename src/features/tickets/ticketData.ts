@@ -58,15 +58,18 @@ export function toTicketView(record: TicketRecord): Ticket {
 export async function fetchTickets(userId?: string, userName = ''): Promise<Ticket[]> {
   if (!userId) return []
 
-  return (await fetchTicketRecords(userId, userName)).map(toTicketView)
+  const records = await fetchTicketRecords(userId, userName)
+  return records.map(toTicketView)
 }
 
 export async function fetchTicketRecords(userId: string, userName = ''): Promise<TicketRecord[]> {
   if (!userId) return []
+
   const records = await api<BackendHistoryTicket[]>('/tickets/mine')
 
   return records.map((record) => {
     const start = new Date(record.event.startAt)
+
     return {
       id: record.ticketNumber,
       userId,

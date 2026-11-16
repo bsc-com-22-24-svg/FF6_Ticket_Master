@@ -4,7 +4,6 @@ import { api } from '../../../lib/backend'
 import { useToast } from '../../toast'
 import { StatCard } from '../../organizer/components/StatCard'
 import { UserManagement } from '../components/UserManagement'
-import { AuditLogTab } from '../components/AuditLogTab'
 
 interface AdminEvent {
   id: string
@@ -16,17 +15,17 @@ interface AdminEvent {
 // The OpenAPI spec says GET /events/mine returns all of the caller's own events
 // for an organizer. For an admin, the backend returns all events across organizers
 // (this is the "admin sees everything" behaviour via the /mine endpoint).
-async function fetchAllEvents(): Promise<AdminEvent[]> {
+async function fetchPages(base: string): Promise<AdminEvent[]> {
   const all: AdminEvent[] = []
   let page = 1
   let totalPages = 1
   do {
-    const res = await api<any>(`/events/mine?page=${page}&limit=50`)
+    const res = await api<any>(`${base}?page=${page}&limit=50`)
     const list: any[] = Array.isArray(res) ? res : (res?.data || [])
     all.push(...list.map((e) => ({
       id: String(e.id),
       title: e.title || 'Untitled',
-      organizer: e.organizerName || e.organizer || '',
+      organizer: e.organizerName || e.organizer?.name || (typeof e.organizer === 'string' ? e.organizer : ''),
       status: String(e.status || 'PUBLISHED').toUpperCase(),
     })))
     const meta = res?.meta
@@ -36,9 +35,18 @@ async function fetchAllEvents(): Promise<AdminEvent[]> {
   return all
 }
 
+// The admin's own events (GET /events/mine) plus every published event, so the list is
+// useful even when the backend only returns the caller's own events.
+async function fetchAllEvents(): Promise<AdminEvent[]> {
+  const own = await fetchPages('/events/mine')
+  const published = await fetchPages('/events').catch(() => [] as AdminEvent[])
+  const seen = new Set(own.map((e) => e.id))
+  return [...own, ...published.filter((e) => !seen.has(e.id))]
+}
+
 export function AdminDashboardPage() {
   const { showToast } = useToast()
-  const [tab, setTab] = useState<'events' | 'users' | 'audit'>('events')
+  const [tab, setTab] = useState<'events' | 'users'>('events')
   const [events, setEvents] = useState<AdminEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -131,17 +139,9 @@ export function AdminDashboardPage() {
           >
             User Management
           </button>
-          <button
-            onClick={() => setTab('audit')}
-            className={`pb-3 font-semibold text-sm ${tab === 'audit' ? 'border-b-2 border-navy text-navy' : 'text-slate-500'}`}
-          >
-            Audit Trail
-          </button>
         </div>
 
         {tab === 'users' && <UserManagement />}
-
-        {tab === 'audit' && <AuditLogTab />}
 
         {tab === 'events' && (
           <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">

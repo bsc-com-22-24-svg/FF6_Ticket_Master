@@ -1,6 +1,3 @@
-// The real API is the default. Tests and local mock demos can set VITE_USE_BACKEND=false.
-export const USE_BACKEND = import.meta.env.VITE_USE_BACKEND !== 'false'
-
 // The dev server forwards /be/* to the backend (see vite.config.ts), so the browser
 // never calls port 3000 directly and there is no CORS problem.
 export const API = '/be'
