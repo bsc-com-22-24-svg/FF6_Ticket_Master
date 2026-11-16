@@ -130,6 +130,7 @@ export function LoginPage() {
   // Server-side problems (e.g. wrong password) are announced as an alert
   const alertMessage = submit.error?.message ?? null;
   const isPending = submit.isPending;
+  const sessionExpired = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('expired') === '1';
 
   const title = mode === 'login' ? 'Welcome back' : 'Create your account';
   const subtitle = mode === 'login'
@@ -255,6 +256,7 @@ export function LoginPage() {
             }
 
 
+            {sessionExpired && !alertMessage && <p role="status" className={styles.error}>Your session expired. Log in again.</p>}
             {alertMessage && <p role="alert" className={styles.error}>{alertMessage}</p>}
 
             <button type="submit" disabled={isPending} className={styles.submit}>

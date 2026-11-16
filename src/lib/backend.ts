@@ -54,6 +54,14 @@ export async function api<T>(path: string, options: { method?: string; body?: un
   } catch {
     data = null
   }
+  if (response.status === 401 && token && !path.startsWith('/auth/')) {
+    // the saved login has expired: clear it and ask the user to sign in again
+    setToken(null)
+    try { localStorage.removeItem('tm_user') } catch { /* storage unavailable */ }
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.assign('/login?expired=1')
+    }
+  }
   if (!response.ok) {
     const error = new Error(messageFrom(response.status, data)) as Error & { status: number }
     error.status = response.status

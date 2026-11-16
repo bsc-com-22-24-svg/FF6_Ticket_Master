@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useLocation } from '@tanstack/react-router'
 import { Menu, X } from 'lucide-react'
 import { headerLinks } from '../routes/links'
@@ -8,6 +8,8 @@ import { useAuth } from '../features/authentication/useAuth'
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLElement>(null)
   const location = useLocation()
 
   // Close menu on route change
@@ -24,10 +26,18 @@ export default function Header() {
   // Close menu on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false)
+      if (e.key === 'Escape') {
+        setMenuOpen(false)
+        toggleRef.current?.focus() // give focus back to the button that opened the menu
+      }
     }
     if (menuOpen) document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [menuOpen])
+
+  // Move focus into the menu when it opens
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.querySelector<HTMLElement>('a, button')?.focus()
   }, [menuOpen])
 
   const { user, logout } = useAuth()
@@ -78,6 +88,7 @@ export default function Header() {
 
         {/* Mobile Toggle */}
         <button 
+          ref={toggleRef}
           aria-label={menuOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
@@ -90,7 +101,7 @@ export default function Header() {
 
       {/* Mobile Nav */}
       {menuOpen && (
-        <nav id="mobile-menu" aria-label="Mobile navigation" className="flex flex-col border-t bg-white px-4 pb-4 lg:hidden">
+        <nav id="mobile-menu" ref={menuRef} aria-label="Mobile navigation" className="flex flex-col border-t bg-white px-4 pb-4 lg:hidden">
           {visibleLinks.map((item) => (
             <SiteLink key={item.label} item={item} onClick={closeMenu} className="rounded-lg px-3 py-3 font-medium hover:bg-navy-50" />
           ))}
