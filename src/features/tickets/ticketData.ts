@@ -58,26 +58,30 @@ export function toTicketView(record: TicketRecord): Ticket {
 export async function fetchTickets(userId?: string, userName = ''): Promise<Ticket[]> {
   if (!userId) return []
 
+  return (await fetchTicketRecords(userId, userName)).map(toTicketView)
+}
+
+export async function fetchTicketRecords(userId: string, userName = ''): Promise<TicketRecord[]> {
+  if (!userId) return []
   const records = await api<BackendHistoryTicket[]>('/tickets/mine')
 
   return records.map((record) => {
     const start = new Date(record.event.startAt)
-    const status = TICKET_STATUS[record.status]
-
     return {
       id: record.ticketNumber,
-      eventTitle: record.event.title,
-      venue: record.venue.name,
-      city: record.venue.city ?? record.venue.location ?? '',
+      userId,
+      eventId: record.eventId,
+      eventName: record.event.title,
       date: start.toLocaleDateString('en-CA'),
       time: start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      venue: record.venue.name,
+      city: record.venue.city ?? record.venue.location ?? '',
       ticketType: record.ticketType.name,
-      seat: `${record.ticketType.name} Admission`,
       price: Number(record.ticketType.price),
       holder: userName,
-      status,
-      purchasedAt: record.purchasedAt ?? record.issuedAt,
+      status: TICKET_STATUS[record.status],
+      createdAt: record.purchasedAt ?? record.issuedAt,
       qrCodeDataUrl: record.qrCodeDataUrl,
-    } satisfies Ticket
+    } satisfies TicketRecord
   })
 }

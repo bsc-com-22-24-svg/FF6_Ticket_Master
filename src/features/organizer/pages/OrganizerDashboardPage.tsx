@@ -8,7 +8,7 @@ import { SearchBar } from '../components/searchBar';
 import { EventTable } from '../components/EventTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
-import { StaffTable } from '../components/staffTable';
+import { StaffRoster } from '../components/StaffRoster';
 import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
@@ -33,7 +33,6 @@ export const OrganizerDashboardPage: React.FC = () => {
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
   const {
-    staff,
     totalStaff,
     activeStaff,
     disabledStaff,
@@ -149,7 +148,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                 )}
                 {staffLoading
                   ? <p className="view-subtitle">Loading your staff...</p>
-                  : <StaffTable staff={staff} />}
+                  : <StaffRoster />}
               </>
             )}
 

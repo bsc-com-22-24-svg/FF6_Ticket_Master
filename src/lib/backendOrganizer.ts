@@ -1,4 +1,5 @@
-import { api } from './backend'
+import { API, api, getToken } from './backend'
+import { restoreEvent } from './backendEvents'
 import type { EventItem } from '../features/organizer/Data/Events'
 
 // Organizer side of the backend: create, publish, cancel and list the organizer's own events.
@@ -56,6 +57,27 @@ export function formatEventDate(iso: string): string {
 // The backend wants the total capacity as well. It is simply the sum of the ticket types.
 export function totalCapacity(ticketTypes: NewTicketType[]): number {
   return ticketTypes.reduce((sum, type) => sum + type.quantity, 0)
+}
+
+export async function uploadEventImage(file: File): Promise<string> {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('The image must be a JPG, PNG or WEBP file')
+  }
+  const body = new FormData()
+  body.append('file', file)
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+  const response = await fetch(`${API}/events/upload-image`, { method: 'POST', headers, body })
+  let result: { imageUrl?: unknown; message?: unknown } = {}
+  try { result = await response.json() } catch { /* use fallback below */ }
+  if (!response.ok) throw new Error(typeof result.message === 'string' ? result.message : `Image upload failed (${response.status})`)
+  if (typeof result.imageUrl !== 'string') throw new Error('The backend did not return the uploaded image URL')
+  return result.imageUrl
+}
+
+export function restoreOrganizerEvent(id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> {
+  return restoreEvent(id, status === 'PUBLISHED' ? 'Published' : 'Draft')
 }
 
 async function soldFor(eventId: string): Promise<number> {
