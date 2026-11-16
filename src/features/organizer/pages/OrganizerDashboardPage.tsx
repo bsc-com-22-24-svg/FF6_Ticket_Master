@@ -32,7 +32,6 @@ export const OrganizerDashboardPage: React.FC = () => {
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
   const {
-    staff,
     totalStaff,
     activeStaff,
     disabledStaff,
