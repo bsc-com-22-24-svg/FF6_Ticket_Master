@@ -69,7 +69,7 @@ export async function listUsers(): Promise<AdminUser[]> {
 }
 
 export function setUserActive(userId: string, isActive: boolean): Promise<unknown> {
-  return api(`/users/${encodeURIComponent(userId)}/active`, { method: 'PATCH', body: { isActive } })
+  return api(`/users/${encodeURIComponent(userId)}/status`, { method: 'PATCH', body: { isActive } })
 }
 
 // The backend deactivates the account and keeps the tickets and orders of that user.

@@ -8,7 +8,6 @@ import { SearchBar } from '../components/searchBar';
 import { EventTable } from '../components/EventTable';
 import { AttendeeTable } from '../components/Attendee';
 import { SalesChart } from '../components/SalesChart';
-import { StaffTable } from '../components/staffTable';
 import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
@@ -147,9 +146,25 @@ export const OrganizerDashboardPage: React.FC = () => {
                 {staffError && !staffUnsupported && (
                   <p role="alert" className="form-error-banner">{staffError}</p>
                 )}
-                {staffLoading
-                  ? <p className="view-subtitle">Loading your staff...</p>
-                  : <StaffTable staff={staff} />}
+                {staffLoading ? <p className="view-subtitle">Loading your staff...</p> : (
+                  <div className="table-responsive">
+                    <table className="dashboard-table">
+                      <thead><tr><th>Name</th><th>Email</th><th>Assigned events</th><th>Status</th></tr></thead>
+                      <tbody>
+                        {staff.length === 0 ? (
+                          <tr><td colSpan={4}>No staff accounts yet.</td></tr>
+                        ) : staff.map((member) => (
+                          <tr key={member.staffId}>
+                            <td>{member.name}</td>
+                            <td>{member.email}</td>
+                            <td>{member.events.map((event) => event.title).join(', ') || 'None'}</td>
+                            <td>{member.isActive ? 'Active' : 'Disabled'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </>
             )}
 
