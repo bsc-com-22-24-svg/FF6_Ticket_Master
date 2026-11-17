@@ -1,98 +1,73 @@
-import { api } from './backend';
+import { api } from './backend'
 
-export type KYCStatus = 'Unverified' | 'Pending' | 'Verified' | 'Rejected';
+export type KYCStatus = 'NOT_SUBMITTED' | 'PENDING' | 'APPROVED' | 'REJECTED' | string
 
 export interface OrganizerKYC {
-  userId: string;
-  businessName: string;
-  phoneNumber: string;
-  nationalId: string;
-  status: KYCStatus;
-  submittedAt?: string;
+  id?: string
+  organizerId?: string
+  businessName: string
+  registrationNumber?: string | null
+  documentType: string
+  documentUrl: string
+  status: KYCStatus
+  notes?: string | null
+  submittedAt?: string
+  reviewedAt?: string | null
 }
 
-const KYC_KEY = 'tm.ticket-master.kyc';
-
-function hasStorage(): boolean {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+export interface SubmitKycInput {
+  businessName: string
+  registrationNumber?: string
+  documentType: string
+  documentUrl: string
 }
 
-export function getKYC(userId: string): OrganizerKYC | null {
-  if (!hasStorage()) return null;
-  const raw = window.localStorage.getItem(KYC_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as OrganizerKYC[];
-    return parsed.find((k) => k.userId === userId) ?? null;
-  } catch {
-    return null;
-  }
+function unwrapKyc(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value
+  const record = value as Record<string, unknown>
+  if ('kyc' in record) return record.kyc
+  if ('submission' in record) return record.submission
+  if ('data' in record && record.data && typeof record.data === 'object') return unwrapKyc(record.data)
+  return value
 }
 
-export function saveKYC(data: OrganizerKYC): void {
-  if (!hasStorage()) return;
-  const raw = window.localStorage.getItem(KYC_KEY);
-  let parsed: OrganizerKYC[] = [];
-  if (raw) {
-    try { parsed = JSON.parse(raw) as OrganizerKYC[]; } catch {}
-  }
-  const existingIndex = parsed.findIndex((k) => k.userId === data.userId);
-  if (existingIndex >= 0) {
-    parsed[existingIndex] = data;
-  } else {
-    parsed.push(data);
-  }
-  window.localStorage.setItem(KYC_KEY, JSON.stringify(parsed));
-}
+function toKyc(value: unknown): OrganizerKYC | null {
+  const unwrapped = unwrapKyc(value)
+  if (!unwrapped || typeof unwrapped !== 'object') return null
+  const raw = unwrapped as Record<string, unknown>
+  if (typeof raw.businessName !== 'string') return null
 
-export function listAllKYC(): OrganizerKYC[] {
-  if (!hasStorage()) return [];
-  const raw = window.localStorage.getItem(KYC_KEY);
-  if (!raw) return [];
-  try { return JSON.parse(raw) as OrganizerKYC[]; } catch { return []; }
-}
-
-interface BackendKyc {
-  businessName: string;
-  phoneNumber: string;
-  nationalId: string;
-  status: string;
-  submittedAt?: string;
-}
-
-function toKyc(userId: string, remote: BackendKyc): OrganizerKYC {
   return {
-    userId,
-    businessName: remote.businessName,
-    phoneNumber: remote.phoneNumber,
-    nationalId: remote.nationalId,
-    status: remote.status as KYCStatus,
-    submittedAt: remote.submittedAt,
-  };
-}
-
-// The backend keeps the organizer's details. This copies them into the browser, so the
-// route guards (which read getKYC) work without waiting for the network.
-export async function syncKyc(userId: string): Promise<OrganizerKYC | null> {
-  const remote = await api<BackendKyc | null>('/organizers/me/kyc');
-  if (!remote) {
-    if (hasStorage()) {
-      const kept = listAllKYC().filter((k) => k.userId !== userId);
-      window.localStorage.setItem(KYC_KEY, JSON.stringify(kept));
-    }
-    return null;
+    ...(typeof raw.id === 'string' || typeof raw.id === 'number' ? { id: String(raw.id) } : {}),
+    ...(typeof raw.organizerId === 'string' || typeof raw.organizerId === 'number'
+      ? { organizerId: String(raw.organizerId) }
+      : {}),
+    businessName: raw.businessName,
+    registrationNumber: typeof raw.registrationNumber === 'string' ? raw.registrationNumber : null,
+    documentType: typeof raw.documentType === 'string' ? raw.documentType : '',
+    documentUrl: typeof raw.documentUrl === 'string' ? raw.documentUrl : '',
+    status: typeof raw.status === 'string' ? raw.status.toUpperCase() : 'PENDING',
+    notes: typeof raw.notes === 'string' ? raw.notes : null,
+    submittedAt: typeof raw.submittedAt === 'string' ? raw.submittedAt : undefined,
+    reviewedAt: typeof raw.reviewedAt === 'string' ? raw.reviewedAt : null,
   }
-  const kyc = toKyc(userId, remote);
-  saveKYC(kyc);
-  return kyc;
 }
 
-export async function submitKyc(
-  userId: string,
-  input: { businessName: string; phoneNumber: string; nationalId: string },
-): Promise<OrganizerKYC> {
-  const remote = await api<BackendKyc>('/organizers/me/kyc', { method: 'PUT', body: input });
-  const kyc = toKyc(userId, remote);
-  saveKYC(kyc);
-  return kyc;
+export async function getMyKyc(): Promise<OrganizerKYC | null> {
+  return toKyc(await api<unknown>('/organizers/me/kyc'))
+}
+
+export async function submitKyc(input: SubmitKycInput): Promise<OrganizerKYC> {
+  const result = await api<unknown>('/organizers/me/kyc', {
+    method: 'POST',
+    body: {
+      businessName: input.businessName.trim(),
+      ...(input.registrationNumber?.trim() ? { registrationNumber: input.registrationNumber.trim() } : {}),
+      documentType: input.documentType,
+      documentUrl: input.documentUrl.trim(),
+    },
+  })
+  const kyc = toKyc(result)
+  if (!kyc) throw new Error('The backend returned an invalid KYC submission.')
+  return kyc
 }

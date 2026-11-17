@@ -523,7 +523,7 @@ hr {
 @layer base {
   *, ::after, ::before { border-color: #e2e8f0; }
   html { scroll-behavior: smooth; font-size: 16px; }
-  body { background: #ffffff; color: #475569; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-width: 320px; overflow-x: hidden; background: #ffffff; color: #475569; font-family: Inter, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-font-smoothing: antialiased; }
   h1, h2, h3, h4 { color: #0a1f47; }
   button { cursor: pointer; }
 }
@@ -538,6 +538,29 @@ section[id] { scroll-margin-top: 4rem; }
 /* hero text animation */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 .fade-up { animation: fadeUp .9s ease both; }
+
+@media (max-width: 640px) {
+  .g2,
+  .g3,
+  .g4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .row {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .row > * { min-width: 0; }
+  .split { gap: 16px; }
+  .pg { padding: 16px 12px; min-height: 0; }
+  .top { padding: 10px 12px; gap: 10px; }
+  .cam { height: min(62svh, 380px); min-height: 240px; }
+
+  input,
+  select,
+  textarea { font-size: 16px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }

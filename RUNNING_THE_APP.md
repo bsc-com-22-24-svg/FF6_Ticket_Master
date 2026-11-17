@@ -9,6 +9,29 @@ This guide runs the full stack locally:
 
 The backend image contains the application only. PostgreSQL, the schema, and the data are separate.
 
+## Start the backend and database with Compose
+
+From the repository root, create the local environment files once:
+
+```bash
+cp .env.db.example .env.db
+cp .env.backend.example .env.backend
+```
+
+Set the same `POSTGRES_PASSWORD` in `.env.db` and `DB_PASSWORD` in `.env.backend`,
+then set a private `JWT_SECRET` of at least 32 characters. Start both services:
+
+```bash
+docker volume create ticket-db-data
+docker compose up -d
+docker compose ps
+docker compose logs -f
+```
+
+The frontend can reach the API at `http://localhost:3000` through its `/be` proxy.
+Use `docker compose down` to stop both services. The `ticket-db-data` volume
+keeps the database when the containers stop.
+
 ## Requirements
 
 - Node.js and npm
@@ -126,7 +149,7 @@ docker run -d --name ticket-backend-app --network ticket-network \
   --workdir /tmp \
   --entrypoint node \
   -p 3000:3000 \
-  alicekayla/ticket-backend:1.3 \
+  alicekayla/ticket-backend:1.4 \
   /app/dist/main
 ```
 
@@ -207,7 +230,7 @@ Suggested flow:
 
 To test scanning, create a staff account from the organizer account and assign it to the event. Backend 1.3 requires both the staff account and the assignment; promoting a normal account to `CHECK_IN_STAFF` is not enough. Unassigned scans return `NOT_ASSIGNED`.
 
-The organizer **Staff Roster** tab and **Create or manage staff** page now use the backend 1.3 organizer-staff endpoints. The page keeps a warning banner because backend 1.2 does not support these routes. Use the UI to create staff, assign events, enable/disable staff, and remove staff. The equivalent API calls are shown below for reference.
+The organizer **Staff Roster** tab and **Create or manage staff** page use the organizer-staff endpoints. Use the UI to create staff, assign events, enable/disable staff, and remove staff. The equivalent API calls are shown below for reference.
 
 ```bash
 # Use the organizer's bearer token.

@@ -23,7 +23,7 @@ export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
-  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, restoreEvent, loading: evLoading, loadError: evError } = useEvents();
   const {
     attendees, totalAttendees, checkedInCount,
     search: atSearch, setSearch: setAtSearch,
@@ -32,6 +32,7 @@ export const OrganizerDashboardPage: React.FC = () => {
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
   const {
+    staff,
     totalStaff,
     activeStaff,
     disabledStaff,
@@ -67,6 +68,9 @@ export const OrganizerDashboardPage: React.FC = () => {
         </div>
 
         <nav className="sidebar-nav">
+          <Link to="/organizer/kyc" className="nav-link-btn">
+            <span className="nav-icon">🛡️</span> Organization Verification
+          </Link>
           <button className={`nav-link-btn ${currentTab === 'events' ? 'active' : ''}`} onClick={() => setCurrentTab('events')}>
             <span className="nav-icon">📅</span> My Events
           </button>
@@ -114,7 +118,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </select>
                 </div>
                 {evError && <div className="form-error-banner">{evError}</div>}
-                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
+                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} onRestore={restoreEvent} />}
               </>
             )}
 
@@ -127,10 +131,8 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </div>
                   <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
                 </div>
-                <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" style={{ marginBottom: 20 }}>
-                  Staff management uses the organizer-staff endpoints added in backend 1.3.
-                  If you are connected to backend 1.2, this section is not supported and the staff list will fail.
-                  Staff must be assigned to an event before they can scan.
+                <p role="status" className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900" style={{ marginBottom: 20 }}>
+                  Staff use the organizer staff tools to manage their accounts and event assignments. Assign a staff member to an event before they can scan.
                 </p>
                 <div className="metrics-grid">
                   <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
@@ -139,7 +141,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                 </div>
                 {staffUnsupported && (
                   <p role="alert" className="form-error-banner">
-                    The connected backend does not expose /organizers/me/staff. Start backend 1.3 and try again.
+                    The connected backend does not expose the organizer staff endpoints. Check that the configured backend image is up to date.
                   </p>
                 )}
                 {staffError && !staffUnsupported && (

@@ -694,3 +694,136 @@
 .dashboard-root .status-badge {
   white-space: nowrap;
 }
+
+@media (max-width: 760px) {
+  .dashboard-root {
+    display: block;
+    min-height: calc(100svh - 64px);
+  }
+
+  .dashboard-root .dashboard-sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .dashboard-root .sidebar-brand {
+    padding: 12px 16px;
+  }
+
+  .dashboard-root .user-profile-badge {
+    margin: 0;
+    padding: 8px 16px;
+  }
+
+  .dashboard-root .sidebar-nav {
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .dashboard-root .nav-link-btn {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    font-size: .85rem;
+  }
+
+  .dashboard-root .nav-link-btn.active {
+    border-bottom-color: #facc15;
+  }
+
+  .dashboard-viewport {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .page-content-wrapper {
+    padding: 20px 14px 28px;
+  }
+
+  .content-header {
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .view-title { font-size: 1.4rem; }
+  .view-subtitle { font-size: .88rem; }
+
+  .btn-primary-header {
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: .85rem;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    min-width: 0;
+    padding: 14px 12px;
+    gap: 8px;
+  }
+
+  .stat-title { font-size: .72rem; }
+  .stat-value { font-size: 1.45rem; overflow-wrap: anywhere; }
+  .stat-icon { font-size: 1.35rem; }
+
+  .filter-toolbar {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .toolbar-dropdown {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .dashboard-root .dashboard-table { min-width: 760px; }
+  .dashboard-root .attendee-table { min-width: 940px; }
+  .dashboard-root .dashboard-table th,
+  .dashboard-root .dashboard-table td { padding: 12px 14px; }
+
+  .dashboard-root .action-buttons {
+    justify-content: flex-start;
+  }
+
+  .dashboard-root .btn-action {
+    min-height: 40px;
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 390px) {
+  .dashboard-root .content-header {
+    flex-direction: column;
+  }
+
+  .dashboard-root .content-header .btn-primary-header {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dashboard-root .metrics-grid { gap: 8px; }
+  .dashboard-root .stat-card { padding: 12px 10px; }
+}

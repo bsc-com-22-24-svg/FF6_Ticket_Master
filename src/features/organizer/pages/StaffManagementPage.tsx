@@ -157,11 +157,9 @@ export function StaffManagementPage() {
 
         <div
           role="status"
-          className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
         >
-          <strong>Backend support:</strong> Staff management uses the organizer-staff endpoints
-          added in backend 1.3. If you are connected to backend 1.2, this section is not supported
-          and the staff list will fail. Staff must be assigned to an event before they can scan.
+          Staff management is connected to the backend. Assign staff to at least one event before they can scan tickets.
         </div>
 
         {notice && (
@@ -172,8 +170,7 @@ export function StaffManagementPage() {
 
         {unsupported && (
           <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            The connected backend does not expose `/organizers/me/staff`. Start backend 1.3 and
-            try again.
+            The connected backend does not expose the organizer staff endpoints. Check that the configured backend image is up to date.
           </div>
         )}
 
