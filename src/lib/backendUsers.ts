@@ -39,7 +39,8 @@ interface BackendUser {
 
 interface UsersPage {
   data: BackendUser[]
-  totalPages: number
+  totalPages?: number
+  meta?: { totalPages?: number }
 }
 
 function toAdminUser(user: BackendUser): AdminUser {
@@ -62,7 +63,7 @@ export async function listUsers(): Promise<AdminUser[]> {
   do {
     const result = await api<UsersPage>(`/users?page=${page}&limit=100`)
     users.push(...result.data.map(toAdminUser))
-    totalPages = result.totalPages
+    totalPages = result.meta?.totalPages ?? result.totalPages ?? 1
     page += 1
   } while (page <= totalPages && page <= 50)
   return users
@@ -82,8 +83,6 @@ export function createUser(input: {
   email: string
   password: string
   role: Role
-  organizerId?: string
-  actorPassword?: string
 }): Promise<unknown> {
   return api('/users', {
     method: 'POST',
@@ -92,24 +91,8 @@ export function createUser(input: {
       email: input.email.trim(),
       password: input.password,
       role: TO_BACKEND[input.role],
-      ...(input.organizerId ? { organizerId: input.organizerId } : {}),
-      ...(input.actorPassword ? { actorPassword: input.actorPassword } : {}),
     },
   })
-}
-
-export interface OrganizerKycView {
-  businessName: string
-  phoneNumber: string
-  status: string
-}
-
-export async function fetchOrganizerKyc(userId: string): Promise<OrganizerKycView | null> {
-  try {
-    return await api<OrganizerKycView | null>(`/organizers/${encodeURIComponent(userId)}/kyc`)
-  } catch {
-    return null
-  }
 }
 
 // ---------- organizer staff ----------
@@ -212,5 +195,30 @@ export interface AssignedEvent {
 }
 
 export function listMyAssignedEvents(): Promise<AssignedEvent[]> {
-  return api<AssignedEvent[]>('/staff/me/events')
+  return api<unknown>('/staff/me/events').then((response) => {
+    const rowsFrom = (value: unknown): unknown[] => {
+      if (Array.isArray(value)) return value
+      if (!value || typeof value !== 'object') return []
+      const envelope = value as Record<string, unknown>
+      for (const key of ['data', 'events', 'assignedEvents', 'assigned_events']) {
+        if (Array.isArray(envelope[key])) return envelope[key] as unknown[]
+      }
+      return []
+    }
+    const rows = rowsFrom(response)
+    return rows.flatMap((value) => {
+      if (!value || typeof value !== 'object') return []
+      const row = value as Record<string, unknown>
+      const event = row.event && typeof row.event === 'object'
+        ? row.event as Record<string, unknown>
+        : row
+      const id = event.id ?? event.eventId
+      if (id === undefined || id === null) return []
+      return [{
+        id: String(id),
+        title: String(event.title ?? 'Untitled event'),
+        venue: String(event.venue ?? ''),
+      }]
+    })
+  })
 }

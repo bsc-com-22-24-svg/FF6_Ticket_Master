@@ -6,22 +6,13 @@ import { CheckoutPage, PaymentReturnPage } from '../features/checkout';
 import { MyTicketsPage, BookingHistoryPage, TicketDetailPage } from '../features/tickets';
 import { ScannerPage } from '../features/validation';
 import { OrganizerDashboardPage, CreateEventRoute, StaffManagementPage } from '../features/organizer';
+import { OrganizerKycPage } from '../features/organizer/pages/OrganizerKycPage'
+import { EditEventPage } from '../features/organizer/pages/EditEventPage'
 import { AdminDashboardPage } from '../features/admin/pages/AdminDashboardPage'
 import { HomePage } from '../features/landing'
 import { validateEventSearch } from '../features/landing/filters';
 import NotFoundPage from '../components/NotFoundPage';
 import type { ComponentType } from 'react';
-
-function BackendFeatureNotice({ feature }: { feature: string }) {
-  return (
-    <main className="mx-auto min-h-[60vh] max-w-3xl px-4 py-20 sm:px-6">
-      <h1 className="text-3xl font-extrabold text-navy-dark">{feature} unavailable</h1>
-      <p role="status" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        The connected backend API does not document the endpoint this feature requires. No local or demo data is being shown or saved.
-      </p>
-    </main>
-  )
-}
 
 const rootRoute = createRootRoute({ component: AppLayout });
 
@@ -57,10 +48,10 @@ const routeTree = rootRoute.addChildren([
   page('/tickets', MyTicketsPage, requireAuth('customer')),         // <-- Added base tickets route
   page('/tickets/$ticketId', TicketDetailPage, requireAuth('customer')), // <-- Kept specific route
   page('/bookings', BookingHistoryPage, requireAuth('customer')),
-  page('/organizer/kyc', () => <BackendFeatureNotice feature="Organizer verification" />, requireAuth('organizer')),
+  page('/organizer/kyc', OrganizerKycPage, requireAuth('organizer')),
   page('/organizer/dashboard', OrganizerDashboardPage, requireAuth('organizer')),
   page('/organizer/events/new', CreateEventRoute, requireAuth('organizer')),
-  page('/organizer/events/$eventId/edit', () => <BackendFeatureNotice feature="Event editing" />, requireAuth('organizer')),
+  page('/organizer/events/$eventId/edit', EditEventPage, requireAuth('organizer')),
   page('/organizer/staff', StaffManagementPage, requireAuth('organizer')),
   page('/admin', AdminDashboardPage, requireAuth('admin')),
   page('/scan', ScannerPage, requireAuth('staff')),

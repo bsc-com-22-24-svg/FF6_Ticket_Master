@@ -6,13 +6,9 @@ const KNOWN_CITIES = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba', 'Mangochi', 'Sal
 // Bundled pictures an organizer can pick instead of uploading their own.
 
 function cleanId(value: unknown): string {
-  // If your backend uses UUIDs, comment out this line and return String(value)
-  const numeric = Number(value);
-  if (!Number.isInteger(numeric) || numeric <= 0) {
-    console.warn('[event] backend returned a non-numeric id:', value);
-    return "";
-  }
-  return String(numeric);
+  const id = value === undefined || value === null ? '' : String(value).trim()
+  if (!id) console.warn('[event] backend returned an empty id:', value)
+  return id
 }
 
 export const DEFAULT_EVENT_IMAGES = [
@@ -113,19 +109,19 @@ export async function fetchBackendEvent(eventId: string): Promise<StoredEvent> {
 
 
 
-// Safe cancel: only allows cancellation when the event is DRAFT or PUBLISHED.
-// Some backend implementations reject DELETE on already-cancelled events.
 export async function cancelEvent(id: string): Promise<void> {
-  await api(`/events/${encodeURIComponent(id)}`, { method: "DELETE" });
+  await api(`/events/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: { status: 'CANCELLED' },
+  })
 }
 
-// Restore an event that was cancelled. Uses PATCH /events/:id because
-// POST /events/:id/publish does not exist on the backend (404).
-// Note: the backend currently rejects CANCELLED -> PUBLISHED with 409.
-// This function will surface that error honestly to the caller.
+// The backend rejects a direct CANCELLED -> PUBLISHED transition. Reopen as a
+// draft first, then use the normal publish flow when that was the prior status.
 export async function restoreEvent(id: string, target: "Draft" | "Published"): Promise<void> {
   await api(`/events/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { status: target === "Published" ? "PUBLISHED" : "DRAFT" },
-  });
+    method: 'PATCH',
+    body: { status: 'DRAFT' },
+  })
+  if (target === 'Published') await publishEvent(id)
 }

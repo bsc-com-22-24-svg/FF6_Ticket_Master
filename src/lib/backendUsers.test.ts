@@ -32,12 +32,12 @@ describe('backendUsers', () => {
     apiMock.mockResolvedValue({})
     await setUserActive('5', false)
     await deleteUser('5')
-    await createUser({ name: ' S ', email: 's@x.com', password: 'pass1234', role: 'staff', organizerId: '9' })
-    expect(apiMock).toHaveBeenCalledWith('/users/5/active', { method: 'PATCH', body: { isActive: false } })
+    await createUser({ name: ' S ', email: 's@x.com', password: 'pass1234', role: 'staff' })
+    expect(apiMock).toHaveBeenCalledWith('/users/5/status', { method: 'PATCH', body: { isActive: false } })
     expect(apiMock).toHaveBeenCalledWith('/users/5', { method: 'DELETE' })
     expect(apiMock).toHaveBeenCalledWith('/users', {
       method: 'POST',
-      body: { name: 'S', email: 's@x.com', password: 'pass1234', role: 'CHECK_IN_STAFF', organizerId: '9' },
+      body: { name: 'S', email: 's@x.com', password: 'pass1234', role: 'CHECK_IN_STAFF' },
     })
   })
 })

@@ -18,6 +18,7 @@ const emptyRow = (name = ''): TicketRow => ({ name, price: '', quantity: '' });
 export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
   const [venue, setVenue] = useState('');
   const [location, setLocation] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -87,6 +88,7 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
       await onSubmit({
         name,
         description,
+        category,
         venue,
         location,
         startAt: startDateTime.toISOString(),
@@ -144,6 +146,11 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
           )}
         </div>
         <small>Upload your own (JPG, PNG or WEBP, up to 5 MB) or pick a default. If you choose nothing, a default is used.</small>
+      </div>
+
+      <div className="form-group">
+        <label>Category</label>
+        <input type="text" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Music, Conference, Sports" />
       </div>
 
       <div className="form-group">

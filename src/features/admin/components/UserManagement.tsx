@@ -46,15 +46,9 @@ async function fetchUsers(): Promise<AdminUser[]> {
   return all
 }
 
-// PATCH /users/{userId}/status. Some backend builds name the route /active instead.
+// PATCH /users/{userId}/status.
 async function setStatus(userId: string, isActive: boolean): Promise<void> {
-  const body = { isActive }
-  try {
-    await api(`/users/${encodeURIComponent(userId)}/status`, { method: 'PATCH', body })
-  } catch (err) {
-    if ((err as { status?: number }).status !== 404) throw err
-    await api(`/users/${encodeURIComponent(userId)}/active`, { method: 'PATCH', body })
-  }
+  await api(`/users/${encodeURIComponent(userId)}/status`, { method: 'PATCH', body: { isActive } })
 }
 
 const emptyForm = { name: '', email: '', password: '', role: 'ATTENDEE' as BackendRole }

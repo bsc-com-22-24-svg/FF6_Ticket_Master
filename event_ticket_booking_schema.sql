@@ -1,4 +1,4 @@
--- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.3
+-- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.4
 -- Run against a new, empty database:
 --   docker exec -i ticket-db psql -U postgres -d ticket_master < event_ticket_booking_schema.sql
 --

@@ -11,7 +11,7 @@ describe('updateAdminEventStatus', () => {
     vi.stubGlobal('fetch', fetchMock)
     await updateAdminEventStatus('event/12', 'CANCELLED')
 
-    expect(fetchMock).toHaveBeenCalledWith('/be/events/event%2F12', expect.objectContaining({
+    expect(fetchMock).toHaveBeenCalledWith('/be/admin/events/event%2F12/status', expect.objectContaining({
       method: 'PATCH',
       body: JSON.stringify({ status: 'CANCELLED' }),
     }))

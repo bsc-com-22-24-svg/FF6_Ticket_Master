@@ -14,12 +14,49 @@ export interface NewTicketType {
 export interface NewEventInput {
   name: string
   description: string
+  category?: string
   venue: string
   location: string
   startAt: string // ISO date-time
   endAt: string // ISO date-time
   ticketTypes: NewTicketType[]
   status: 'Published' | 'Draft'
+  imageUrl?: string
+}
+
+export interface EditableBackendEvent {
+  id: string
+  title: string
+  description: string
+  category: string
+  imageUrl: string
+  venue: string
+  location: string
+  startAt: string
+  endAt: string
+  status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+  capacity?: number
+}
+
+export interface EditableTicketType {
+  id?: string
+  name: string
+  description: string
+  price: number
+  currency: string
+  quantity: number
+  perOrderLimit: number
+  isActive: boolean
+}
+
+export interface TicketTypeInput {
+  name: string
+  description?: string
+  price: number
+  currency: string
+  quantity: number
+  perOrderLimit: number
+  isActive?: boolean
 }
 
 interface BackendMyEvent {
@@ -63,6 +100,7 @@ export async function uploadEventImage(file: File): Promise<string> {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
     throw new Error('Please choose a JPG, PNG or WEBP file.')
   }
+  if (file.size > 5 * 1024 * 1024) throw new Error('Choose an image smaller than 5 MB.')
 
   const form = new FormData()
   form.append('file', file)
@@ -70,8 +108,8 @@ export async function uploadEventImage(file: File): Promise<string> {
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const response = await fetch(`${API}/events/upload-image`, { method: 'POST', headers, body: form })
-  let data: { imageUrl?: unknown; message?: unknown } = {}
+  const response = await fetch(`${API}/events/images`, { method: 'POST', headers, body: form })
+  let data: { imageUrl?: unknown; url?: unknown; path?: unknown; message?: unknown } = {}
   try {
     data = await response.json()
   } catch {
@@ -80,8 +118,71 @@ export async function uploadEventImage(file: File): Promise<string> {
   if (!response.ok) {
     throw new Error(typeof data.message === 'string' ? data.message : `Image upload failed (${response.status}).`)
   }
-  if (typeof data.imageUrl !== 'string') throw new Error('The backend did not return the uploaded image URL.')
-  return data.imageUrl
+  const imageUrl = data.imageUrl ?? data.url ?? data.path
+  if (typeof imageUrl !== 'string') throw new Error('The backend did not return the uploaded image URL.')
+  return imageUrl
+}
+
+export function fetchEditableOrganizerEvent(eventId: string): Promise<EditableBackendEvent> {
+  return api<EditableBackendEvent>(`/events/${encodeURIComponent(eventId)}`)
+}
+
+export function updateOrganizerEvent(
+  eventId: string,
+  input: Partial<Omit<EditableBackendEvent, 'id' | 'status'>>,
+): Promise<unknown> {
+  return api(`/events/${encodeURIComponent(eventId)}`, { method: 'PATCH', body: input })
+}
+
+export async function listOrganizerTicketTypes(eventId: string): Promise<EditableTicketType[]> {
+  const response = await api<unknown>(`/events/${encodeURIComponent(eventId)}/ticket-types`)
+  const rows = Array.isArray(response)
+    ? response
+    : response && typeof response === 'object' && Array.isArray((response as { data?: unknown }).data)
+      ? (response as { data: unknown[] }).data
+      : []
+  return rows.flatMap((value) => {
+    if (!value || typeof value !== 'object') return []
+    const row = value as Record<string, unknown>
+    const id = row.ticketTypeId ?? row.id
+    if (id === undefined || id === null) return []
+    return [{
+      id: String(id),
+      name: String(row.name ?? ''),
+      description: String(row.description ?? ''),
+      price: Number(row.price ?? 0),
+      currency: String(row.currency ?? 'MWK'),
+      quantity: Number(row.quantity ?? 0),
+      perOrderLimit: Number(row.perOrderLimit ?? 10),
+      isActive: typeof row.isActive === 'boolean' ? row.isActive : row.active !== false,
+    }]
+  })
+}
+
+export function createOrganizerTicketType(eventId: string, input: TicketTypeInput): Promise<unknown> {
+  const body = {
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    price: input.price,
+    currency: input.currency,
+    quantity: input.quantity,
+    perOrderLimit: input.perOrderLimit,
+  }
+  return api(`/events/${encodeURIComponent(eventId)}/ticket-types`, {
+    method: 'POST',
+    body,
+  })
+}
+
+export function updateOrganizerTicketType(
+  eventId: string,
+  ticketTypeId: string,
+  input: TicketTypeInput,
+): Promise<unknown> {
+  return api(`/events/${encodeURIComponent(eventId)}/ticket-types/${encodeURIComponent(ticketTypeId)}`, {
+    method: 'PATCH',
+    body: input,
+  })
 }
 
 export function restoreOrganizerEvent(id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> {
@@ -138,6 +239,8 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
     body: {
       title: input.name.trim(),
       description: input.description.trim(),
+      ...(input.category?.trim() ? { category: input.category.trim() } : {}),
+      ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
       venue: input.venue.trim(),
       location: input.location.trim(),
       startAt: input.startAt,

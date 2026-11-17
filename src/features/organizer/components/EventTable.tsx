@@ -66,6 +66,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
               <td>
                 <div className="action-buttons">
                   <Link to="/events/$eventId" params={{ eventId: event.id }} className="btn-action">View</Link>
+                  <Link to="/organizer/events/$eventId/edit" params={{ eventId: event.id }} className="btn-action">Edit</Link>
                   {event.status === 'Draft' && onPublish && (
                     <button className="btn-action primary" disabled={busyId === event.id} onClick={() => run(event.id, onPublish)}>Publish</button>
                   )}
