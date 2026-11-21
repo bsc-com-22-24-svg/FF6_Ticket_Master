@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+all-code.txt
+.env
+*.pdf
+my_full_code.txt
+*.rej
+*.bak.*
+FullProjectCode.txt
+AllMyReactCode.txt
+*.patch
+*.bak.*
+FullProjectCode.txt
+AllMyReactCode.txt
+*.patch
