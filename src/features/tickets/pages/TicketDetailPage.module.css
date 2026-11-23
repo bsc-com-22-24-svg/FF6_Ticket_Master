@@ -1,0 +1,35 @@
+.page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 28px 20px 48px;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #12326b;
+  text-decoration: underline;
+}
+
+.heading {
+  margin: 0 0 18px;
+  font-size: 26px;
+  color: #0a1f47;
+}
+
+.state {
+  margin: 12px 0;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.retry {
+  border: 0;
+  background: none;
+  color: #12326b;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

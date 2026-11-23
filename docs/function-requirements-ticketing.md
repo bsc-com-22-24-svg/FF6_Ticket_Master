@@ -19,3 +19,5 @@ Functional requirements identified for ticket generation and door validation:
  d. Reject invalid tickets.
  d. Prevent reuse of already validated tickets.
  e. Display the validation result to the event player.
+
+See [ticket-booking-payment-flows.md](ticket-booking-payment-flows.md) for the booking/payment sequence and activity diagrams.
