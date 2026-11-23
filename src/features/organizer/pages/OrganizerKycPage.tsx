@@ -3,16 +3,16 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../../authentication'
 import { getKYC, submitKyc } from '../../../lib/verification'
 
-// Shown to an organizer the first time they log in. The details are saved and accepted
-// immediately: there is no admin review step.
+// Organizer details are saved directly to the backend. Submission does not wait for
+// an admin review or approval before the organizer can use the platform.
 export function OrganizerKycPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const existing = user ? getKYC(user.id) : null
 
   const [businessName, setBusinessName] = useState(existing?.businessName ?? '')
-  const [phoneNumber, setPhoneNumber] = useState(existing?.phoneNumber ?? '')
-  const [nationalId, setNationalId] = useState(existing?.nationalId ?? '')
+  const [documentType, setDocumentType] = useState(existing?.documentType ?? 'National ID')
+  const [documentUrl, setDocumentUrl] = useState(existing?.documentUrl ?? '')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -22,15 +22,20 @@ export function OrganizerKycPage() {
     event.preventDefault()
     if (!user || saving) return
     if (!businessName.trim()) return setError('Enter your business or organization name.')
-    if (!/^[+\d][\d\s-]{6,}$/.test(phoneNumber.trim())) return setError('Enter a valid phone number, for example +265 999 000 000.')
-    if (nationalId.trim().length < 5) return setError('Enter your national ID number.')
+    if (!documentType.trim() || documentType.trim().length > 50) return setError('Choose a valid document type.')
+    try {
+      const parsedUrl = new URL(documentUrl.trim())
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') throw new Error('Invalid protocol')
+    } catch {
+      return setError('Enter a valid link to your verification document.')
+    }
     setError('')
     setSaving(true)
     try {
       await submitKyc(user.id, {
         businessName: businessName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        nationalId: nationalId.trim(),
+        documentType: documentType.trim(),
+        documentUrl: documentUrl.trim(),
       })
       void navigate({ to: '/organizer/dashboard' })
     } catch (caught) {
@@ -47,7 +52,7 @@ export function OrganizerKycPage() {
       <form onSubmit={submit} className="mx-auto max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" noValidate>
         <h1 className="text-2xl font-extrabold text-navy-dark">Confirm your details</h1>
         <p className="mt-2 text-sm text-slate-600">
-          Welcome, {user.name}. Before you create events, tell us about your business. This takes a minute and you only do it once.
+          Welcome, {user.name}. Add your business details and a link to your verification document. You can create and manage events as soon as you save; no admin approval is required.
         </p>
 
         {error && (
@@ -56,15 +61,20 @@ export function OrganizerKycPage() {
 
         <label className="mt-5 block text-sm font-semibold text-slate-700">
           Business or organization name
-          <input className={field} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Nyasa Events" autoComplete="organization" />
+          <input className={field} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Nyasa Events" autoComplete="organization" required />
         </label>
         <label className="mt-4 block text-sm font-semibold text-slate-700">
-          Phone number
-          <input className={field} value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+265 999 000 000" inputMode="tel" autoComplete="tel" />
+          Verification document type
+          <select className={field} value={documentType} onChange={(e) => setDocumentType(e.target.value)} required>
+            <option>National ID</option>
+            <option>Passport</option>
+            <option>Business registration</option>
+          </select>
         </label>
         <label className="mt-4 block text-sm font-semibold text-slate-700">
-          National ID number
-          <input className={field} value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="Your national ID" />
+          Verification document link
+          <input className={field} type="url" value={documentUrl} onChange={(e) => setDocumentUrl(e.target.value)} placeholder="https://…" autoComplete="url" required />
+          <span className="mt-1 block text-xs font-normal text-slate-500">Use a link to an online copy of your selected document.</span>
         </label>
 
         <button type="submit" disabled={saving} className="mt-6 w-full rounded-lg bg-navy px-4 py-3 font-semibold text-white hover:bg-navy-dark disabled:opacity-60">

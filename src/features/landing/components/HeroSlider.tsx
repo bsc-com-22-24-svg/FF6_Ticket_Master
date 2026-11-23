@@ -61,10 +61,10 @@ export default function HeroSlider({ filters, setFilters, onShowAll }: HeroSlide
       <div className="relative z-20 mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 pb-20 pt-28 text-center">
         <div key={current} className="fade-up">
           <h1 className="text-4xl font-extrabold text-white sm:text-5xl lg:text-7xl">
-            {heroSlides[current % total].title}
+            Welcome to Tic-EM
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-white/85 sm:text-xl">
-            {heroSlides[current % total].text}
+            Discover events happening near you
           </p>
         </div>
         <div className="mt-10 w-full">

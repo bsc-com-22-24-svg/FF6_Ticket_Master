@@ -5,8 +5,11 @@ import About from '../components/About'
 import EventsSection from '../components/EventsSection'
 import Organizers from '../components/Organizers'
 import Contact from '../components/Contact'
+import { useAuth } from '../../authentication/useAuth'
 
 export default function HomePage() {
+  const { user } = useAuth()
+  const showPublicLanding = !user || user.role === 'customer'
   const search = useSearch({ from: '/' })
   const navigate = useNavigate()
   const filters = filtersFromSearch(search)
@@ -23,10 +26,14 @@ export default function HomePage() {
 
   return (
     <>
-      <HeroSlider filters={filters} setFilters={setFilters} onShowAll={showAll} />
-      <About />
-      <EventsSection filters={filters} />
-      <Organizers />
+      {showPublicLanding && (
+        <>
+          <HeroSlider filters={filters} setFilters={setFilters} onShowAll={showAll} />
+          <About />
+          <EventsSection filters={filters} />
+          <Organizers />
+        </>
+      )}
       <Contact />
     </>
   )

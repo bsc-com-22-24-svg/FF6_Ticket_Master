@@ -7,4 +7,5 @@ export interface EventItem {
   status: 'Published' | 'Draft' | 'Cancelled';
   restoreStatus?: 'Published' | 'Draft';
   image?: string;
+  isPendingCancel?: boolean;
 }

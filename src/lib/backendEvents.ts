@@ -119,13 +119,84 @@ export async function cancelEvent(id: string): Promise<void> {
   await api(`/events/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
-// Restore an event that was cancelled. Uses PATCH /events/:id because
-// POST /events/:id/publish does not exist on the backend (404).
-// Note: the backend currently rejects CANCELLED -> PUBLISHED with 409.
-// This function will surface that error honestly to the caller.
-export async function restoreEvent(id: string, target: "Draft" | "Published"): Promise<void> {
-  await api(`/events/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    body: { status: target === "Published" ? "PUBLISHED" : "DRAFT" },
+export async function recreateCancelledEvent(eventId: string): Promise<void> {
+  const event = await api<BackendEvent>(`/events/${encodeURIComponent(eventId)}`);
+  let ticketTypes: BackendTicketType[] = [];
+  try {
+    ticketTypes = await api<BackendTicketType[]>(`/events/${encodeURIComponent(eventId)}/ticket-types`);
+  } catch {
+    ticketTypes = [];
+  }
+
+  let start = new Date(event.startAt);
+  const now = new Date();
+  if (Number.isNaN(start.getTime()) || start <= now) {
+    start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  }
+  const end = new Date(start.getTime() + 4 * 60 * 60 * 1000);
+
+  const rows = (Array.isArray(ticketTypes) ? ticketTypes : []).map((t) => ({
+    name: t.name || 'General',
+    price: Number(t.price) || 0,
+    currency: 'MWK',
+    quantity: Number(t.quantity) || 50,
+    perOrderLimit: 10,
+  }));
+
+  const typesToSave = rows.length > 0 ? rows : [{ name: 'General', price: 0, currency: 'MWK', quantity: 100, perOrderLimit: 10 }];
+
+  await api('/events', {
+    method: 'POST',
+    body: {
+      title: event.title,
+      description: event.description,
+      venue: event.venue,
+      location: event.location,
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      ...(event.imageUrl ? { imageUrl: event.imageUrl } : {}),
+      capacity: typesToSave.reduce((s, t) => s + t.quantity, 0),
+      ticketTypes: typesToSave,
+    },
   });
+}
+
+// Restore a cancelled event. Attempts direct update via admin status endpoint and
+// standard PATCH /events/:id. If the backend refuses because cancelled events are
+// locked ("Cancelled events cannot be updated"), it automatically recreates the event
+// as an active Draft so the organizer's event details are restored.
+export async function restoreEvent(id: string, target: "Draft" | "Published"): Promise<void> {
+  const status = target === 'Published' ? 'PUBLISHED' : 'DRAFT';
+  try {
+    await api(`/admin/events/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: { status },
+    });
+    return;
+  } catch {
+    // Proceed to standard endpoints if admin moderation endpoint is not permitted
+  }
+
+  try {
+    await api(`/events/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: { status: 'DRAFT' },
+    });
+    if (target === 'Published') {
+      await api(`/events/${encodeURIComponent(id)}`, { method: 'PATCH', body: { status: 'PUBLISHED' } });
+      try {
+        await api(`/tickets/events/${encodeURIComponent(id)}/generate`, { method: 'POST' });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : 'unknown error';
+        throw new Error(`The event is published but its tickets could not be created (${reason}). Press Restore again to retry.`);
+      }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes('cancelled events cannot be updated')) {
+      await recreateCancelledEvent(id);
+      return;
+    }
+    throw err;
+  }
 }

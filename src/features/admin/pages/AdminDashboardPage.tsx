@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ShieldAlert, CheckCircle, Ban, RefreshCw } from 'lucide-react'
 import { api } from '../../../lib/backend'
+import { updateAdminEventStatus } from '../../../lib/backendAdmin'
 import { useToast } from '../../toast'
 import { StatCard } from '../../organizer/components/StatCard'
 import { UserManagement } from '../components/UserManagement'
+import { AuditLogTab } from '../components/AuditLogTab'
 
 interface AdminEvent {
   id: string
@@ -46,7 +48,7 @@ async function fetchAllEvents(): Promise<AdminEvent[]> {
 
 export function AdminDashboardPage() {
   const { showToast } = useToast()
-  const [tab, setTab] = useState<'events' | 'users'>('events')
+  const [tab, setTab] = useState<'events' | 'users' | 'audit'>('events')
   const [events, setEvents] = useState<AdminEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -69,21 +71,9 @@ export function AdminDashboardPage() {
   async function setStatus(eventId: string, status: 'PUBLISHED' | 'CANCELLED') {
     setBusyId(eventId)
     try {
-      // PATCH /events/:id accepts { status: 'DRAFT'|'PUBLISHED'|'CANCELLED' }
-      let applied: string = status
-      try {
-        await api(`/events/${eventId}`, { method: 'PATCH', body: { status } })
-      } catch (err) {
-        // an event that was never published goes back to draft, not to published
-        if (status === 'PUBLISHED' && (err as { status?: number }).status === 409) {
-          applied = 'DRAFT'
-          await api(`/events/${eventId}`, { method: 'PATCH', body: { status: 'DRAFT' } })
-        } else {
-          throw err
-        }
-      }
+      await updateAdminEventStatus(eventId, status)
       setEvents((prev) =>
-        prev.map((e) => (e.id === eventId ? { ...e, status: applied } : e)),
+        prev.map((e) => (e.id === eventId ? { ...e, status } : e)),
       )
       showToast(`Event ${status === 'PUBLISHED' ? 'restored' : 'cancelled'}`, 'success')
     } catch (err) {
@@ -126,26 +116,32 @@ export function AdminDashboardPage() {
           <StatCard label="Cancelled" value={cancelledCount.toString()} icon={Ban} />
         </div>
 
-        <div className="mt-8 flex gap-6 border-b border-slate-200">
+        <div className="mt-8 flex flex-wrap gap-6 border-b border-slate-200">
           <button
             onClick={() => setTab('events')}
             className={`pb-3 font-semibold text-sm ${tab === 'events' ? 'border-b-2 border-navy text-navy' : 'text-slate-500'}`}
           >
-            Event Moderation
+            Events
           </button>
           <button
             onClick={() => setTab('users')}
             className={`pb-3 font-semibold text-sm ${tab === 'users' ? 'border-b-2 border-navy text-navy' : 'text-slate-500'}`}
           >
-            User Management
+            Users
+          </button>
+          <button
+            onClick={() => setTab('audit')}
+            className={`pb-3 font-semibold text-sm ${tab === 'audit' ? 'border-b-2 border-navy text-navy' : 'text-slate-500'}`}
+          >
+            Logs
           </button>
         </div>
 
         {tab === 'users' && <UserManagement />}
+        {tab === 'audit' && <AuditLogTab />}
 
         {tab === 'events' && (
           <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-bold text-navy-dark">All Events</h2>
             {isLoading ? (
               <p className="text-slate-500">Loading events...</p>
             ) : events.length === 0 ? (

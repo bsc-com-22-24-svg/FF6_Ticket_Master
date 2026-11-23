@@ -5,8 +5,8 @@ export type KYCStatus = 'Unverified' | 'Pending' | 'Verified' | 'Rejected';
 export interface OrganizerKYC {
   userId: string;
   businessName: string;
-  phoneNumber: string;
-  nationalId: string;
+  documentType: string;
+  documentUrl: string;
   status: KYCStatus;
   submittedAt?: string;
 }
@@ -54,8 +54,8 @@ export function listAllKYC(): OrganizerKYC[] {
 
 interface BackendKyc {
   businessName: string;
-  phoneNumber: string;
-  nationalId: string;
+  documentType: string;
+  documentUrl: string;
   status: string;
   submittedAt?: string;
 }
@@ -64,8 +64,8 @@ function toKyc(userId: string, remote: BackendKyc): OrganizerKYC {
   return {
     userId,
     businessName: remote.businessName,
-    phoneNumber: remote.phoneNumber,
-    nationalId: remote.nationalId,
+    documentType: remote.documentType,
+    documentUrl: remote.documentUrl,
     status: remote.status as KYCStatus,
     submittedAt: remote.submittedAt,
   };
@@ -89,9 +89,9 @@ export async function syncKyc(userId: string): Promise<OrganizerKYC | null> {
 
 export async function submitKyc(
   userId: string,
-  input: { businessName: string; phoneNumber: string; nationalId: string },
+  input: { businessName: string; documentType: string; documentUrl: string },
 ): Promise<OrganizerKYC> {
-  const remote = await api<BackendKyc>('/organizers/me/kyc', { method: 'PUT', body: input });
+  const remote = await api<BackendKyc>('/organizers/me/kyc', { method: 'POST', body: input });
   const kyc = toKyc(userId, remote);
   saveKYC(kyc);
   return kyc;

@@ -42,8 +42,13 @@ export default function Header() {
 
   const { user, logout } = useAuth()
   const isAdmin = user?.role === 'admin'
-  // Admins don't see the Events or Bookings links; everyone else sees the full menu.
-  const visibleLinks = isAdmin ? headerLinks.filter((item) => !/event|booking/i.test(item.label)) : headerLinks
+  const isRestrictedRole = user?.role === 'organizer' || user?.role === 'admin' || user?.role === 'staff'
+  // Public discovery links belong in the customer navigation, not organizer/admin tabs.
+  const visibleLinks = isAdmin
+    ? headerLinks.filter((item) => !/home|event|about|booking/i.test(item.label))
+    : isRestrictedRole
+      ? headerLinks.filter((item) => !/home|event|about/i.test(item.label))
+      : headerLinks
   const navigate = useNavigate()
   const closeMenu = () => setMenuOpen(false)
   const handleLogout = () => {

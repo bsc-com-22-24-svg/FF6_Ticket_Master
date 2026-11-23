@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Modal } from '../../../components/ui/Modal'
+import { ConfirmDialog } from '../../../components/ConfirmDialog'
+import { useToast } from '../../toast'
 import { StatCard } from '../components/StatCard'
 import { useEvents } from '../hooks/useEventStats'
 import { useStaff } from '../hooks/useStaff'
@@ -41,10 +43,11 @@ export function StaffManagementPage() {
   const [form, setForm] = useState(emptyForm)
   const [formError, setFormError] = useState('')
   const [editing, setEditing] = useState<StaffMember | null>(null)
+  const [removalTarget, setRemovalTarget] = useState<StaffMember | null>(null)
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
   const [actionError, setActionError] = useState('')
-  const [notice, setNotice] = useState('')
   const [busyId, setBusyId] = useState('')
+  const { showToast } = useToast()
 
   function openCreate() {
     setForm(emptyForm)
@@ -72,7 +75,7 @@ export function StaffManagementPage() {
       await createStaff(form)
       setCreating(false)
       setForm(emptyForm)
-      setNotice('Staff account created. Assign at least one event before they can scan tickets.')
+      showToast('Staff account created. Assign at least one event before they can scan tickets.', 'success')
     } catch (err) {
       setFormError(messageFor(err, 'Could not create the staff account.'))
     }
@@ -99,9 +102,11 @@ export function StaffManagementPage() {
     try {
       await assignEvents(editing.staffId, selectedEventIds)
       setEditing(null)
-      setNotice('Event assignments updated.')
+      showToast('Event assignments updated.', 'success')
     } catch (err) {
-      setActionError(messageFor(err, 'Could not update the event assignments.'))
+      const message = messageFor(err, 'Could not update the event assignments.')
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setBusyId('')
     }
@@ -112,25 +117,26 @@ export function StaffManagementPage() {
     setActionError('')
     try {
       await setActive(member.staffId, !member.isActive)
-      setNotice(member.isActive ? 'Staff account disabled.' : 'Staff account enabled.')
+      showToast(member.isActive ? 'Staff account disabled.' : 'Staff account enabled.', 'success')
     } catch (err) {
-      setActionError(messageFor(err, 'Could not change the staff account status.'))
+      const message = messageFor(err, 'Could not change the staff account status.')
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setBusyId('')
     }
   }
 
   async function deleteMember(member: StaffMember) {
-    if (!window.confirm(`Remove ${member.name}? Their login will stop working and their event assignments will be deleted.`)) {
-      return
-    }
     setBusyId(member.staffId)
     setActionError('')
     try {
       await removeStaff(member.staffId)
-      setNotice('Staff member removed.')
+      showToast('Staff member removed.', 'success')
     } catch (err) {
-      setActionError(messageFor(err, 'Could not remove the staff member.'))
+      const message = messageFor(err, 'Could not remove the staff member.')
+      setActionError(message)
+      showToast(message, 'error')
     } finally {
       setBusyId('')
     }
@@ -154,21 +160,6 @@ export function StaffManagementPage() {
             + Create staff
           </button>
         </div>
-
-        <div
-          role="status"
-          className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
-        >
-          <strong>Backend support:</strong> Staff management uses the organizer-staff endpoints
-          added in backend 1.3. If you are connected to backend 1.2, this section is not supported
-          and the staff list will fail. Staff must be assigned to an event before they can scan.
-        </div>
-
-        {notice && (
-          <div role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-            {notice}
-          </div>
-        )}
 
         {unsupported && (
           <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -278,7 +269,7 @@ export function StaffManagementPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => void deleteMember(member)}
+                            onClick={() => setRemovalTarget(member)}
                             className="btn-action text-red-700"
                             disabled={busyId === member.staffId}
                           >
@@ -400,6 +391,19 @@ export function StaffManagementPage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={removalTarget !== null}
+        onClose={() => setRemovalTarget(null)}
+        onConfirm={() => {
+          if (removalTarget) void deleteMember(removalTarget)
+        }}
+        title="Remove staff member?"
+        description={removalTarget ? `${removalTarget.name} will no longer be able to sign in, and their event assignments will be removed.` : ''}
+        confirmLabel="Remove staff"
+        cancelLabel="Keep staff member"
+        variant="danger"
+      />
     </main>
   )
 }

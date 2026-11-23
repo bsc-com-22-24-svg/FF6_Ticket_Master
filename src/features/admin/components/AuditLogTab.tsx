@@ -47,8 +47,7 @@ export function AuditLogTab() {
 
   return (
     <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-navy-dark">Audit trail</h2>
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-2">
           <select
             value={outcome}

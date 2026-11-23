@@ -11,7 +11,8 @@ interface BackendHistoryTicket {
   purchasedAt: string | null
   checkedInAt: string | null
   event: {
-    title: string
+    title?: string | null
+    name?: string | null
     category: string | null
     startAt: string
     endAt: string
@@ -74,7 +75,7 @@ export async function fetchTicketRecords(userId: string, userName = ''): Promise
       id: record.ticketNumber,
       userId,
       eventId: record.eventId,
-      eventName: record.event.title,
+      eventName: record.event.title?.trim() || record.event.name?.trim() || 'Unknown Event',
       date: start.toLocaleDateString('en-CA'),
       time: start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
       venue: record.venue.name,

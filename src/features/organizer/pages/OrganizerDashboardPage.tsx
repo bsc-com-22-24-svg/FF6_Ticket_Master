@@ -12,7 +12,6 @@ import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
 import { useAttendees } from '../hooks/useAttendee';
-import { useStaff } from '../hooks/useStaff';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 function initials(name: string | undefined): string {
@@ -20,7 +19,7 @@ function initials(name: string | undefined): string {
 }
 
 export const OrganizerDashboardPage: React.FC = () => {
-  const [currentTab, setCurrentTab] = useState<'events' | 'staff' | 'attendees' | 'create'>('events');
+  const [currentTab, setCurrentTab] = useState<'events' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
   const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
@@ -31,15 +30,6 @@ export const OrganizerDashboardPage: React.FC = () => {
     ticketType: atTicketType, setTicketType: setAtTicketType,
     eventOptions, ticketTypeOptions, loading: attendeeLoading, error: attendeeError,
   } = useAttendees();
-  const {
-    totalStaff,
-    activeStaff,
-    disabledStaff,
-    loading: staffLoading,
-    error: staffError,
-    unsupported: staffUnsupported,
-  } = useStaff();
-
   // Throws when the backend refuses, so the form can show the message and stay open.
   const handleEventFormSubmission = async (newEvent: NewEventInput) => {
     await addEvent(newEvent);
@@ -51,10 +41,8 @@ export const OrganizerDashboardPage: React.FC = () => {
       {/* Sidebar Architecture Layout */}
       <aside className="dashboard-sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo">FF6</div>
           <div className="brand-info">
-            <span className="panel-title">FF6 Ticket</span>
-            <span className="panel-subtitle">Organizer Panel</span>
+            <span className="panel-title">Organizer Panel</span>
           </div>
         </div>
 
@@ -62,7 +50,7 @@ export const OrganizerDashboardPage: React.FC = () => {
           <div className="avatar-placeholder">{initials(user?.name)}</div>
           <div className="user-details">
             <span className="user-name">{user?.name ?? 'Organizer'}</span>
-            <span className="user-role">Organizer ▼</span>
+            <span className="user-role">Organizer</span>
           </div>
         </div>
 
@@ -73,9 +61,9 @@ export const OrganizerDashboardPage: React.FC = () => {
           <button className={`nav-link-btn ${currentTab === 'create' ? 'active' : ''}`} onClick={() => setCurrentTab('create')}>
             <span className="nav-icon">➕</span> Create Event
           </button>
-          <button className={`nav-link-btn ${currentTab === 'staff' ? 'active' : ''}`} onClick={() => setCurrentTab('staff')}>
+          <Link to="/organizer/staff" className="nav-link-btn">
             <span className="nav-icon">👥</span> Staff Roster
-          </button>
+          </Link>
           <button className={`nav-link-btn ${currentTab === 'attendees' ? 'active' : ''}`} onClick={() => setCurrentTab('attendees')}>
             <span className="nav-icon">🎟️</span> Attendees
           </button>
@@ -97,7 +85,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                     <h2 className="view-title">My Events</h2>
                     <p className="view-subtitle">Manage and track your active performance profiles.</p>
                   </div>
-                  <button className="btn-primary-header" onClick={() => setCurrentTab('create')}>+ Create Event</button>
+                  <button className="btn-primary-header" onClick={() => setCurrentTab('create')}>Create Event</button>
                 </div>
                 <div className="metrics-grid">
                   <StatCard title="Total Events" value={totalEvents} icon="📊" color="#3b82f6" />
@@ -115,55 +103,6 @@ export const OrganizerDashboardPage: React.FC = () => {
                 </div>
                 {evError && <div className="form-error-banner">{evError}</div>}
                 {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
-              </>
-            )}
-
-            {currentTab === 'staff' && (
-              <>
-                <div className="content-header">
-                  <div>
-                    <h2 className="view-title">My Staff Roster</h2>
-                    <p className="view-subtitle">Manage your staff and the events they are allowed to scan.</p>
-                  </div>
-                  <Link to="/organizer/staff" className="btn-primary-header">Create or manage staff</Link>
-                </div>
-                <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" style={{ marginBottom: 20 }}>
-                  Staff management uses the organizer-staff endpoints added in backend 1.3.
-                  If you are connected to backend 1.2, this section is not supported and the staff list will fail.
-                  Staff must be assigned to an event before they can scan.
-                </p>
-                <div className="metrics-grid">
-                  <StatCard title="Total Staff" value={totalStaff} icon="👥" color="#3b82f6" />
-                  <StatCard title="Active" value={activeStaff} icon="✅" color="#10b981" />
-                  <StatCard title="Disabled" value={disabledStaff} icon="⛔" color="#64748b" />
-                </div>
-                {staffUnsupported && (
-                  <p role="alert" className="form-error-banner">
-                    The connected backend does not expose /organizers/me/staff. Start backend 1.3 and try again.
-                  </p>
-                )}
-                {staffError && !staffUnsupported && (
-                  <p role="alert" className="form-error-banner">{staffError}</p>
-                )}
-                {staffLoading ? <p className="view-subtitle">Loading your staff...</p> : (
-                  <div className="table-responsive">
-                    <table className="dashboard-table">
-                      <thead><tr><th>Name</th><th>Email</th><th>Assigned events</th><th>Status</th></tr></thead>
-                      <tbody>
-                        {staff.length === 0 ? (
-                          <tr><td colSpan={4}>No staff accounts yet.</td></tr>
-                        ) : staff.map((member) => (
-                          <tr key={member.staffId}>
-                            <td>{member.name}</td>
-                            <td>{member.email}</td>
-                            <td>{member.events.map((event) => event.title).join(', ') || 'None'}</td>
-                            <td>{member.isActive ? 'Active' : 'Disabled'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
               </>
             )}
 

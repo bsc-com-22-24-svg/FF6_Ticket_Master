@@ -24,7 +24,7 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
   const [startTime, setStartTime] = useState('');
   const [endDate, setEndDate] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [rows, setRows] = useState<TicketRow[]>([emptyRow('General')]);
+  const [rows, setRows] = useState<TicketRow[]>([emptyRow()]);
   const [status, setStatus] = useState<'Published' | 'Draft'>('Draft');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -111,14 +111,14 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Afrobeat Showcase 2026" />
       </div>
 
-      <div className="form-group">
+      <div className="form-group event-image-group">
         <label>Event image</label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        <div className="event-image-options" aria-label="Choose a default event image">
           {imageUrl && (
             <img
               src={resolveEventImage(imageUrl, '0')}
               alt="Selected event"
-              style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8, border: '2px solid #1e3a8a' }}
+              className="event-image-preview"
             />
           )}
           {DEFAULT_EVENT_IMAGES.map((src) => (
@@ -126,24 +126,24 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
               key={src}
               type="button"
               onClick={() => setImageUrl(src)}
-              aria-label="Use this default image"
+              aria-label={`Use default image ${DEFAULT_EVENT_IMAGES.indexOf(src) + 1}`}
               aria-pressed={imageUrl === src}
-              style={{ padding: 0, border: imageUrl === src ? '2px solid #1e3a8a' : '2px solid transparent', borderRadius: 8, background: 'none', cursor: 'pointer' }}
+              className="event-image-choice"
             >
-              <img src={src} alt="" style={{ width: 72, height: 48, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
+              <img src={src} alt="" />
             </button>
           ))}
         </div>
-        <div style={{ marginTop: 8, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageFile} disabled={uploading} />
+        <div className="event-image-upload">
+          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageFile} disabled={uploading} aria-label="Upload event image" />
           {uploading && <span>Uploading…</span>}
           {imageUrl && !uploading && (
-            <button type="button" onClick={() => setImageUrl('')} style={{ background: 'none', border: 'none', color: '#475569', textDecoration: 'underline', cursor: 'pointer' }}>
+            <button type="button" onClick={() => setImageUrl('')} className="event-image-remove">
               Remove image
             </button>
           )}
         </div>
-        <small>Upload your own (JPG, PNG or WEBP, up to 5 MB) or pick a default. If you choose nothing, a default is used.</small>
+        <small className="event-image-help">Choose a sample image or upload your own JPG, PNG, or WEBP (up to 5 MB). A sample image is used automatically if you skip this step.</small>
       </div>
 
       <div className="form-group">
@@ -180,23 +180,32 @@ export const EventForm: React.FC<EventFormProps> = ({ onSubmit, onCancel }) => {
         </div>
       </div>
 
-      <div className="form-group">
-        <label>Ticket types (prices in MWK)</label>
-        {rows.map((row, index) => (
-          <div className="ticket-row" key={index}>
-            <input type="text" aria-label="Ticket type name" value={row.name} onChange={(e) => updateRow(index, { name: e.target.value })} placeholder="Name, e.g. VIP" />
-            <input type="number" min="0" aria-label="Price" value={row.price} onChange={(e) => updateRow(index, { price: e.target.value })} placeholder="Price" />
-            <input type="number" min="1" aria-label="Number of tickets" value={row.quantity} onChange={(e) => updateRow(index, { quantity: e.target.value })} placeholder="How many" />
-            {rows.length > 1 && (
-              <button type="button" className="btn-action" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Remove</button>
-            )}
+      <section className="ticket-details-section" aria-labelledby="ticket-details-heading">
+        <h3 id="ticket-details-heading">Ticket details</h3>
+        <div className="ticket-details-content">
+          {rows.map((row, index) => (
+            <div className="ticket-row" key={index}>
+              <label className="ticket-field">
+                <span>Ticket type</span>
+                <input type="text" aria-label="Ticket type name" value={row.name} onChange={(e) => updateRow(index, { name: e.target.value })} placeholder="General" />
+              </label>
+              <label className="ticket-field">Price (MWK)
+                <input type="number" min="0" aria-label="Price (MWK)" value={row.price} onChange={(e) => updateRow(index, { price: e.target.value })} placeholder="Price" />
+              </label>
+              <label className="ticket-field">Capacity
+                <input type="number" min="1" aria-label="Capacity" value={row.quantity} onChange={(e) => updateRow(index, { quantity: e.target.value })} placeholder="Capacity" />
+              </label>
+              {rows.length > 1 && (
+                <button type="button" className="btn-action" onClick={() => setRows(rows.filter((_, i) => i !== index))}>Remove</button>
+              )}
+            </div>
+          ))}
+          <div className="ticket-row-footer">
+            <button type="button" className="btn-action" onClick={() => setRows([...rows, emptyRow()])}>+ Add another type</button>
+            <span className="form-hint">Total capacity: {capacity.toLocaleString()}</span>
           </div>
-        ))}
-        <div className="ticket-row-footer">
-          <button type="button" className="btn-action" onClick={() => setRows([...rows, emptyRow()])}>+ Add ticket type</button>
-          <span className="form-hint">Total capacity: {capacity.toLocaleString()} tickets</span>
         </div>
-      </div>
+      </section>
 
       <div className="form-group">
         <label>Visibility Status</label>

@@ -144,18 +144,17 @@ export function UserManagement() {
   return (
     <div className="mt-6 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-navy-dark">Users ({users.length})</h2>
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-navy"
+          />
+        </div>
         <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-navy"
-            />
-          </div>
           <button
             onClick={() => void load()}
             disabled={isLoading}

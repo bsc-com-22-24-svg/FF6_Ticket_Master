@@ -72,6 +72,10 @@ export function LoginPage() {
     onSuccess: (user) => {
       if (mode === 'register') {
         showToast(`Account created — welcome, ${user.name}!`, 'success');
+        if (user.role === 'organizer') {
+          void navigate({ to: '/organizer/kyc' });
+          return;
+        }
       }
       goAfterLogin(user);
     },

@@ -100,7 +100,8 @@ export function createUser(input: {
 
 export interface OrganizerKycView {
   businessName: string
-  phoneNumber: string
+  documentType: string
+  documentUrl: string
   status: string
 }
 

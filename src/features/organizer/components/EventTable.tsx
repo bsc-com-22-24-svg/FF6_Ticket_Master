@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
+import { useToast } from '../../toast';
 import type { EventItem } from '../Data/Events';
 
 interface EventTableProps {
@@ -18,16 +20,17 @@ const Thumb: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
 
 export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCancel, onRestore }) => {
   const [busyId, setBusyId] = useState('');
-  const [error, setError] = useState('');
+  const [cancelTarget, setCancelTarget] = useState<EventItem | null>(null);
+  const { showToast } = useToast();
 
-  const run = async (id: string, action?: (id: string) => Promise<void>) => {
+  const run = async (id: string, action?: (id: string) => Promise<void>, successMessage = 'Event updated.') => {
     if (!action) return;
     setBusyId(id);
-    setError('');
     try {
       await action(id);
+      showToast(successMessage, 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That did not work. Try again.');
+      showToast(err instanceof Error ? err.message : 'That did not work. Try again.', 'error');
     } finally {
       setBusyId('');
     }
@@ -35,8 +38,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
 
   return (
     <div className="table-responsive">
-      {error && <div className="form-error-banner">{error}</div>}
-      <table className="dashboard-table">
+      <table className="dashboard-table event-table">
         <thead>
           <tr>
             <th>Event Image</th>
@@ -66,8 +68,17 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
               <td>
                 <div className="action-buttons">
                   <Link to="/events/$eventId" params={{ eventId: event.id }} className="btn-action">View</Link>
+                  {event.status !== 'Cancelled' && (
+                    <Link to="/organizer/events/$eventId/edit" params={{ eventId: event.id }} className="btn-action">Edit</Link>
+                  )}
                   {event.status === 'Draft' && onPublish && (
-                    <button className="btn-action primary" disabled={busyId === event.id} onClick={() => run(event.id, onPublish)}>Publish</button>
+                    <button
+                      className="btn-action primary"
+                      disabled={busyId === event.id}
+                      onClick={() => void run(event.id, onPublish, 'Event published.')}
+                    >
+                      Publish
+                    </button>
                   )}
                   {event.status === 'Cancelled' && onRestore && event.restoreStatus && (
                     <button
@@ -76,7 +87,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
                       onClick={() => void run(event.id, () => onRestore(
                         event.id,
                         event.restoreStatus === 'Published' ? 'PUBLISHED' : 'DRAFT',
-                      ))}
+                      ), 'Event restored.')}
                     >
                       Restore
                     </button>
@@ -85,9 +96,9 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
                     <button
                       className="btn-action danger"
                       disabled={busyId === event.id}
-                      onClick={() => { if (window.confirm(`Cancel "${event.name}"? You can restore it later.`)) void run(event.id, onCancel); }}
+                      onClick={() => setCancelTarget(event)}
                     >
-                      Remove
+                      Cancel event
                     </button>
                   )}
                 </div>
@@ -96,6 +107,18 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
           ))}
         </tbody>
       </table>
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={() => {
+          if (cancelTarget && onCancel) void run(cancelTarget.id, onCancel, 'Event cancellation started. You can restore it from the event list.');
+        }}
+        title="Cancel this event?"
+        description={cancelTarget ? `“${cancelTarget.name}” will be cancelled and removed from public listings. The event and ticket records are preserved.` : ''}
+        confirmLabel="Cancel event"
+        cancelLabel="Keep event"
+        variant="danger"
+      />
     </div>
   );
 };
