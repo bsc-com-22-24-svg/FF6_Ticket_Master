@@ -166,7 +166,7 @@ export function EditEventPage() {
               <section className="rounded-xl border border-slate-200 p-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h2 className="font-bold text-navy-dark">Ticket types and prices</h2>
+                    <h2 className="font-bold text-navy-dark">Ticket details</h2>
                     <p className="mt-1 text-xs font-normal text-slate-500">Removing a type deactivates it; existing ticket records are kept.</p>
                   </div>
                   <button type="button" onClick={() => setTicketTypes((current) => [...current, { name: '', description: '', price: '', quantity: '1', perOrderLimit: '10', currency: 'MWK' }])} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Add ticket type</button>
