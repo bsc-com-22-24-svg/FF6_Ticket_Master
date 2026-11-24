@@ -22,7 +22,7 @@ export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
-  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
+  const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, restoreEvent, loading: evLoading, loadError: evError } = useEvents();
   const {
     attendees, totalAttendees, checkedInCount,
     search: atSearch, setSearch: setAtSearch,
@@ -102,7 +102,7 @@ export const OrganizerDashboardPage: React.FC = () => {
                   </select>
                 </div>
                 {evError && <div className="form-error-banner">{evError}</div>}
-                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} />}
+                {evLoading ? <p className="view-subtitle">Loading your events...</p> : <EventTable events={events} onPublish={publishEvent} onCancel={cancelEvent} onRestore={restoreEvent} />}
               </>
             )}
 

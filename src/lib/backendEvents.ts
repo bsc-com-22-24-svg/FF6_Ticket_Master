@@ -25,8 +25,10 @@ export const DEFAULT_EVENT_IMAGES = [
 // chosen) one of the defaults picked from the event id.
 export function resolveEventImage(imageUrl: string | null | undefined, eventId: string): string {
   if (imageUrl) {
-    // uploads live on the backend, which the browser reaches through the /be proxy
-    return imageUrl.startsWith('/uploads/') ? `${API}${imageUrl}` : imageUrl
+    // uploads live on the backend, which the browser reaches through the /be proxy or /uploads
+    if (imageUrl.startsWith('/uploads/')) return `${API}${imageUrl}`
+    if (imageUrl.startsWith('uploads/')) return `${API}/${imageUrl}`
+    return imageUrl
   }
   let hash = 0
   for (const char of eventId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0
@@ -167,6 +169,23 @@ export async function recreateCancelledEvent(eventId: string): Promise<void> {
 // as an active Draft so the organizer's event details are restored.
 export async function restoreEvent(id: string, target: "Draft" | "Published"): Promise<void> {
   const status = target === 'Published' ? 'PUBLISHED' : 'DRAFT';
+  try {
+    await api(`/events/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: { status },
+    });
+    if (target === 'Published') {
+      try {
+        await api(`/tickets/events/${encodeURIComponent(id)}/generate`, { method: 'POST' });
+      } catch {
+        // Tickets might already exist
+      }
+    }
+    return;
+  } catch {
+    // Continue to fallback endpoints
+  }
+
   try {
     await api(`/admin/events/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',

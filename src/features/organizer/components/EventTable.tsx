@@ -80,7 +80,7 @@ export const EventTable: React.FC<EventTableProps> = ({ events, onPublish, onCan
                       Publish
                     </button>
                   )}
-                  {event.status === 'Cancelled' && onRestore && event.restoreStatus && (
+                  {event.status === 'Cancelled' && onRestore && (
                     <button
                       className="btn-action primary"
                       disabled={busyId === event.id}
