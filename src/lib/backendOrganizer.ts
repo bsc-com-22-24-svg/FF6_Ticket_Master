@@ -1,5 +1,5 @@
 import { API, api, getToken } from './backend'
-import { restoreEvent } from './backendEvents'
+import { restoreEvent, resolveEventImage } from './backendEvents'
 import type { EventItem } from '../features/organizer/Data/Events'
 
 // Organizer side of the backend: create, publish, cancel and list the organizer's own events.
@@ -109,6 +109,7 @@ interface BackendMyEvent {
   venue: string
   startAt: string
   status: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+  imageUrl?: string | null
 }
 
 interface MyEventsPage {
@@ -169,8 +170,22 @@ export async function uploadEventImage(file: File): Promise<string> {
   return data.imageUrl
 }
 
-export function restoreOrganizerEvent(id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> {
-  return restoreEvent(id, status === 'PUBLISHED' ? 'Published' : 'Draft')
+export async function restoreOrganizerEvent(id: string, status: 'DRAFT' | 'PUBLISHED'): Promise<void> {
+  try {
+    await api(`/events/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: { status },
+    })
+    if (status === 'PUBLISHED') {
+      try {
+        await api(`/tickets/events/${encodeURIComponent(id)}/generate`, { method: 'POST' })
+      } catch {
+        // Tickets might already exist
+      }
+    }
+  } catch {
+    await restoreEvent(id, status === 'PUBLISHED' ? 'Published' : 'Draft')
+  }
 }
 
 async function soldFor(eventId: string): Promise<number> {
@@ -198,6 +213,7 @@ export async function listMyEvents(): Promise<EventItem[]> {
       venue: event.venue,
       ticketsSold: await soldFor(event.id),
       status: STATUS[event.status] ?? 'Draft',
+      image: resolveEventImage(event.imageUrl, String(event.id)),
     })),
   )
 }
@@ -246,8 +262,15 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
 }
 
 export async function cancelOrganizerEvent(eventId: string): Promise<void> {
-  await api(`/events/${eventId}`, {
-    method: 'PATCH',
-    body: { status: 'CANCELLED' },
-  })
+  try {
+    await api(`/events/${encodeURIComponent(eventId)}/status`, {
+      method: 'PATCH',
+      body: { status: 'CANCELLED' },
+    })
+  } catch {
+    await api(`/events/${encodeURIComponent(eventId)}`, {
+      method: 'PATCH',
+      body: { status: 'CANCELLED' },
+    })
+  }
 }

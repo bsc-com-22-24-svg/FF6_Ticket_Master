@@ -57,7 +57,7 @@ async function setStatus(userId: string, isActive: boolean): Promise<void> {
   }
 }
 
-const emptyForm = { name: '', email: '', password: '', role: 'ATTENDEE' as BackendRole }
+const emptyForm = { name: '', email: '', password: '', role: 'ADMIN' as BackendRole }
 const field = 'mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-navy'
 
 export function UserManagement() {
@@ -123,14 +123,14 @@ export function UserManagement() {
     try {
       await api('/users', {
         method: 'POST',
-        body: { name: form.name.trim(), email: form.email.trim(), password: form.password, role: form.role },
+        body: { name: form.name.trim(), email: form.email.trim(), password: form.password, role: 'ADMIN' },
       })
       setForm(emptyForm)
       setShowForm(false)
-      showToast('User created', 'success')
+      showToast('Admin created', 'success')
       await load()
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Could not create the user.')
+      setFormError(err instanceof Error ? err.message : 'Could not create the admin.')
     } finally {
       setSaving(false)
     }
@@ -168,7 +168,7 @@ export function UserManagement() {
             className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-3 py-2 text-xs font-semibold text-white hover:bg-navy-dark"
           >
             <UserPlus size={14} />
-            {showForm ? 'Close' : 'Create user'}
+            {showForm ? 'Close' : 'Create admin'}
           </button>
         </div>
       </div>
@@ -190,15 +190,13 @@ export function UserManagement() {
             </label>
             <label className="text-sm font-semibold text-slate-700">
               Role
-              <select className={field} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as BackendRole })}>
-                {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
-              </select>
+              <input type="text" readOnly disabled value="Administrator (ADMIN)" className={`${field} bg-slate-100 text-slate-500 cursor-not-allowed`} />
             </label>
           </div>
           {formError && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{formError}</p>}
           <div className="mt-4 flex justify-end">
             <button type="submit" disabled={saving} className="rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white hover:bg-navy-dark disabled:opacity-60">
-              {saving ? 'Creating...' : 'Create account'}
+              {saving ? 'Creating...' : 'Create admin'}
             </button>
           </div>
         </form>
