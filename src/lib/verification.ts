@@ -7,8 +7,19 @@ export interface OrganizerKYC {
   businessName: string;
   documentType: string;
   documentUrl: string;
+  registrationNumber?: string;
   status: KYCStatus;
+  reviewerNotes?: string | null;
   submittedAt?: string;
+  reviewedAt?: string | null;
+  isVerified?: boolean;
+}
+
+export interface SubmitKycInput {
+  businessName: string;
+  documentType: string;
+  documentUrl: string;
+  registrationNumber?: string;
 }
 
 const KYC_KEY = 'tm.ticket-master.kyc';
@@ -53,28 +64,60 @@ export function listAllKYC(): OrganizerKYC[] {
 }
 
 interface BackendKyc {
-  businessName: string;
-  documentType: string;
-  documentUrl: string;
+  businessName?: string;
+  documentType?: string;
+  documentUrl?: string;
+  registrationNumber?: string | null;
   status: string;
+  reviewerNotes?: string | null;
   submittedAt?: string;
+  reviewedAt?: string | null;
+  isVerified?: boolean;
+}
+
+function mapStatus(remote: BackendKyc): KYCStatus {
+  if (remote.status === 'APPROVED' || remote.isVerified) return 'Verified';
+  if (remote.status === 'PENDING') return 'Pending';
+  if (remote.status === 'REJECTED') return 'Rejected';
+  return 'Unverified';
 }
 
 function toKyc(userId: string, remote: BackendKyc): OrganizerKYC {
   return {
     userId,
-    businessName: remote.businessName,
-    documentType: remote.documentType,
-    documentUrl: remote.documentUrl,
-    status: remote.status as KYCStatus,
+    businessName: remote.businessName ?? '',
+    documentType: remote.documentType ?? '',
+    documentUrl: remote.documentUrl ?? '',
+    registrationNumber: remote.registrationNumber ?? undefined,
+    status: mapStatus(remote),
+    reviewerNotes: remote.reviewerNotes ?? null,
     submittedAt: remote.submittedAt,
+    reviewedAt: remote.reviewedAt ?? null,
+    isVerified: remote.isVerified ?? remote.status === 'APPROVED',
   };
 }
 
-// The backend keeps the organizer's details. This copies them into the browser, so the
-// route guards (which read getKYC) work without waiting for the network.
+function emptyKyc(userId: string): OrganizerKYC {
+  return {
+    userId,
+    businessName: '',
+    documentType: 'National ID',
+    documentUrl: '',
+    status: 'Unverified',
+  };
+}
+
+async function fetchBackendKyc(): Promise<BackendKyc | null> {
+  return api<BackendKyc | null>('/organizers/me/kyc');
+}
+
+export async function fetchMyKyc(userId: string): Promise<OrganizerKYC> {
+  const remote = await fetchBackendKyc();
+  return remote ? toKyc(userId, remote) : emptyKyc(userId);
+}
+
 export async function syncKyc(userId: string): Promise<OrganizerKYC | null> {
-  const remote = await api<BackendKyc | null>('/organizers/me/kyc');
+  const remote = await fetchBackendKyc();
   if (!remote) {
     if (hasStorage()) {
       const kept = listAllKYC().filter((k) => k.userId !== userId);
@@ -87,10 +130,7 @@ export async function syncKyc(userId: string): Promise<OrganizerKYC | null> {
   return kyc;
 }
 
-export async function submitKyc(
-  userId: string,
-  input: { businessName: string; documentType: string; documentUrl: string },
-): Promise<OrganizerKYC> {
+export async function submitKyc(userId: string, input: SubmitKycInput): Promise<OrganizerKYC> {
   const remote = await api<BackendKyc>('/organizers/me/kyc', { method: 'POST', body: input });
   const kyc = toKyc(userId, remote);
   saveKYC(kyc);

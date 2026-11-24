@@ -1,5 +1,5 @@
 import { API, api, getToken } from './backend'
-import { restoreEvent } from './backendEvents'
+import { restoreEvent, setEventStatus } from './backendEvents'
 import type { EventItem } from '../features/organizer/Data/Events'
 
 // Organizer side of the backend: create, publish, cancel and list the organizer's own events.
@@ -205,10 +205,7 @@ export async function listMyEvents(): Promise<EventItem[]> {
 // Publishing makes the event public. Tickets only exist after "generate", so both run together.
 // Generating again is safe: it only creates tickets that are still missing.
 export async function publishEvent(eventId: string): Promise<void> {
-  await api(`/events/${eventId}`, {
-    method: 'PATCH',
-    body: { status: 'PUBLISHED' },
-  })
+  await setEventStatus(eventId, 'PUBLISHED')
   try {
     await api(`/tickets/events/${eventId}/generate`, { method: 'POST' })
   } catch (error) {
@@ -246,8 +243,5 @@ export async function createOrganizerEvent(input: NewEventInput): Promise<{ id: 
 }
 
 export async function cancelOrganizerEvent(eventId: string): Promise<void> {
-  await api(`/events/${eventId}`, {
-    method: 'PATCH',
-    body: { status: 'CANCELLED' },
-  })
+  await setEventStatus(eventId, 'CANCELLED')
 }

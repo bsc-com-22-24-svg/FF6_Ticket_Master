@@ -1,38 +1,48 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
-import { issueTicket, normalizeTicketCode } from '../../../lib/tickets'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { validateBackendTicket } from '../../../lib/backendTickets'
 
-function newTicket(eventId = 'event-one') {
-  return issueTicket({
-    userId: 'u-test',
-    eventId,
-    eventName: 'Event One',
-    date: '2026-11-14',
-    time: '18:00',
-    venue: 'Test Venue',
-    city: 'Blantyre',
-    ticketType: 'General',
-    price: 35000,
-    holder: 'Test Holder',
-  })
-}
-
-describe('ticket ids', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
-  })
-
-  it('are long, random looking and unique', () => {
-    const ids = Array.from({ length: 40 }, () => newTicket().id)
-    for (const id of ids) expect(id).toMatch(/^TM-2026-[A-HJ-NP-Z2-9]{12}$/)
-    expect(new Set(ids).size).toBe(40)
-  })
+vi.mock('../../../lib/backendTickets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/backendTickets')>()
+  return { ...actual, validateBackendTicket: vi.fn() }
 })
 
-describe('normalizeTicketCode', () => {
-  it('accepts the plain, prefixed and signed forms', () => {
-    expect(normalizeTicketCode('TM-2026-ABCDEFGHJKLM')).toBe('TM-2026-ABCDEFGHJKLM')
-    expect(normalizeTicketCode('ticket:tm-2026-abcdefghjklm')).toBe('TM-2026-ABCDEFGHJKLM')
-    expect(normalizeTicketCode('TICKET:TM-2026-ABCDEFGHJKLM.0123456789')).toBe('TM-2026-ABCDEFGHJKLM')
+import { validateTicket } from './useTicketValidator'
+
+const verify = vi.mocked(validateBackendTicket)
+
+describe('validateTicket', () => {
+  beforeEach(() => verify.mockReset())
+
+  it('passes the event id to the backend and maps accepted scans', async () => {
+    verify.mockResolvedValue({
+      accepted: true,
+      reason: null,
+      ticketId: 'TKT-ONE',
+      eventId: '7',
+      validatedAt: '2026-11-24T12:00:00.000Z',
+      details: { ticketNumber: 'TKT-ONE', ticketType: 'General' },
+    })
+
+    const result = await validateTicket('TICKET:TKT-ONE.signature', '7')
+
+    expect(verify).toHaveBeenCalledWith('TICKET:TKT-ONE.signature', '7')
+    expect(result.status).toBe('valid')
+    expect(result.message).toContain('TKT-ONE')
+  })
+
+  it('maps a used ticket rejection', async () => {
+    verify.mockResolvedValue({
+      accepted: false,
+      reason: 'ALREADY_USED',
+      ticketId: 'TKT-TWO',
+      eventId: '7',
+      validatedAt: '2026-11-24T12:00:00.000Z',
+    })
+
+    const result = await validateTicket('TKT-TWO', '7')
+
+    expect(result.status).toBe('used')
+    expect(result.title).toBe('Already used')
   })
 })

@@ -60,7 +60,7 @@ describe('createOrganizerEvent', () => {
     expect(result.id).toBe('7')
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       'POST /be/events',
-      'PATCH /be/events/7',
+      'PATCH /be/events/7/status',
       'POST /be/tickets/events/7/generate',
     ])
     expect(calls[1].body).toEqual({ status: 'PUBLISHED' })
@@ -121,7 +121,7 @@ describe('cancelOrganizerEvent', () => {
   it('marks the event as cancelled with PATCH', async () => {
     const calls = stubBackend(() => ({}))
     await cancelOrganizerEvent('7')
-    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7')
+    expect(`${calls[0].method} ${calls[0].url}`).toBe('PATCH /be/events/7/status')
     expect(calls[0].body).toEqual({ status: 'CANCELLED' })
   })
 })

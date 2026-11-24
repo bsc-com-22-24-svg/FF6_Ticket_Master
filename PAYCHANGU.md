@@ -40,8 +40,6 @@ and open the app through the tunnel URL instead. PayChangu will then redirect to
 tunnel's portless HTTPS URL. No PayChangu dashboard changes are needed for either option.
 
 ## Limits of this project (say so in the report)
-- Orders, events and tickets still live in the browser (localStorage), so the server cannot check the price itself.
-  A real system keeps events and orders in a database and computes the amount on the server.
-- Verification is done when the customer returns. A real system also handles PayChangu webhooks
-  (customer closes the tab after paying) and refunds.
-- `server/paychangu.ts` runs inside the Vite dev/preview server. A deployed site needs the same two routes on a real backend.
+- Orders, events and tickets live in the backend database; the browser only keeps the token and a short-lived payment reference.
+- Backend 1.5 also exposes `POST /payments/paychangu/webhook`, but refunds are not implemented.
+- Ticket purchases still start through `/api/paychangu/*` in `server/paychangu.ts`, which runs inside the Vite dev/preview server. The backend checkout endpoints are available for orders created through `/orders`.

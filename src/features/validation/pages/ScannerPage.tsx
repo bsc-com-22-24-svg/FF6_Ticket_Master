@@ -2,9 +2,9 @@ import { useCallback, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { TicketValidationResult } from '../../../lib/tickets'
-import { useEvents } from '../../events/hooks/useEvents'
 import { ScanResult } from '../components/ScanResult'
 import { useQrScanner } from '../hooks/useQrScanner'
+import { useStaffEvents } from '../hooks/useStaffEvents'
 import { validateTicket } from '../hooks/useTicketValidator'
 
 export function ScannerPage(): ReactNode {
@@ -14,9 +14,8 @@ export function ScannerPage(): ReactNode {
   const [checking, setChecking] = useState(false)
   const checkingRef = useRef(false)
   const queryClient = useQueryClient()
-  const { data: backendEvents = [], isLoading: loadingEvents } = useEvents()
-  const events = backendEvents
-  const [selectedEventId, setSelectedEventId] = useState(events[0]?.id ?? '')
+  const { events, loading: loadingEvents, error: eventsError, unsupported } = useStaffEvents()
+  const [selectedEventId, setSelectedEventId] = useState('')
   const selectedEvent = events.find((e) => e.id === selectedEventId) ?? events[0]
   const activeEventId = selectedEvent?.id ?? ''
 
@@ -89,7 +88,9 @@ export function ScannerPage(): ReactNode {
       <div>
         <h1>Scan tickets</h1>
         <div className="alert info" style={{ marginTop: 14 }}>
-          No published events are available to scan yet. Ask the organizer to publish an event first.
+          {unsupported
+            ? 'Assigned-event lookup is not available on this backend.'
+            : eventsError || 'No events are assigned to your staff account yet. Ask the organizer to assign you to an event.'}
         </div>
       </div>
     )

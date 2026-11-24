@@ -32,7 +32,7 @@ Start PostgreSQL:
 docker run -d --name ticket-db --network ticket-network \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=ticket_master \
+  -e POSTGRES_DB=ticket_master_v15 \
   -p 5433:5432 \
   -v ticket-db-data:/var/lib/postgresql/data \
   postgres:16
@@ -55,7 +55,7 @@ docker start ticket-db
 Import the schema once into a new database:
 
 ```bash
-docker exec -i ticket-db psql -v ON_ERROR_STOP=1 -U postgres -d ticket_master \
+docker exec -i ticket-db psql -v ON_ERROR_STOP=1 -U postgres -d ticket_master_v15 \
   < event_ticket_booking_schema.sql
 ```
 
@@ -79,7 +79,7 @@ DB_HOST=ticket-db
 DB_PORT=5432
 DB_USERNAME=postgres
 DB_PASSWORD=postgres
-DB_NAME=ticket_master
+DB_NAME=ticket_master_v15
 JWT_SECRET=PASTE_THE_GENERATED_SECRET_HERE
 JWT_EXPIRES_IN=15m
 PAYCHANGU_SECRET_KEY=PASTE_YOUR_PAYCHANGU_TEST_KEY_HERE
@@ -99,7 +99,7 @@ EOF
 | `DB_PORT` | PostgreSQL port inside the network | `5432` |
 | `DB_USERNAME` | Database user | `postgres` |
 | `DB_PASSWORD` | Database password | Must match `POSTGRES_PASSWORD` |
-| `DB_NAME` | Database name | `ticket_master` |
+| `DB_NAME` | Database name | `ticket_master_v15` |
 | `JWT_SECRET` | Signs login tokens | Random string, 32+ characters |
 | `JWT_EXPIRES_IN` | Login token lifetime | `15m` |
 | `PAYCHANGU_SECRET_KEY` | Verifies PayChangu payments | Your test key |
@@ -126,11 +126,11 @@ docker run -d --name ticket-backend-app --network ticket-network \
   --workdir /tmp \
   --entrypoint node \
   -p 3000:3000 \
-  alicekayla/ticket-backend:1.3 \
+  alicekayla/ticket-backend:1.5 \
   /app/dist/main
 ```
 
-Backend 1.3 writes `swagger.json` into its working directory. The image runs as the `node` user, which cannot write to `/app`, so the container exits with `EACCES` if started with the default entrypoint. The `--workdir /tmp --entrypoint node /app/dist/main` override keeps the app unprivileged and gives it a writable directory. Event images uploaded through the backend are also written under `/tmp` and are lost when the container is removed.
+Backend 1.5 writes `swagger.json` into its working directory. The image runs as the `node` user, which cannot write to `/app`, so the container exits with `EACCES` if started with the default entrypoint. The `--workdir /tmp --entrypoint node /app/dist/main` override keeps the app unprivileged and gives it a writable directory. Event images uploaded through the backend are also written under `/tmp` and are lost when the container is removed.
 
 Follow the logs:
 
@@ -201,13 +201,14 @@ Suggested flow:
 2. Browse events after an organizer publishes one.
 3. Buy a ticket and complete the PayChangu test payment.
 4. Open **My Tickets** and check the QR code.
-5. Register an organizer account, create an event, and publish it.
-6. Check the organizer dashboard for attendees and sales.
-7. Use the scanner with a staff account that is assigned to the event.
+5. Register an organizer account, submit KYC, and wait for an admin to approve it.
+6. Create an event and publish it. Backend 1.5 blocks organizer event routes until KYC is approved.
+7. Check the organizer dashboard for attendees and sales.
+8. Use the scanner with a staff account that is assigned to the event.
 
-To test scanning, create a staff account from the organizer account and assign it to the event. Backend 1.3 requires both the staff account and the assignment; promoting a normal account to `CHECK_IN_STAFF` is not enough. Unassigned scans return `NOT_ASSIGNED`.
+To test scanning, create a staff account from the organizer account and assign it to the event. Backend 1.5 requires both the staff account and the assignment; promoting a normal account to `CHECK_IN_STAFF` is not enough. Unassigned scans return `NOT_ASSIGNED`. The scanner loads assigned events from `GET /staff/me/events`.
 
-The organizer **Staff Roster** tab and **Create or manage staff** page now use the backend 1.3 organizer-staff endpoints. The page keeps a warning banner because backend 1.2 does not support these routes. Use the UI to create staff, assign events, enable/disable staff, and remove staff. The equivalent API calls are shown below for reference.
+The organizer **Staff Roster** tab and **Create or manage staff** page use the backend organizer-staff endpoints. Use the UI to create staff, assign events, enable/disable staff, and remove staff. The equivalent API calls are shown below for reference.
 
 ```bash
 # Use the organizer's bearer token.
@@ -223,7 +224,7 @@ curl -X PUT http://localhost:3000/organizers/me/staff/STAFF_ID/events \
   -d '{"eventIds":["EVENT_ID"]}'
 ```
 
-Log in as the staff account to use the scanner. Admin screens remain unavailable in this frontend.
+Log in as the staff account to use the scanner. The admin dashboard now reads `GET /admin/events`, `GET /admin/kyc`, and `GET /admin/audit-logs`. Use its **Organizer KYC** tab to approve or reject organizer submissions; approval sets `users.is_verified`, which unlocks organizer event routes.
 
 ### PayChangu test payments
 
@@ -274,7 +275,7 @@ Your data stays in the `ticket-db-data` volume, so users, events, and tickets re
 | Run lint | `npm run lint` |
 | Redirect PayChangu's portless return URL to port 5173 | `sudo env "PATH=$PATH" npm run paychangu:bridge` |
 
-The unit tests use the in-browser mock and do not require Docker.
+The unit tests stub backend HTTP calls and do not require Docker.
 
 ## Resetting local data
 
@@ -303,7 +304,7 @@ Check `JWT_SECRET` length, database host and password, and whether the schema wa
 
 ### Backend exits with `EACCES` for `/app/swagger.json`
 
-Backend 1.3 writes `swagger.json` to the current working directory. Start it with the `--workdir /tmp --entrypoint node /app/dist/main` override shown above, or run it with `--user root` if you accept the extra privileges.
+Backend 1.5 writes `swagger.json` to the current working directory. Start it with the `--workdir /tmp --entrypoint node /app/dist/main` override shown above, or run it with `--user root` if you accept the extra privileges.
 
 ### `ECONNREFUSED` or database connection errors
 
@@ -324,9 +325,9 @@ The backend must use `DB_HOST=ticket-db` and `DB_PORT=5432`.
 
 If port `3000` or `5433` is taken, change the host side of the mapping and update `BACKEND_URL` in the frontend `.env`. Keep `PORT=3000` and `DB_PORT=5432` inside the containers.
 
-### Frontend still uses mock data
+### Frontend appears to use mock data
 
-Confirm `.env.local` contains `VITE_USE_BACKEND=true`, then restart `npm run dev`.
+The frontend calls the NestJS backend through the `/be` proxy. Confirm `.env.local` contains `VITE_USE_BACKEND=true`, restart `npm run dev`, and check that `BACKEND_URL` in `.env` points to the running backend.
 
 ### Login works but requests return `401` or `403`
 

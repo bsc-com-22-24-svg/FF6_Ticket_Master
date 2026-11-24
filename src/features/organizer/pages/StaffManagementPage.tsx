@@ -163,7 +163,7 @@ export function StaffManagementPage() {
 
         {unsupported && (
           <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            The connected backend does not expose `/organizers/me/staff`. Start backend 1.3 and
+            The connected backend does not expose `/organizers/me/staff`. Start backend 1.5 and
             try again.
           </div>
         )}

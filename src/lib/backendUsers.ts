@@ -212,6 +212,17 @@ export interface AssignedEvent {
   venue: string
 }
 
-export function listMyAssignedEvents(): Promise<AssignedEvent[]> {
-  return api<AssignedEvent[]>('/staff/me/events')
+interface BackendAssignedEvent {
+  eventId: string
+  title: string
+  venue: string
+}
+
+export async function listMyAssignedEvents(): Promise<AssignedEvent[]> {
+  const events = await api<BackendAssignedEvent[]>('/staff/me/events')
+  return events.map((event) => ({
+    id: String(event.eventId),
+    title: event.title,
+    venue: event.venue,
+  }))
 }

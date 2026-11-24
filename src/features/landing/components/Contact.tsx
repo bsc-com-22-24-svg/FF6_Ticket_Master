@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Mail, MapPin, Phone, Check } from 'lucide-react'
 import Reveal from '../../../components/Reveal'
-import { api } from '../../../lib/backend'
+import { sendContact } from '../../../lib/contact'
 
 const details = [
   { icon: MapPin, text: 'Lilongwe, Central Region, Malawi' },
@@ -30,15 +30,11 @@ export default function Contact() {
     if (form.message.trim().length < 5) return setError('Write a message of at least 5 characters.')
     setSending(true)
     try {
-      const subject = form.subject.trim()
-      await api('/contact', {
-        method: 'POST',
-        body: {
-          name: form.name.trim(),
-          email: form.email.trim(),
-          message: subject ? `${subject}\n\n${form.message.trim()}` : form.message.trim(),
-          website: form.website,
-        },
+      await sendContact({
+        name: form.name,
+        email: form.email,
+        subject: form.subject,
+        message: form.message,
       })
       setForm(emptyForm)
       setSent(true)

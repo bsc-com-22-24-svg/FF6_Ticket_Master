@@ -1,10 +1,10 @@
--- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.3
+-- Ticket Master PostgreSQL schema for backend image alicekayla/ticket-backend:1.5
 -- Run against a new, empty database:
---   docker exec -i ticket-db psql -U postgres -d ticket_master < event_ticket_booking_schema.sql
+--   docker exec -i ticket-db psql -U postgres -d ticket_master_v15 < event_ticket_booking_schema.sql
 --
 -- The backend uses synchronize=false and migrationsRun=false. This file combines the
--- legacy event/ticket schema with the tracked TypeORM migrations for orders, payments
--- and organizer staff.
+-- legacy event/ticket schema with the tracked migrations for orders, payments,
+-- organizer staff, organizer KYC, contact messages, and admin moderation logs.
 
 BEGIN;
 
@@ -18,6 +18,7 @@ CREATE TABLE users (
   role VARCHAR(20) NOT NULL DEFAULT 'ATTENDEE'
     CHECK (role IN ('ATTENDEE', 'ORGANIZER', 'CHECK_IN_STAFF', 'ADMIN')),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -263,5 +264,50 @@ CREATE TABLE ticket_payment_claims (
 );
 
 CREATE INDEX idx_payment_claims_customer ON ticket_payment_claims(customer_id);
+
+CREATE TABLE audit_logs (
+  audit_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  actor_user_id BIGINT,
+  action VARCHAR(100) NOT NULL,
+  entity_type VARCHAR(50),
+  entity_id VARCHAR(100),
+  details JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_audit_actor
+    FOREIGN KEY (actor_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+CREATE TABLE organizer_kyc (
+  kyc_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  organizer_id BIGINT NOT NULL UNIQUE
+    REFERENCES users(user_id) ON DELETE CASCADE,
+  business_name VARCHAR(200) NOT NULL,
+  registration_number VARCHAR(100),
+  document_type VARCHAR(50) NOT NULL,
+  document_url TEXT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  reviewer_notes TEXT,
+  submitted_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reviewed_at TIMESTAMPTZ,
+
+  CONSTRAINT organizer_kyc_status_check
+    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED'))
+);
+
+CREATE INDEX idx_organizer_kyc_status ON organizer_kyc(status);
+
+CREATE TABLE contact_messages (
+  contact_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  subject VARCHAR(200) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_contact_messages_created_at ON contact_messages(created_at DESC);
 
 COMMIT;

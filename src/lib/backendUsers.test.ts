@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('./backend', () => ({ api: vi.fn() }))
 
 import { api } from './backend'
-import { createUser, deleteUser, listUsers, setUserActive } from './backendUsers'
+import { createUser, deleteUser, listMyAssignedEvents, listUsers, setUserActive } from './backendUsers'
 
 const apiMock = vi.mocked(api)
 
@@ -28,12 +28,23 @@ describe('backendUsers', () => {
     expect(apiMock).toHaveBeenNthCalledWith(2, '/users?page=2&limit=100')
   })
 
+  it('maps the assigned events returned for a staff account', async () => {
+    apiMock.mockResolvedValue([
+      { eventId: '7', title: 'Gate Event', venue: 'Main Hall' },
+    ])
+
+    await expect(listMyAssignedEvents()).resolves.toEqual([
+      { id: '7', title: 'Gate Event', venue: 'Main Hall' },
+    ])
+    expect(apiMock).toHaveBeenCalledWith('/staff/me/events')
+  })
+
   it('disables, deletes and creates with backend role names', async () => {
     apiMock.mockResolvedValue({})
     await setUserActive('5', false)
     await deleteUser('5')
     await createUser({ name: ' S ', email: 's@x.com', password: 'pass1234', role: 'staff', organizerId: '9' })
-    expect(apiMock).toHaveBeenCalledWith('/users/5/active', { method: 'PATCH', body: { isActive: false } })
+    expect(apiMock).toHaveBeenCalledWith('/users/5/status', { method: 'PATCH', body: { isActive: false } })
     expect(apiMock).toHaveBeenCalledWith('/users/5', { method: 'DELETE' })
     expect(apiMock).toHaveBeenCalledWith('/users', {
       method: 'POST',

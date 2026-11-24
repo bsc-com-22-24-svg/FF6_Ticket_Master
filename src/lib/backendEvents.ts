@@ -33,6 +33,8 @@ export function resolveEventImage(imageUrl: string | null | undefined, eventId: 
   return DEFAULT_EVENT_IMAGES[hash % DEFAULT_EVENT_IMAGES.length]
 }
 
+export type BackendEventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+
 interface BackendEvent {
   id: string
   title: string
@@ -40,7 +42,7 @@ interface BackendEvent {
   venue: string
   location: string
   startAt: string
-  status?: 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+  status?: BackendEventStatus
   category?: string | null
   imageUrl?: string | null
   organizerName?: string | null
@@ -111,7 +113,9 @@ export async function fetchBackendEvent(eventId: string): Promise<StoredEvent> {
   return toStoredEvent(event, ticketTypes)
 }
 
-
+export async function setEventStatus(eventId: string, status: BackendEventStatus): Promise<void> {
+  await api(`/events/${encodeURIComponent(eventId)}/status`, { method: 'PATCH', body: { status } })
+}
 
 // Safe cancel: only allows cancellation when the event is DRAFT or PUBLISHED.
 // Some backend implementations reject DELETE on already-cancelled events.
@@ -161,29 +165,13 @@ export async function recreateCancelledEvent(eventId: string): Promise<void> {
   });
 }
 
-// Restore a cancelled event. Attempts direct update via admin status endpoint and
-// standard PATCH /events/:id. If the backend refuses because cancelled events are
-// locked ("Cancelled events cannot be updated"), it automatically recreates the event
-// as an active Draft so the organizer's event details are restored.
+// Restore a cancelled event through the 1.5 status endpoint. If an older backend refuses
+// because cancelled events are locked, it recreates the event as an active Draft.
 export async function restoreEvent(id: string, target: "Draft" | "Published"): Promise<void> {
   const status = target === 'Published' ? 'PUBLISHED' : 'DRAFT';
   try {
-    await api(`/admin/events/${encodeURIComponent(id)}/status`, {
-      method: 'PATCH',
-      body: { status },
-    });
-    return;
-  } catch {
-    // Proceed to standard endpoints if admin moderation endpoint is not permitted
-  }
-
-  try {
-    await api(`/events/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: { status: 'DRAFT' },
-    });
-    if (target === 'Published') {
-      await api(`/events/${encodeURIComponent(id)}`, { method: 'PATCH', body: { status: 'PUBLISHED' } });
+    await setEventStatus(id, status);
+    if (status === 'PUBLISHED') {
       try {
         await api(`/tickets/events/${encodeURIComponent(id)}/generate`, { method: 'POST' });
       } catch (error) {

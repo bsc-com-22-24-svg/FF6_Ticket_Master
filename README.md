@@ -29,29 +29,20 @@ npm run lint      # oxlint
 npm test          # vitest unit tests
 ```
 
-### Frontend-only mock mode
+### Backend-backed walkthrough
 
-Set `VITE_USE_BACKEND=false` in `.env.local` to use the old in-browser mock.
-Events, tickets and bookings are then stored in `localStorage`, so anything you
-do (buy a ticket, scan it, create an event) sticks around until you reset it.
-
-Use the **one-tap demo accounts** on the login screen, or sign in manually:
-
-| Role       | Email                  | Password      |
-| ---------- | ---------------------- | ------------- |
-| Customer   | customer@example.com   | password123   |
-| Organizer  | organizer@example.com  | password123   |
-| Staff      | staff@example.com      | password123   |
+The app uses the NestJS backend through the `/be` proxy. Follow
+`RUNNING_THE_APP.md` to start PostgreSQL and `alicekayla/ticket-backend:1.5`
+before using these flows.
 
 Suggested walkthrough:
 
 1. **Browse** — open *Discover* (`/events`), filter by category/city/price, open an event.
-2. **Buy** — pick a ticket type, hit *Get tickets*, sign in as **Customer**, pay (any 16-digit card that does **not** end in `00`, or a 9–12 digit mobile number).
+2. **Buy** — pick a ticket type, hit *Get tickets*, sign in as **Customer**, and complete the PayChangu test payment.
 3. **View** — your ticket with its QR code is under *My Tickets*.
-4. **Manage** — sign in as **Organizer**, open the dashboard, and *Create event*. Publish it and it appears on the public site; ticket sales update the remaining-seat counts.
-5. **Scan** — sign in as **Staff** (`/scan`), choose the event gate, and paste a ticket code. The organizer dashboard's *Checked in* count increases.
-
-To start over, use **Reset demo data** on the organizer dashboard.
+4. **Verify** — register as **Organizer**, submit KYC, then sign in as **Admin** and approve it from *Organizer KYC*. Backend 1.5 blocks organizer event routes until approval.
+5. **Manage** — sign in as the approved **Organizer**, open the dashboard, and *Create event*. Publish it and it appears on the public site.
+6. **Scan** — create a staff account from **Staff Roster**, assign it to the event, then sign in as **Staff** (`/scan`). The scanner only shows assigned events.
 
 ## Team
 

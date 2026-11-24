@@ -12,6 +12,7 @@ import { CreateEventPage } from './CreateEventPage';
 
 import { useEvents } from '../hooks/useEventStats';
 import { useAttendees } from '../hooks/useAttendee';
+import { useOrganizerKyc } from '../hooks/useOrganizerKyc';
 import type { NewEventInput } from '../../../lib/backendOrganizer';
 
 function initials(name: string | undefined): string {
@@ -22,6 +23,7 @@ export const OrganizerDashboardPage: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<'events' | 'attendees' | 'create'>('events');
 
   const { user } = useAuth();
+  const { kyc } = useOrganizerKyc();
   const { events, totalEvents, publishedCount, draftCount, totalTickets, search: evSearch, setSearch: setEvSearch, filterStatus, setFilterStatus, addEvent, publishEvent, cancelEvent, loading: evLoading, loadError: evError } = useEvents();
   const {
     attendees, totalAttendees, checkedInCount,
@@ -72,6 +74,14 @@ export const OrganizerDashboardPage: React.FC = () => {
 
       {/* Main Core View Area */}
       <main className="dashboard-viewport">
+        {kyc && kyc.status !== 'Verified' && (
+          <div className="form-error-banner" style={{ margin: '16px 24px 0' }}>
+            {kyc.status === 'Pending'
+              ? 'Your KYC submission is pending admin review. Event management unlocks after approval.'
+              : 'Your organizer profile is not verified. Submit KYC before creating events.'}{' '}
+            <Link to="/organizer/kyc" className="underline">Open verification</Link>
+          </div>
+        )}
         {currentTab === 'create' ? (
           <CreateEventPage onEventCreated={handleEventFormSubmission} onCancel={() => setCurrentTab('events')} />
         ) : (
